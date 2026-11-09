@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Cookbook Anything</string>
+
+    <!-- Common actions -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+    <string name="back">Back</string>
+    <string name="next">Next</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="remove">Remove</string>
+    <string name="rename">Rename</string>
+    <string name="share">Share</string>
+
+    <!-- Tabs -->
+    <string name="tab_recipes">Recipes</string>
+    <string name="tab_calendar">Calendar</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Recipe list -->
+    <string name="add_recipe">Add recipe</string>
+    <string name="all_recipes">All</string>
+    <string name="no_recipes_yet">Your cookbook is empty. Tap + to add your first recipe.</string>
+    <string name="no_recipes_in_category">No recipes in this category yet.</string>
+    <string name="import_recipe">Import recipe</string>
+    <string name="import_failed">This file is not a Cookbook Anything recipe.</string>
+
+    <!-- Recipe page -->
+    <string name="ingredients">Ingredients</string>
+    <string name="steps">Steps</string>
+    <string name="comments">Comments</string>
+    <string name="add_comment">Add a comment</string>
+    <string name="reset_checks">Uncheck everything</string>
+    <string name="add_to_calendar">Add to calendar</string>
+    <string name="recipe_not_found">This recipe no longer exists.</string>
+    <string name="delete_recipe_title">Delete this recipe?</string>
+    <string name="delete_recipe_text">The recipe, its photos, comments and calendar entries will be deleted for good.</string>
+    <string name="share_as_pdf">As a PDF</string>
+    <string name="share_as_recipe_file">As a recipe file for the app</string>
+    <string name="share_failed">The recipe could not be shared.</string>
+
+    <!-- Recipe editor -->
+    <string name="new_recipe">New recipe</string>
+    <string name="edit_recipe">Edit recipe</string>
+    <string name="recipe_title">Recipe name</string>
+    <string name="title_required">Give the recipe a name.</string>
+    <string name="ingredient_hint">Ingredient, for example 200 g flour</string>
+    <string name="step_hint">Step %1$d</string>
+    <string name="add_photo">Add photo</string>
+    <string name="photo_from_gallery">Choose from gallery</string>
+    <string name="photo_from_camera">Take a photo</string>
+    <string name="remove_photo">Remove photo</string>
+    <string name="discard_title">Discard changes?</string>
+    <string name="discard_text">What you changed in this recipe will be lost.</string>
+    <string name="discard">Discard</string>
+
+    <!-- Categories -->
+    <string name="categories">Categories</string>
+    <string name="no_category">No category</string>
+    <string name="new_category">New category</string>
+    <string name="category_name">Category name</string>
+    <string name="no_categories_yet">No categories yet. Tap + to create one, for example Desserts.</string>
+    <string name="delete_category_title">Delete “%1$s”?</string>
+    <string name="delete_category_text">Recipes in this category are kept, without a category.</string>
+
+    <!-- Calendar -->
+    <string name="schedule_recipe">Plan a recipe</string>
+    <string name="nothing_scheduled">Nothing planned for this day.</string>
+    <string name="add_a_recipe_first">Add a recipe first, then you can plan it here.</string>
+    <string name="previous_month">Previous month</string>
+    <string name="next_month">Next month</string>
+    <string name="reminder_channel">Recipe reminders</string>
+    <string name="reminder_title">Time to cook</string>
+
+    <!-- Settings -->
+    <string name="language">Language</string>
+    <string name="language_system">Same as the phone</string>
+    <string name="plan">Your plan</string>
+    <string name="plan_free">Free version: %1$d of %2$d recipes used.</string>
+    <string name="plan_unlocked">Unlimited recipes unlocked.</string>
+    <string name="version">Version %1$s</string>
+
+    <!-- Paywall -->
+    <string name="paywall_title">Unlock unlimited recipes</string>
+    <string name="paywall_text">The free version holds %1$d recipes. A one-time purchase unlocks unlimited recipes for life. Purchases are not available in this version yet.</string>
+    <string name="paywall_unlock_test">Unlock (test build)</string>
+</resources>
