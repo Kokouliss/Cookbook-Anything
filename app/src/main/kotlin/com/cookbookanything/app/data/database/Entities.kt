@@ -134,10 +134,10 @@ data class ScheduleEntity(
 
 data class RecipeWithDetails(
     @Embedded val recipe: RecipeEntity,
-    @Relation(parentColumn = "id", entityColumn = "recipeId") val ingredients: List<IngredientEntity>,
-    @Relation(parentColumn = "id", entityColumn = "recipeId") val steps: List<StepEntity>,
-    @Relation(parentColumn = "id", entityColumn = "recipeId") val photos: List<PhotoEntity>,
-    @Relation(parentColumn = "id", entityColumn = "recipeId") val comments: List<CommentEntity>,
+    @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val ingredients: List<IngredientEntity>,
+    @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val steps: List<StepEntity>,
+    @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val photos: List<PhotoEntity>,
+    @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val comments: List<CommentEntity>,
 )
 
 data class RecipeSummaryRow(
