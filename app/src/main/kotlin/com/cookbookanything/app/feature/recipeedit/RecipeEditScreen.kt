@@ -22,11 +22,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -58,6 +60,7 @@ import com.cookbookanything.app.ui.components.PhotoPicker
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.TextInputDialog
 import com.cookbookanything.app.ui.components.rememberPhotoPicker
+import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 
 @Composable
@@ -122,6 +125,7 @@ fun RecipeEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = appBarColors(),
                 title = {
                     Text(stringResource(if (uiState.isNew) R.string.new_recipe else R.string.edit_recipe))
                 },
@@ -129,7 +133,12 @@ fun RecipeEditScreen(
                     AppIconButton(R.drawable.ic_close, stringResource(R.string.close), onClick = close)
                 },
                 actions = {
-                    TextButton(onClick = onSave, enabled = !uiState.loading) {
+                    TextButton(
+                        onClick = onSave,
+                        enabled = !uiState.loading,
+                        // The default primary text would vanish on the brand-coloured bar.
+                        colors = ButtonDefaults.textButtonColors(contentColor = LocalContentColor.current),
+                    ) {
                         Text(stringResource(R.string.save))
                     }
                 },
@@ -214,13 +223,17 @@ fun RecipeEditScreen(
                         placeholder = stringResource(R.string.step_hint, index + 1),
                         singleLine = false,
                         onRemove = { onRemoveStep(step.id) }.takeIf { step !== uiState.steps.last() },
+                        trailing = {
+                            AddPhotoButton(
+                                picker = photoPicker,
+                                onBeforePick = { photoTargetStepId = step.id },
+                                iconOnly = true,
+                            )
+                        },
                     )
-                    PhotoStrip(
-                        photos = step.photos,
-                        onRemove = { onRemovePhoto(step.id, it) },
-                        picker = photoPicker,
-                        onBeforePick = { photoTargetStepId = step.id },
-                    )
+                    if (step.photos.isNotEmpty()) {
+                        PhotoStrip(photos = step.photos, onRemove = { onRemovePhoto(step.id, it) })
+                    }
                 }
             }
         }
@@ -244,7 +257,7 @@ fun RecipeEditScreen(
 private fun SectionTitle(title: String) {
     Column {
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(title, style = MaterialTheme.typography.titleLarge)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -313,6 +326,7 @@ private fun RemovableField(
     placeholder: String,
     singleLine: Boolean,
     onRemove: (() -> Unit)?,
+    trailing: @Composable () -> Unit = {},
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
@@ -326,6 +340,7 @@ private fun RemovableField(
             ),
             modifier = Modifier.weight(1f),
         )
+        trailing()
         if (onRemove != null) {
             AppIconButton(R.drawable.ic_close, stringResource(R.string.remove), onClick = onRemove)
         } else {
@@ -339,8 +354,9 @@ private fun RemovableField(
 private fun PhotoStrip(
     photos: List<String>,
     onRemove: (String) -> Unit,
-    picker: PhotoPicker,
-    onBeforePick: () -> Unit,
+    // Steps add photos with the camera button next to their field, so they pass no picker here.
+    picker: PhotoPicker? = null,
+    onBeforePick: () -> Unit = {},
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -372,8 +388,10 @@ private fun PhotoStrip(
                 }
             }
         }
-        item {
-            AddPhotoButton(picker = picker, onBeforePick = onBeforePick)
+        if (picker != null) {
+            item {
+                AddPhotoButton(picker = picker, onBeforePick = onBeforePick)
+            }
         }
     }
 }

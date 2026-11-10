@@ -33,6 +33,7 @@ import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.ConfirmDialog
 import com.cookbookanything.app.ui.components.TextInputDialog
+import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 
 @Composable
@@ -63,6 +64,7 @@ fun CategoriesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = appBarColors(),
                 title = { Text(stringResource(R.string.categories)) },
                 navigationIcon = {
                     AppIconButton(R.drawable.ic_arrow_back, stringResource(R.string.back), onClick = onBack)
@@ -70,7 +72,7 @@ fun CategoriesScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { adding = true }) {
+            FloatingActionButton(onClick = { adding = true }, containerColor = MaterialTheme.colorScheme.secondary) {
                 AppIcon(R.drawable.ic_add, contentDescription = stringResource(R.string.new_category))
             }
         },

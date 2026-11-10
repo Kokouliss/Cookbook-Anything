@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -64,6 +65,7 @@ import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
+import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Comment
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.ScheduledRecipe
@@ -152,6 +154,7 @@ fun RecipeDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = appBarColors(),
                 title = {},
                 navigationIcon = {
                     AppIconButton(R.drawable.ic_arrow_back, stringResource(R.string.back), onClick = onBack)
@@ -374,7 +377,7 @@ private fun SectionHeader(title: String, progress: String? = null) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
+            Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
             if (progress != null) {
                 Text(
                     text = progress,
@@ -395,7 +398,15 @@ private fun CheckRow(text: String, checked: Boolean, onCheckedChange: (Boolean) 
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            // Green for "have it" and "done", so progress reads at a glance.
+            colors = CheckboxDefaults.colors(
+                checkedColor = MaterialTheme.colorScheme.secondary,
+                checkmarkColor = MaterialTheme.colorScheme.onSecondary,
+            ),
+        )
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
