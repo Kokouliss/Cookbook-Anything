@@ -73,11 +73,20 @@ fun rememberPhotoPicker(newCameraTarget: () -> Uri, onPicked: (List<Uri>) -> Uni
 }
 
 @Composable
-fun AddPhotoButton(picker: PhotoPicker, onBeforePick: () -> Unit = {}, modifier: Modifier = Modifier) {
+fun AddPhotoButton(
+    picker: PhotoPicker,
+    onBeforePick: () -> Unit = {},
+    modifier: Modifier = Modifier,
+    iconOnly: Boolean = false,
+) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
-        OutlinedButton(onClick = { expanded = true }) {
-            Text(stringResource(R.string.add_photo))
+        if (iconOnly) {
+            AppIconButton(R.drawable.ic_add_photo, stringResource(R.string.add_photo), onClick = { expanded = true })
+        } else {
+            OutlinedButton(onClick = { expanded = true }) {
+                Text(stringResource(R.string.add_photo))
+            }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(

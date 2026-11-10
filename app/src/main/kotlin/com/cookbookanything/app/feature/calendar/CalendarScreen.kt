@@ -49,6 +49,7 @@ import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
+import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.calendar.monthGrid
 import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.model.ScheduledRecipe
@@ -96,9 +97,9 @@ fun CalendarScreen(
     val requestNotificationPermission = rememberNotificationPermissionRequest()
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_calendar)) }) },
+        topBar = { TopAppBar(colors = appBarColors(), title = { Text(stringResource(R.string.tab_calendar)) }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { pickingRecipe = true }) {
+            FloatingActionButton(onClick = { pickingRecipe = true }, containerColor = MaterialTheme.colorScheme.secondary) {
                 AppIcon(R.drawable.ic_add, contentDescription = stringResource(R.string.schedule_recipe))
             }
         },

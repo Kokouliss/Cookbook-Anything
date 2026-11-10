@@ -28,6 +28,7 @@ import androidx.core.os.LocaleListCompat
 import com.cookbookanything.app.BuildConfig
 import com.cookbookanything.app.R
 import com.cookbookanything.app.ui.components.AppIcon
+import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.FreeTier
 
 @Composable
@@ -38,7 +39,7 @@ fun SettingsScreen(
     onManageCategories: () -> Unit,
 ) {
     Scaffold(
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.tab_settings)) }) },
+        topBar = { TopAppBar(colors = appBarColors(), title = { Text(stringResource(R.string.tab_settings)) }) },
     ) { padding ->
         Column(
             modifier = Modifier

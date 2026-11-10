@@ -43,6 +43,7 @@ import com.cookbookanything.app.R
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.RecipePhoto
+import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
 
@@ -82,6 +83,7 @@ fun RecipeListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = appBarColors(),
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     AppIconButton(
@@ -98,7 +100,7 @@ fun RecipeListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddRecipe) {
+            FloatingActionButton(onClick = onAddRecipe, containerColor = MaterialTheme.colorScheme.secondary) {
                 AppIcon(R.drawable.ic_add, contentDescription = stringResource(R.string.add_recipe))
             }
         },
