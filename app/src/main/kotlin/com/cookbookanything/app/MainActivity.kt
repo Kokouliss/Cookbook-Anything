@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent) {
         intent.getStringExtra(EXTRA_RECIPE_ID)?.let(viewModel::openRecipe)
-        if (intent.action == Intent.ACTION_VIEW) intent.data?.let(viewModel::importRecipe)
+        if (intent.action == Intent.ACTION_VIEW) intent.data?.let(viewModel::importFile)
     }
 
     companion object {

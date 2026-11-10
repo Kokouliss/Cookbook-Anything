@@ -25,7 +25,7 @@
     <string name="no_recipes_yet">Your cookbook is empty. Tap + to add your first recipe.</string>
     <string name="no_recipes_in_category">No recipes in this category yet.</string>
     <string name="import_recipe">Import recipe</string>
-    <string name="import_failed">This file is not a Cookbook Anything recipe.</string>
+    <string name="import_failed">This file is not a Cookbook Anything recipe or backup.</string>
 
     <!-- Recipe page -->
     <string name="ingredients">Ingredients</string>
@@ -86,4 +86,44 @@
     <string name="paywall_title">Unlock unlimited recipes</string>
     <string name="paywall_text">The free version holds %1$d recipes. A one-time purchase unlocks unlimited recipes for life. Purchases are not available in this version yet.</string>
     <string name="paywall_unlock_test">Unlock (test build)</string>
+
+    <!-- Backup -->
+    <string name="backup">Backup</string>
+    <string name="backup_hint">A backup is one file with all your recipes and photos. Keep a copy outside this phone.</string>
+    <string name="backup_save">Save a backup</string>
+    <string name="backup_restore">Restore from a backup</string>
+    <string name="backup_saved">Backup saved.</string>
+    <string name="backup_failed">The backup could not be saved.</string>
+    <string name="backup_nothing_new">Every recipe in this backup is already here.</string>
+    <plurals name="backup_restored">
+        <item quantity="one">%d recipe restored.</item>
+        <item quantity="other">%d recipes restored.</item>
+    </plurals>
+
+    <!-- Search -->
+    <string name="search_hint">Search recipes or ingredients</string>
+    <string name="clear_search">Clear search</string>
+    <string name="no_search_results">No recipe matches your search.</string>
+
+    <!-- Cooking mode -->
+    <string name="start_cooking">Start cooking</string>
+    <string name="step_of">Step %1$d of %2$d</string>
+    <string name="previous">Previous</string>
+    <string name="finish">Finish</string>
+
+    <!-- Shopping list -->
+    <string name="shopping_list">Shopping list</string>
+    <string name="shopping_hint">Ingredients of the recipes you planned from today on. Tick what you already have.</string>
+    <string name="shopping_empty">Plan recipes in the calendar and their ingredients will show up here.</string>
+
+    <!-- Servings and times -->
+    <string name="servings">Servings</string>
+    <string name="servings_count">Servings: %1$d</string>
+    <string name="fewer_servings">Fewer servings</string>
+    <string name="more_servings">More servings</string>
+    <string name="prep_time_label">Prep time</string>
+    <string name="cook_time_label">Cooking time</string>
+    <string name="minutes_short">min</string>
+    <string name="prep_time">Prep %1$d min</string>
+    <string name="cook_time">Cooking %1$d min</string>
 </resources>

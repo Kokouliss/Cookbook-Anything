@@ -64,11 +64,16 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 
 @Composable
-fun CalendarRoute(onOpenRecipe: (String) -> Unit, viewModel: CalendarViewModel = hiltViewModel()) {
+fun CalendarRoute(
+    onOpenRecipe: (String) -> Unit,
+    onOpenShoppingList: () -> Unit,
+    viewModel: CalendarViewModel = hiltViewModel(),
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CalendarScreen(
         uiState = uiState,
         onOpenRecipe = onOpenRecipe,
+        onOpenShoppingList = onOpenShoppingList,
         onSchedule = viewModel::schedule,
         onRemove = viewModel::remove,
     )
@@ -78,6 +83,7 @@ fun CalendarRoute(onOpenRecipe: (String) -> Unit, viewModel: CalendarViewModel =
 fun CalendarScreen(
     uiState: CalendarUiState,
     onOpenRecipe: (String) -> Unit,
+    onOpenShoppingList: () -> Unit,
     onSchedule: (String, Long) -> Unit,
     onRemove: (String) -> Unit,
 ) {
@@ -97,7 +103,19 @@ fun CalendarScreen(
     val requestNotificationPermission = rememberNotificationPermissionRequest()
 
     Scaffold(
-        topBar = { TopAppBar(colors = appBarColors(), title = { Text(stringResource(R.string.tab_calendar)) }) },
+        topBar = {
+            TopAppBar(
+                colors = appBarColors(),
+                title = { Text(stringResource(R.string.tab_calendar)) },
+                actions = {
+                    AppIconButton(
+                        icon = R.drawable.ic_shopping_cart,
+                        contentDescription = stringResource(R.string.shopping_list),
+                        onClick = onOpenShoppingList,
+                    )
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = { pickingRecipe = true }, containerColor = MaterialTheme.colorScheme.secondary) {
                 AppIcon(R.drawable.ic_add, contentDescription = stringResource(R.string.schedule_recipe))

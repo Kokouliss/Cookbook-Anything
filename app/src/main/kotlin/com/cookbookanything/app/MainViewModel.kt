@@ -3,7 +3,9 @@ package com.cookbookanything.app
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cookbookanything.app.data.share.BackupManager
 import com.cookbookanything.app.data.share.RecipeSharer
+import com.cookbookanything.app.data.share.RestoreResult
 import com.cookbookanything.core.domain.FreeTier
 import com.cookbookanything.core.domain.repository.EntitlementRepository
 import com.cookbookanything.core.domain.repository.RecipeRepository
@@ -29,6 +31,8 @@ sealed interface MainEvent {
     data class OpenRecipe(val recipeId: String) : MainEvent
     data object ImportFailed : MainEvent
     data object LimitReached : MainEvent
+    data class BackupRestored(val added: Int) : MainEvent
+    data class BackupSaved(val success: Boolean) : MainEvent
 }
 
 /** App-wide state: the free-tier limit, and recipes arriving from outside (shared files, reminders). */
@@ -37,6 +41,7 @@ class MainViewModel @Inject constructor(
     private val recipeRepository: RecipeRepository,
     private val entitlementRepository: EntitlementRepository,
     private val recipeSharer: RecipeSharer,
+    private val backupManager: BackupManager,
 ) : ViewModel() {
 
     val uiState: StateFlow<MainUiState> =
@@ -51,11 +56,18 @@ class MainViewModel @Inject constructor(
         eventChannel.trySend(MainEvent.OpenRecipe(recipeId))
     }
 
-    fun importRecipe(uri: Uri) {
+    /** Opens a file from outside the app: a backup of the whole cookbook, or one shared recipe. */
+    fun importFile(uri: Uri) {
         viewModelScope.launch {
+            val unlocked = entitlementRepository.isUnlocked.first()
+            when (val restored = backupManager.restore(uri, unlocked)) {
+                is RestoreResult.Restored -> return@launch eventChannel.send(MainEvent.BackupRestored(restored.added))
+                RestoreResult.LimitReached -> return@launch eventChannel.send(MainEvent.LimitReached)
+                RestoreResult.NotABackup -> Unit
+            }
             val canAdd = FreeTier.canAddRecipe(
                 recipeCount = recipeRepository.observeCount().first(),
-                unlocked = entitlementRepository.isUnlocked.first(),
+                unlocked = unlocked,
             )
             if (!canAdd) {
                 eventChannel.send(MainEvent.LimitReached)
@@ -69,6 +81,10 @@ class MainViewModel @Inject constructor(
                 eventChannel.send(MainEvent.OpenRecipe(recipe.id))
             }
         }
+    }
+
+    fun saveBackup(target: Uri) {
+        viewModelScope.launch { eventChannel.send(MainEvent.BackupSaved(backupManager.export(target))) }
     }
 
     fun unlock() {

@@ -14,6 +14,9 @@ import kotlinx.serialization.json.Json
 data class SharedRecipe(
     val formatVersion: Int = RecipeShareCodec.FORMAT_VERSION,
     val title: String,
+    val servings: Int? = null,
+    val prepMinutes: Int? = null,
+    val cookMinutes: Int? = null,
     val photos: List<String> = emptyList(),
     val ingredients: List<String> = emptyList(),
     val steps: List<SharedStep> = emptyList(),
@@ -45,6 +48,9 @@ object RecipeShareCodec {
 
 fun Recipe.toShared(): SharedRecipe = SharedRecipe(
     title = title,
+    servings = servings,
+    prepMinutes = prepMinutes,
+    cookMinutes = cookMinutes,
     photos = photos,
     ingredients = ingredients.map { it.text },
     steps = steps.map { SharedStep(text = it.text, photos = it.photos) },
@@ -61,6 +67,9 @@ fun SharedRecipe.toRecipe(
 ): Recipe = Recipe(
     id = newId(),
     title = title.trim(),
+    servings = servings,
+    prepMinutes = prepMinutes,
+    cookMinutes = cookMinutes,
     photos = photos.mapNotNull(photoNames::get),
     ingredients = ingredients.map { Ingredient(id = newId(), text = it) },
     steps = steps.map { Step(id = newId(), text = it.text, photos = it.photos.mapNotNull(photoNames::get)) },

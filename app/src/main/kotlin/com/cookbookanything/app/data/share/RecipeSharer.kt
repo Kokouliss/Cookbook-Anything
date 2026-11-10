@@ -100,27 +100,27 @@ class RecipeSharer @Inject constructor(
     private fun uriFor(file: File): Uri =
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 
-    private fun InputStream.readText(maxBytes: Int): String {
-        val bytes = ByteArrayOutputStream()
-        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-        while (bytes.size() <= maxBytes) {
-            val read = read(buffer)
-            if (read < 0) break
-            bytes.write(buffer, 0, read)
-        }
-        // An oversized entry ends up truncated, which the decoder then rejects as invalid.
-        return bytes.toString(Charsets.UTF_8.name())
-    }
-
     companion object {
         const val RECIPE_FILE_EXTENSION = "cookbook"
         const val RECIPE_FILE_MIME_TYPE = "application/zip"
         const val PDF_MIME_TYPE = "application/pdf"
 
         private const val RECIPE_ENTRY = "recipe.json"
-        private const val PHOTO_PREFIX = "photos/"
+        const val PHOTO_PREFIX = "photos/"
         private const val MAX_ENTRIES = 300
         private const val MAX_JSON_BYTES = 2 * 1024 * 1024
-        private const val MAX_PHOTO_BYTES = 15L * 1024 * 1024
+        const val MAX_PHOTO_BYTES = 15L * 1024 * 1024
     }
+}
+
+/** Reads at most [maxBytes] of text. A longer entry comes back cut short, which the decoders reject. */
+internal fun InputStream.readText(maxBytes: Int): String {
+    val bytes = ByteArrayOutputStream()
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    while (bytes.size() <= maxBytes) {
+        val read = read(buffer)
+        if (read < 0) break
+        bytes.write(buffer, 0, read)
+    }
+    return bytes.toString(Charsets.UTF_8.name())
 }

@@ -14,7 +14,8 @@ import java.io.File
 import java.io.OutputStream
 
 /** Section headings, passed in so the PDF follows the language the user picked in the app. */
-data class PdfLabels(val ingredients: String, val steps: String)
+/** [summary] is the line under the title with servings and times, when the recipe has any. */
+data class PdfLabels(val ingredients: String, val steps: String, val summary: String? = null)
 
 /** Lays a recipe out on A4 pages: title, cover photo, ingredients, then numbered steps with photos. */
 class RecipePdfWriter(private val photoFile: (String) -> File) {
@@ -24,6 +25,7 @@ class RecipePdfWriter(private val photoFile: (String) -> File) {
         try {
             val pages = PageCursor(document)
             pages.text(recipe.title, TITLE, spacingAfter = 12f)
+            labels.summary?.let { pages.text(it, BODY, spacingAfter = 12f) }
             recipe.photos.firstOrNull()?.let { pages.photo(photoFile(it), maxHeight = 260f) }
 
             if (recipe.ingredients.isNotEmpty()) {

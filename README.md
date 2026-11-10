@@ -11,6 +11,11 @@ A personal cookbook app for Android. Keep your own recipes with ingredients, ste
 - A calendar where a recipe is planned for a date and time, with a reminder notification
 - Sharing a recipe as a PDF, or as a recipe file that another person opens in their own copy of the app
 - Greek and English, following the phone or chosen in Settings
+- Search by recipe name or ingredient
+- Cooking mode: one step at a time in large text, with the screen kept on
+- A shopping list built from the recipes planned in the calendar
+- Servings and times, with ingredient amounts scaled for more or fewer people
+- A backup of the whole cookbook in one file, and restore from it
 - The free version holds 5 recipes at a time
 
 Everything is stored on the phone and works offline. Still to come: Google sign-in with cloud sync, and the one-time lifetime purchase through Google Play.

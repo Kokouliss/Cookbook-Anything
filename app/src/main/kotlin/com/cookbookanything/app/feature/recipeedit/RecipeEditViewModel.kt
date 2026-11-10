@@ -29,6 +29,10 @@ data class RecipeEditUiState(
     val titleMissing: Boolean = false,
     val categoryId: String? = null,
     val categories: List<Category> = emptyList(),
+    // Kept as typed text; empty means not set.
+    val servings: String = "",
+    val prepMinutes: String = "",
+    val cookMinutes: String = "",
     val photos: List<String> = emptyList(),
     // Both lists always end with one empty row, so there is always a place to type the next item.
     val ingredients: List<Ingredient> = emptyList(),
@@ -64,6 +68,9 @@ class RecipeEditViewModel @AssistedInject constructor(
                 loading = false,
                 title = recipe?.title.orEmpty(),
                 categoryId = recipe?.categoryId,
+                servings = recipe?.servings?.toString().orEmpty(),
+                prepMinutes = recipe?.prepMinutes?.toString().orEmpty(),
+                cookMinutes = recipe?.cookMinutes?.toString().orEmpty(),
                 photos = recipe?.photos.orEmpty(),
                 ingredients = recipe?.ingredients.orEmpty().withTrailingBlank(),
                 steps = recipe?.steps.orEmpty().withTrailingBlankStep(),
@@ -77,6 +84,12 @@ class RecipeEditViewModel @AssistedInject constructor(
     fun setTitle(value: String) = edit { copy(title = value, titleMissing = false) }
 
     fun setCategory(id: String?) = edit { copy(categoryId = id) }
+
+    fun setServings(value: String) = edit { copy(servings = value.digits(maxLength = 2)) }
+
+    fun setPrepMinutes(value: String) = edit { copy(prepMinutes = value.digits(maxLength = 4)) }
+
+    fun setCookMinutes(value: String) = edit { copy(cookMinutes = value.digits(maxLength = 4)) }
 
     fun createCategory(name: String) {
         viewModelScope.launch {
@@ -142,6 +155,9 @@ class RecipeEditViewModel @AssistedInject constructor(
                 id = recipeId ?: UUID.randomUUID().toString(),
                 title = state.title.trim(),
                 categoryId = state.categoryId,
+                servings = state.servings.positiveIntOrNull(),
+                prepMinutes = state.prepMinutes.positiveIntOrNull(),
+                cookMinutes = state.cookMinutes.positiveIntOrNull(),
                 photos = state.photos,
                 ingredients = state.ingredients.filter { it.text.isNotBlank() }.map { it.copy(text = it.text.trim()) },
                 steps = state.steps.filterNot { it.isBlank() }.map { it.copy(text = it.text.trim()) },
@@ -172,3 +188,7 @@ private fun List<Step>.withTrailingBlankStep(): List<Step> =
     if (lastOrNull()?.isBlank() == true) this else this + Step(id = newId(), text = "")
 
 private fun newId() = UUID.randomUUID().toString()
+
+private fun String.digits(maxLength: Int) = filter(Char::isDigit).take(maxLength)
+
+private fun String.positiveIntOrNull() = toIntOrNull()?.takeIf { it > 0 }
