@@ -2,6 +2,9 @@
 
 package com.cookbookanything.app.feature.settings
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -15,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,6 +34,7 @@ import com.cookbookanything.app.R
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.FreeTier
+import java.time.LocalDate
 
 @Composable
 fun SettingsScreen(
@@ -37,7 +42,17 @@ fun SettingsScreen(
     unlocked: Boolean,
     onUnlock: () -> Unit,
     onManageCategories: () -> Unit,
+    onSaveBackup: (Uri) -> Unit,
+    onRestoreBackup: (Uri) -> Unit,
 ) {
+    // The user picks where the backup goes (phone storage, Drive, ...), so no storage permission is needed.
+    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) onSaveBackup(uri)
+    }
+    val restoreBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onRestoreBackup(uri)
+    }
+
     Scaffold(
         topBar = { TopAppBar(colors = appBarColors(), title = { Text(stringResource(R.string.tab_settings)) }) },
     ) { padding ->
@@ -82,6 +97,27 @@ fun SettingsScreen(
             ) {
                 AppIcon(R.drawable.ic_label, contentDescription = null, modifier = Modifier.padding(end = 16.dp))
                 Text(stringResource(R.string.categories), style = MaterialTheme.typography.bodyLarge)
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SectionTitle(stringResource(R.string.backup))
+            Text(
+                text = stringResource(R.string.backup_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            Button(
+                onClick = { saveBackup.launch("cookbook-backup-${LocalDate.now()}.zip") },
+                modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp),
+            ) {
+                Text(stringResource(R.string.backup_save))
+            }
+            OutlinedButton(
+                onClick = { restoreBackup.launch(arrayOf("*/*")) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            ) {
+                Text(stringResource(R.string.backup_restore))
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

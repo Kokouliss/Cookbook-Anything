@@ -6,6 +6,7 @@ import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.repository.CategoryRepository
 import com.cookbookanything.core.domain.repository.RecipeRepository
+import com.cookbookanything.core.domain.search.matches
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,21 +32,27 @@ class RecipeListViewModel @Inject constructor(
     categoryRepository: CategoryRepository,
 ) : ViewModel() {
     private val selectedCategoryId = MutableStateFlow<String?>(null)
+    private val query = MutableStateFlow("")
 
     val uiState: StateFlow<RecipeListUiState> = combine(
         recipeRepository.observeSummaries(),
         categoryRepository.observeCategories(),
         selectedCategoryId,
-    ) { recipes, categories, selected ->
+        query,
+    ) { recipes, categories, selected, searchText ->
         // A deleted category must not keep filtering the list.
         val active = selected?.takeIf { id -> categories.any { it.id == id } }
         RecipeListUiState.Success(
-            recipes = if (active == null) recipes else recipes.filter { it.categoryId == active },
+            recipes = recipes.filter { (active == null || it.categoryId == active) && it.matches(searchText) },
             categories = categories,
             selectedCategoryId = active,
             cookbookIsEmpty = recipes.isEmpty(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecipeListUiState.Loading)
+
+    fun search(text: String) {
+        query.value = text
+    }
 
     fun selectCategory(categoryId: String?) {
         selectedCategoryId.value = categoryId

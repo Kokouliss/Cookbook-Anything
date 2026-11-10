@@ -4,6 +4,7 @@ import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.model.ScheduledRecipe
+import com.cookbookanything.core.domain.model.ShoppingItem
 import kotlinx.coroutines.flow.Flow
 
 interface RecipeRepository {
@@ -33,6 +34,9 @@ interface CategoryRepository {
 
 interface ScheduleRepository {
     fun observeSchedule(): Flow<List<ScheduledRecipe>>
+
+    /** Ingredients of every recipe planned at or after [from], in calendar order. */
+    fun observeShoppingList(from: Long): Flow<List<ShoppingItem>>
     suspend fun schedule(recipeId: String, scheduledAt: Long)
     suspend fun remove(scheduleId: String)
 }

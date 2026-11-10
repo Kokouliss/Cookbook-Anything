@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.cookbookanything.app.R
 import com.cookbookanything.app.ui.components.AddPhotoButton
@@ -79,6 +80,9 @@ fun RecipeEditRoute(
         onTitleChange = viewModel::setTitle,
         onCategoryChange = viewModel::setCategory,
         onCreateCategory = viewModel::createCategory,
+        onServingsChange = viewModel::setServings,
+        onPrepMinutesChange = viewModel::setPrepMinutes,
+        onCookMinutesChange = viewModel::setCookMinutes,
         onIngredientChange = viewModel::setIngredientText,
         onRemoveIngredient = viewModel::removeIngredient,
         onStepChange = viewModel::setStepText,
@@ -97,6 +101,9 @@ fun RecipeEditScreen(
     onTitleChange: (String) -> Unit,
     onCategoryChange: (String?) -> Unit,
     onCreateCategory: (String) -> Unit,
+    onServingsChange: (String) -> Unit,
+    onPrepMinutesChange: (String) -> Unit,
+    onCookMinutesChange: (String) -> Unit,
     onIngredientChange: (String, String) -> Unit,
     onRemoveIngredient: (String) -> Unit,
     onStepChange: (String, String) -> Unit,
@@ -191,6 +198,23 @@ fun RecipeEditScreen(
                 onCreateCategory = onCreateCategory,
             )
 
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                NumberField(
+                    value = uiState.prepMinutes,
+                    onValueChange = onPrepMinutesChange,
+                    label = stringResource(R.string.prep_time_label),
+                    suffix = stringResource(R.string.minutes_short),
+                    modifier = Modifier.weight(1f),
+                )
+                NumberField(
+                    value = uiState.cookMinutes,
+                    onValueChange = onCookMinutesChange,
+                    label = stringResource(R.string.cook_time_label),
+                    suffix = stringResource(R.string.minutes_short),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
             PhotoStrip(
                 photos = uiState.photos,
                 onRemove = { onRemovePhoto(null, it) },
@@ -199,6 +223,13 @@ fun RecipeEditScreen(
             )
 
             SectionTitle(stringResource(R.string.ingredients))
+            // Next to the amounts it describes: the recipe page scales them from this number.
+            NumberField(
+                value = uiState.servings,
+                onValueChange = onServingsChange,
+                label = stringResource(R.string.servings),
+                modifier = Modifier.fillMaxWidth(0.5f),
+            )
             uiState.ingredients.forEach { ingredient ->
                 // Keyed by id so focus stays with the right field when a row above is removed.
                 key(ingredient.id) {
@@ -317,6 +348,29 @@ private fun CategoryPicker(
             onDismiss = { creating = false },
         )
     }
+}
+
+@Composable
+private fun NumberField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    suffix: String? = null,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        suffix = if (suffix != null) {
+            { Text(suffix) }
+        } else {
+            null
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+        modifier = modifier,
+    )
 }
 
 @Composable

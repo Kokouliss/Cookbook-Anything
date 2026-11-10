@@ -23,7 +23,7 @@
     <string name="no_recipes_yet">Το βιβλίο συνταγών σου είναι άδειο. Πάτησε + για να προσθέσεις την πρώτη σου συνταγή.</string>
     <string name="no_recipes_in_category">Δεν υπάρχουν ακόμη συνταγές σε αυτή την κατηγορία.</string>
     <string name="import_recipe">Εισαγωγή συνταγής</string>
-    <string name="import_failed">Αυτό το αρχείο δεν είναι συνταγή του Cookbook Anything.</string>
+    <string name="import_failed">Αυτό το αρχείο δεν είναι συνταγή ή αντίγραφο του Cookbook Anything.</string>
 
     <!-- Recipe page -->
     <string name="ingredients">Υλικά</string>
@@ -84,4 +84,44 @@
     <string name="paywall_title">Ξεκλείδωσε απεριόριστες συνταγές</string>
     <string name="paywall_text">Η δωρεάν έκδοση χωράει %1$d συνταγές. Με μία εφάπαξ αγορά ξεκλειδώνεις απεριόριστες συνταγές για πάντα. Οι αγορές δεν είναι ακόμη διαθέσιμες σε αυτή την έκδοση.</string>
     <string name="paywall_unlock_test">Ξεκλείδωμα (δοκιμαστική έκδοση)</string>
+
+    <!-- Backup -->
+    <string name="backup">Αντίγραφο ασφαλείας</string>
+    <string name="backup_hint">Το αντίγραφο είναι ένα αρχείο με όλες τις συνταγές και τις φωτογραφίες σου. Κράτα ένα και εκτός τηλεφώνου.</string>
+    <string name="backup_save">Αποθήκευση αντιγράφου</string>
+    <string name="backup_restore">Επαναφορά από αντίγραφο</string>
+    <string name="backup_saved">Το αντίγραφο αποθηκεύτηκε.</string>
+    <string name="backup_failed">Το αντίγραφο δεν μπόρεσε να αποθηκευτεί.</string>
+    <string name="backup_nothing_new">Όλες οι συνταγές του αντιγράφου υπάρχουν ήδη εδώ.</string>
+    <plurals name="backup_restored">
+        <item quantity="one">Επαναφέρθηκε %d συνταγή.</item>
+        <item quantity="other">Επαναφέρθηκαν %d συνταγές.</item>
+    </plurals>
+
+    <!-- Search -->
+    <string name="search_hint">Αναζήτηση συνταγής ή υλικού</string>
+    <string name="clear_search">Καθαρισμός αναζήτησης</string>
+    <string name="no_search_results">Καμία συνταγή δεν ταιριάζει με την αναζήτηση.</string>
+
+    <!-- Cooking mode -->
+    <string name="start_cooking">Ξεκίνα το μαγείρεμα</string>
+    <string name="step_of">Βήμα %1$d από %2$d</string>
+    <string name="previous">Προηγούμενο</string>
+    <string name="finish">Τέλος</string>
+
+    <!-- Shopping list -->
+    <string name="shopping_list">Λίστα για ψώνια</string>
+    <string name="shopping_hint">Τα υλικά των συνταγών που έχεις προγραμματίσει από σήμερα και μετά. Τσέκαρε ό,τι έχεις ήδη.</string>
+    <string name="shopping_empty">Βάλε συνταγές στο ημερολόγιο και τα υλικά τους θα εμφανιστούν εδώ.</string>
+
+    <!-- Servings and times -->
+    <string name="servings">Μερίδες</string>
+    <string name="servings_count">Μερίδες: %1$d</string>
+    <string name="fewer_servings">Λιγότερες μερίδες</string>
+    <string name="more_servings">Περισσότερες μερίδες</string>
+    <string name="prep_time_label">Προετοιμασία</string>
+    <string name="cook_time_label">Μαγείρεμα</string>
+    <string name="minutes_short">λεπτά</string>
+    <string name="prep_time">Προετοιμασία %1$d λ.</string>
+    <string name="cook_time">Μαγείρεμα %1$d λ.</string>
 </resources>

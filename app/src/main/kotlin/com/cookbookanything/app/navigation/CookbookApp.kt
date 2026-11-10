@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,12 +35,14 @@ import com.cookbookanything.app.MainViewModel
 import com.cookbookanything.app.R
 import com.cookbookanything.app.feature.calendar.CalendarRoute
 import com.cookbookanything.app.feature.categories.CategoriesRoute
+import com.cookbookanything.app.feature.cook.CookModeRoute
 import com.cookbookanything.app.feature.recipedetail.RecipeDetailRoute
 import com.cookbookanything.app.feature.recipedetail.RecipeDetailViewModel
 import com.cookbookanything.app.feature.recipeedit.RecipeEditRoute
 import com.cookbookanything.app.feature.recipeedit.RecipeEditViewModel
 import com.cookbookanything.app.feature.recipelist.RecipeListRoute
 import com.cookbookanything.app.feature.settings.SettingsScreen
+import com.cookbookanything.app.feature.shopping.ShoppingListRoute
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.core.domain.FreeTier
 
@@ -52,6 +55,10 @@ fun CookbookApp(viewModel: MainViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     var showPaywall by rememberSaveable { mutableStateOf(false) }
     val importFailedMessage = stringResource(R.string.import_failed)
+    val backupSavedMessage = stringResource(R.string.backup_saved)
+    val backupFailedMessage = stringResource(R.string.backup_failed)
+    val nothingNewMessage = stringResource(R.string.backup_nothing_new)
+    val resources = LocalContext.current.resources
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -59,6 +66,15 @@ fun CookbookApp(viewModel: MainViewModel) {
                 is MainEvent.OpenRecipe -> backStack.add(RecipeDetailKey(event.recipeId))
                 MainEvent.ImportFailed -> snackbarHostState.showSnackbar(importFailedMessage)
                 MainEvent.LimitReached -> showPaywall = true
+                is MainEvent.BackupSaved ->
+                    snackbarHostState.showSnackbar(if (event.success) backupSavedMessage else backupFailedMessage)
+                is MainEvent.BackupRestored -> snackbarHostState.showSnackbar(
+                    if (event.added == 0) {
+                        nothingNewMessage
+                    } else {
+                        resources.getQuantityString(R.plurals.backup_restored, event.added, event.added)
+                    },
+                )
             }
         }
     }
@@ -102,7 +118,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                             }
                         },
                         onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
-                        onImportRecipe = viewModel::importRecipe,
+                        onImportRecipe = viewModel::importFile,
                         onManageCategories = { backStack.add(CategoriesKey) },
                     )
                 }
@@ -110,6 +126,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                     RecipeDetailRoute(
                         onBack = { backStack.removeLastOrNull() },
                         onEdit = { backStack.add(RecipeEditKey(key.recipeId)) },
+                        onStartCooking = { servings -> backStack.add(CookModeKey(key.recipeId, servings)) },
                         viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
                             factory.create(key.recipeId)
                         },
@@ -128,11 +145,26 @@ fun CookbookApp(viewModel: MainViewModel) {
                         },
                     )
                 }
+                entry<CookModeKey> { key ->
+                    CookModeRoute(
+                        servings = key.servings,
+                        onClose = { backStack.removeLastOrNull() },
+                        viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
+                            factory.create(key.recipeId)
+                        },
+                    )
+                }
+                entry<ShoppingListKey> {
+                    ShoppingListRoute(onBack = { backStack.removeLastOrNull() })
+                }
                 entry<CategoriesKey> {
                     CategoriesRoute(onBack = { backStack.removeLastOrNull() })
                 }
                 entry<CalendarKey> {
-                    CalendarRoute(onOpenRecipe = { backStack.add(RecipeDetailKey(it)) })
+                    CalendarRoute(
+                        onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
+                        onOpenShoppingList = { backStack.add(ShoppingListKey) },
+                    )
                 }
                 entry<SettingsKey> {
                     SettingsScreen(
@@ -140,6 +172,8 @@ fun CookbookApp(viewModel: MainViewModel) {
                         unlocked = uiState.unlocked,
                         onUnlock = { showPaywall = true },
                         onManageCategories = { backStack.add(CategoriesKey) },
+                        onSaveBackup = viewModel::saveBackup,
+                        onRestoreBackup = viewModel::importFile,
                     )
                 }
             },

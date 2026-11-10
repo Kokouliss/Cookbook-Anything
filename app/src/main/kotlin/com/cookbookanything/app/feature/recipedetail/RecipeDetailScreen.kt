@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +45,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -60,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cookbookanything.app.R
 import com.cookbookanything.app.data.share.PdfLabels
 import com.cookbookanything.app.ui.components.AppIconButton
+import com.cookbookanything.app.ui.components.CheckRow
 import com.cookbookanything.app.ui.components.ConfirmDialog
 import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.RecipePhoto
@@ -70,6 +73,7 @@ import com.cookbookanything.core.domain.model.Comment
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.model.Step
+import com.cookbookanything.core.domain.scaling.scaleIngredient
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -80,6 +84,7 @@ import java.util.Locale
 fun RecipeDetailRoute(
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    onStartCooking: (servings: Int?) -> Unit,
     viewModel: RecipeDetailViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -90,6 +95,7 @@ fun RecipeDetailRoute(
     val pdfLabels = PdfLabels(
         ingredients = stringResource(R.string.ingredients),
         steps = stringResource(R.string.steps),
+        summary = (uiState as? RecipeDetailUiState.Success)?.let { recipeFacts(it.recipe, withServings = true) },
     )
 
     LaunchedEffect(viewModel) {
@@ -107,6 +113,7 @@ fun RecipeDetailRoute(
         snackbarHostState = snackbarHostState,
         onBack = onBack,
         onEdit = onEdit,
+        onStartCooking = onStartCooking,
         onDelete = viewModel::delete,
         onShareAsPdf = { viewModel.shareAsPdf(pdfLabels) },
         onShareAsRecipeFile = viewModel::shareAsRecipeFile,
@@ -136,6 +143,7 @@ fun RecipeDetailScreen(
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    onStartCooking: (servings: Int?) -> Unit,
     onDelete: () -> Unit,
     onShareAsPdf: () -> Unit,
     onShareAsRecipeFile: () -> Unit,
@@ -206,6 +214,7 @@ fun RecipeDetailScreen(
             is RecipeDetailUiState.Success -> RecipeContent(
                 uiState = uiState,
                 contentPadding = padding,
+                onStartCooking = onStartCooking,
                 onIngredientChecked = onIngredientChecked,
                 onStepDone = onStepDone,
                 onResetProgress = onResetProgress,
@@ -248,6 +257,7 @@ private fun CenteredBox(padding: PaddingValues, content: @Composable () -> Unit)
 private fun RecipeContent(
     uiState: RecipeDetailUiState.Success,
     contentPadding: PaddingValues,
+    onStartCooking: (servings: Int?) -> Unit,
     onIngredientChecked: (String, Boolean) -> Unit,
     onStepDone: (String, Boolean) -> Unit,
     onResetProgress: () -> Unit,
@@ -260,6 +270,10 @@ private fun RecipeContent(
     val locale = currentLocale()
     var pickingDateTime by rememberSaveable { mutableStateOf(false) }
     val requestNotificationPermission = rememberNotificationPermissionRequest()
+    // The cook can view the recipe for more or fewer people; the stored recipe does not change.
+    val baseServings = recipe.servings
+    var shownServings by rememberSaveable(baseServings) { mutableIntStateOf(baseServings ?: 1) }
+    val scale = if (baseServings == null) 1.0 else shownServings.toDouble() / baseServings
 
     LazyColumn(
         modifier = Modifier
@@ -273,8 +287,23 @@ private fun RecipeContent(
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(recipe.title, style = MaterialTheme.typography.headlineMedium)
+                recipeFacts(recipe, withServings = false)?.let { facts ->
+                    Text(
+                        text = facts,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (uiState.categoryName != null) {
                     AssistChip(onClick = {}, label = { Text(uiState.categoryName) })
+                }
+                if (recipe.steps.isNotEmpty()) {
+                    Button(
+                        onClick = { onStartCooking(shownServings.takeIf { baseServings != null }) },
+                        modifier = Modifier.padding(top = 8.dp),
+                    ) {
+                        Text(stringResource(R.string.start_cooking))
+                    }
                 }
             }
         }
@@ -286,9 +315,12 @@ private fun RecipeContent(
                     progress = "${recipe.ingredients.count { it.checked }}/${recipe.ingredients.size}",
                 )
             }
+            if (baseServings != null) {
+                item { ServingsStepper(servings = shownServings, onChange = { shownServings = it }) }
+            }
             items(recipe.ingredients, key = { it.id }) { ingredient ->
                 CheckRow(
-                    text = ingredient.text,
+                    text = scaleIngredient(ingredient.text, scale),
                     checked = ingredient.checked,
                     onCheckedChange = { onIngredientChecked(ingredient.id, it) },
                 )
@@ -390,32 +422,32 @@ private fun SectionHeader(title: String, progress: String? = null) {
 }
 
 @Composable
-private fun CheckRow(text: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            // Green for "have it" and "done", so progress reads at a glance.
-            colors = CheckboxDefaults.colors(
-                checkedColor = MaterialTheme.colorScheme.secondary,
-                checkmarkColor = MaterialTheme.colorScheme.onSecondary,
-            ),
+private fun ServingsStepper(servings: Int, onChange: (Int) -> Unit) {
+    Row(modifier = Modifier.padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.servings), style = MaterialTheme.typography.bodyLarge)
+        AppIconButton(
+            icon = R.drawable.ic_remove,
+            contentDescription = stringResource(R.string.fewer_servings),
+            onClick = { onChange(servings - 1) },
+            enabled = servings > 1,
         )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            textDecoration = if (checked) TextDecoration.LineThrough else null,
-            color = if (checked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(end = 16.dp),
+        Text(servings.toString(), style = MaterialTheme.typography.titleMedium)
+        AppIconButton(
+            icon = R.drawable.ic_add,
+            contentDescription = stringResource(R.string.more_servings),
+            onClick = { onChange(servings + 1) },
+            enabled = servings < 99,
         )
     }
 }
+
+/** Servings and times on one line, or null when the recipe has none of them. */
+@Composable
+private fun recipeFacts(recipe: Recipe, withServings: Boolean): String? = listOfNotNull(
+    recipe.servings?.takeIf { withServings }?.let { stringResource(R.string.servings_count, it) },
+    recipe.prepMinutes?.let { stringResource(R.string.prep_time, it) },
+    recipe.cookMinutes?.let { stringResource(R.string.cook_time, it) },
+).joinToString(" · ").ifEmpty { null }
 
 @Composable
 private fun StepRow(number: Int, step: Step, onDoneChange: (Boolean) -> Unit) {

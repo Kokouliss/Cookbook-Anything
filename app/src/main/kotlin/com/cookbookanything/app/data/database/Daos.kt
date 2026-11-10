@@ -2,6 +2,7 @@ package com.cookbookanything.app.data.database
 
 import androidx.room3.Dao
 import androidx.room3.Insert
+import androidx.room3.OnConflictStrategy
 import androidx.room3.Query
 import androidx.room3.Transaction
 import androidx.room3.Upsert
@@ -14,7 +15,8 @@ abstract class RecipeDao {
         SELECT r.id, r.title, r.categoryId,
             (SELECT p.fileName FROM photos p
              WHERE p.recipeId = r.id AND p.stepId IS NULL
-             ORDER BY p.position LIMIT 1) AS coverPhoto
+             ORDER BY p.position LIMIT 1) AS coverPhoto,
+            (SELECT group_concat(i.text, char(10)) FROM ingredients i WHERE i.recipeId = r.id) AS ingredientLines
         FROM recipes r
         ORDER BY r.updatedAt DESC
         """,
@@ -31,6 +33,13 @@ abstract class RecipeDao {
     @Transaction
     @Query("SELECT * FROM recipes WHERE id = :id")
     abstract suspend fun getRecipe(id: String): RecipeWithDetails?
+
+    @Transaction
+    @Query("SELECT * FROM recipes")
+    abstract suspend fun getAllRecipes(): List<RecipeWithDetails>
+
+    @Query("SELECT id FROM recipes")
+    abstract suspend fun allRecipeIds(): List<String>
 
     @Query("SELECT fileName FROM photos")
     abstract suspend fun allPhotoNames(): List<String>
@@ -97,6 +106,22 @@ abstract class RecipeDao {
     @Insert
     abstract suspend fun insertComment(comment: CommentEntity)
 
+    @Insert
+    abstract suspend fun insertComments(comments: List<CommentEntity>)
+
+    /** Stores a recipe from a backup, which also carries its comments. */
+    @Transaction
+    open suspend fun restoreRecipe(
+        recipe: RecipeEntity,
+        ingredients: List<IngredientEntity>,
+        steps: List<StepEntity>,
+        photos: List<PhotoEntity>,
+        comments: List<CommentEntity>,
+    ) {
+        saveRecipe(recipe, ingredients, steps, photos)
+        insertComments(comments)
+    }
+
     @Query("DELETE FROM comments WHERE id = :id")
     abstract suspend fun deleteComment(id: String)
 }
@@ -106,8 +131,14 @@ interface CategoryDao {
     @Query("SELECT * FROM categories")
     fun observeCategories(): Flow<List<CategoryEntity>>
 
+    @Query("SELECT * FROM categories")
+    suspend fun getAll(): List<CategoryEntity>
+
     @Upsert
     suspend fun upsert(category: CategoryEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMissing(categories: List<CategoryEntity>)
 
     @Query("DELETE FROM categories WHERE id = :id")
     suspend fun delete(id: String)
@@ -124,11 +155,33 @@ interface ScheduleDao {
     )
     fun observeSchedule(): Flow<List<ScheduledRecipeRow>>
 
+    // A recipe planned more than once is listed once, at its earliest date.
+    @Query(
+        """
+        SELECT i.id AS ingredientId, i.text, i.checked, r.id AS recipeId, r.title AS recipeTitle
+        FROM ingredients i
+        JOIN recipes r ON r.id = i.recipeId
+        JOIN (
+            SELECT recipeId, MIN(scheduledAt) AS firstAt FROM schedules
+            WHERE scheduledAt >= :from GROUP BY recipeId
+        ) s ON s.recipeId = r.id
+        ORDER BY s.firstAt, r.id, i.position
+        """,
+    )
+    fun observeShoppingList(from: Long): Flow<List<ShoppingItemRow>>
+
+    @Query("SELECT * FROM schedules")
+    suspend fun getAll(): List<ScheduleEntity>
+
     @Query("SELECT id FROM schedules WHERE recipeId = :recipeId")
     suspend fun idsForRecipe(recipeId: String): List<String>
 
     @Insert
     suspend fun insert(schedule: ScheduleEntity)
+
+    /** Returns -1 when a calendar entry with that id already exists. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMissing(schedule: ScheduleEntity): Long
 
     @Query("DELETE FROM schedules WHERE id = :id")
     suspend fun delete(id: String)

@@ -6,12 +6,27 @@ import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.model.ScheduledRecipe
+import com.cookbookanything.core.domain.model.ShoppingItem
 import com.cookbookanything.core.domain.model.Step
 
 fun CategoryEntity.toModel() = Category(id = id, name = name)
 
 fun RecipeSummaryRow.toModel() =
-    RecipeSummary(id = id, title = title, categoryId = categoryId, coverPhoto = coverPhoto)
+    RecipeSummary(
+        id = id,
+        title = title,
+        categoryId = categoryId,
+        coverPhoto = coverPhoto,
+        ingredients = ingredientLines.orEmpty(),
+    )
+
+fun ShoppingItemRow.toModel() = ShoppingItem(
+    ingredientId = ingredientId,
+    text = text,
+    checked = checked,
+    recipeId = recipeId,
+    recipeTitle = recipeTitle,
+)
 
 fun ScheduledRecipeRow.toModel() =
     ScheduledRecipe(id = id, recipeId = recipeId, recipeTitle = recipeTitle, scheduledAt = scheduledAt)
@@ -22,6 +37,9 @@ fun RecipeWithDetails.toModel(): Recipe {
         id = recipe.id,
         title = recipe.title,
         categoryId = recipe.categoryId,
+        servings = recipe.servings,
+        prepMinutes = recipe.prepMinutes,
+        cookMinutes = recipe.cookMinutes,
         photos = sortedPhotos.filter { it.stepId == null }.map { it.fileName },
         ingredients = ingredients.sortedBy { it.position }
             .map { Ingredient(id = it.id, text = it.text, checked = it.checked) },
@@ -46,6 +64,9 @@ fun Recipe.toEntity() = RecipeEntity(
     categoryId = categoryId,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    servings = servings,
+    prepMinutes = prepMinutes,
+    cookMinutes = cookMinutes,
 )
 
 fun Recipe.toIngredientEntities() = ingredients.mapIndexed { index, ingredient ->
@@ -70,3 +91,7 @@ fun Recipe.toPhotoEntities(): List<PhotoEntity> =
             PhotoEntity(fileName = name, recipeId = id, stepId = step.id, position = index)
         }
     }
+
+fun Recipe.toCommentEntities() = comments.map {
+    CommentEntity(id = it.id, recipeId = id, text = it.text, createdAt = it.createdAt)
+}

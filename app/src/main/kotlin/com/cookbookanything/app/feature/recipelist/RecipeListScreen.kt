@@ -19,21 +19,28 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,6 +70,7 @@ fun RecipeListRoute(
         onImportRecipe = onImportRecipe,
         onManageCategories = onManageCategories,
         onSelectCategory = viewModel::selectCategory,
+        onSearch = viewModel::search,
     )
 }
 
@@ -74,6 +82,7 @@ fun RecipeListScreen(
     onImportRecipe: (Uri) -> Unit,
     onManageCategories: () -> Unit,
     onSelectCategory: (String?) -> Unit,
+    onSearch: (String) -> Unit,
 ) {
     // Any file type: chat apps deliver recipe files as generic documents.
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -120,6 +129,7 @@ fun RecipeListScreen(
                 contentPadding = padding,
                 onOpenRecipe = onOpenRecipe,
                 onSelectCategory = onSelectCategory,
+                onSearch = onSearch,
             )
         }
     }
@@ -131,12 +141,35 @@ private fun RecipeList(
     contentPadding: PaddingValues,
     onOpenRecipe: (String) -> Unit,
     onSelectCategory: (String?) -> Unit,
+    onSearch: (String) -> Unit,
 ) {
+    // The typed text lives here so the field never lags behind fast typing; the view model only filters.
+    var query by rememberSaveable { mutableStateOf("") }
+    // After the screen is restored the view model may be new, so it is told the saved text again.
+    LaunchedEffect(query) { onSearch(query) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding),
     ) {
+        if (!uiState.cookbookIsEmpty) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text(stringResource(R.string.search_hint)) },
+                trailingIcon = if (query.isNotEmpty()) {
+                    { AppIconButton(R.drawable.ic_close, stringResource(R.string.clear_search), onClick = { query = "" }) }
+                } else {
+                    null
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+            )
+        }
         if (uiState.categories.isNotEmpty()) {
             CategoryFilter(
                 categories = uiState.categories,
@@ -153,7 +186,11 @@ private fun RecipeList(
             ) {
                 Text(
                     text = stringResource(
-                        if (uiState.cookbookIsEmpty) R.string.no_recipes_yet else R.string.no_recipes_in_category,
+                        when {
+                            uiState.cookbookIsEmpty -> R.string.no_recipes_yet
+                            query.isNotBlank() -> R.string.no_search_results
+                            else -> R.string.no_recipes_in_category
+                        },
                     ),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

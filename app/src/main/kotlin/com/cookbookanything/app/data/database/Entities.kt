@@ -33,6 +33,9 @@ data class RecipeEntity(
     val categoryId: String?,
     val createdAt: Long,
     val updatedAt: Long,
+    val servings: Int? = null,
+    val prepMinutes: Int? = null,
+    val cookMinutes: Int? = null,
 )
 
 @Entity(
@@ -145,6 +148,8 @@ data class RecipeSummaryRow(
     val title: String,
     val categoryId: String?,
     val coverPhoto: String?,
+    /** All ingredient lines joined by line breaks; null when the recipe has none. */
+    val ingredientLines: String?,
 )
 
 data class ScheduledRecipeRow(
@@ -152,4 +157,12 @@ data class ScheduledRecipeRow(
     val recipeId: String,
     val recipeTitle: String,
     val scheduledAt: Long,
+)
+
+data class ShoppingItemRow(
+    val ingredientId: String,
+    val text: String,
+    val checked: Boolean,
+    val recipeId: String,
+    val recipeTitle: String,
 )
