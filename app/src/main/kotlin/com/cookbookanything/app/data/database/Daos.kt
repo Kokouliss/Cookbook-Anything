@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 abstract class RecipeDao {
     @Query(
         """
-        SELECT r.id, r.title, r.categoryId, r.servings, r.prepMinutes, r.cookMinutes, r.waitMinutes, r.rating, r.favorite,
+        SELECT r.id, r.title, r.categoryId, r.servings, r.prepMinutes, r.cookMinutes, r.waitMinutes, r.rating, r.favorite, r.source,
             (SELECT p.fileName FROM photos p
              WHERE p.recipeId = r.id AND p.stepId IS NULL
              ORDER BY p.position LIMIT 1) AS coverPhoto,

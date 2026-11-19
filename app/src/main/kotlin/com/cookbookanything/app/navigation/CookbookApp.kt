@@ -145,6 +145,8 @@ fun CookbookApp(viewModel: MainViewModel) {
                         onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
                         onImportRecipe = viewModel::importFile,
                         onManageCategories = { backStack.add(CategoriesKey) },
+                        onOpenCalendar = { backStack.add(CalendarKey) },
+                        onOpenShoppingList = { backStack.add(ShoppingListKey) },
                         backupOverdue = uiState.backup.overdue,
                         onOpenSettings = { backStack.add(SettingsKey) },
                     )

@@ -62,12 +62,17 @@ import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.Doodle
 import com.cookbookanything.app.ui.components.DoodleImage
 import com.cookbookanything.app.ui.components.EmptyState
+import com.cookbookanything.app.ui.components.PageCard
+import com.cookbookanything.app.ui.components.StruckText
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.pressScale
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
+import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.sort.RecipeSort
+import com.cookbookanything.app.widget.whenLabel
+import java.time.LocalTime
 
 @Composable
 fun RecipeListRoute(
@@ -75,6 +80,8 @@ fun RecipeListRoute(
     onOpenRecipe: (String) -> Unit,
     onImportRecipe: (Uri) -> Unit,
     onManageCategories: () -> Unit,
+    onOpenCalendar: () -> Unit,
+    onOpenShoppingList: () -> Unit,
     backupOverdue: Boolean,
     onOpenSettings: () -> Unit,
     viewModel: RecipeListViewModel = hiltViewModel(),
@@ -86,6 +93,8 @@ fun RecipeListRoute(
         onOpenRecipe = onOpenRecipe,
         onImportRecipe = onImportRecipe,
         onManageCategories = onManageCategories,
+        onOpenCalendar = onOpenCalendar,
+        onOpenShoppingList = onOpenShoppingList,
         onSelectCategory = viewModel::selectCategory,
         onSearch = viewModel::search,
         onSort = viewModel::setSort,
@@ -102,6 +111,8 @@ fun RecipeListScreen(
     onOpenRecipe: (String) -> Unit,
     onImportRecipe: (Uri) -> Unit,
     onManageCategories: () -> Unit,
+    onOpenCalendar: () -> Unit,
+    onOpenShoppingList: () -> Unit,
     onSelectCategory: (String?) -> Unit,
     onSearch: (String) -> Unit,
     onSort: (RecipeSort) -> Unit,
@@ -161,6 +172,8 @@ fun RecipeListScreen(
                 onSelectCategory = onSelectCategory,
                 onSearch = onSearch,
                 onOnlyFavorites = onOnlyFavorites,
+                onOpenCalendar = onOpenCalendar,
+                onOpenShoppingList = onOpenShoppingList,
                 backupOverdue = backupOverdue,
                 onOpenSettings = onOpenSettings,
             )
@@ -203,6 +216,8 @@ private fun RecipeList(
     onSelectCategory: (String?) -> Unit,
     onSearch: (String) -> Unit,
     onOnlyFavorites: (Boolean) -> Unit,
+    onOpenCalendar: () -> Unit,
+    onOpenShoppingList: () -> Unit,
     backupOverdue: Boolean,
     onOpenSettings: () -> Unit,
 ) {
@@ -235,6 +250,8 @@ private fun RecipeList(
             }
         }
         if (!uiState.cookbookIsEmpty) {
+            HomeStrip(next = uiState.next, onOpenRecipe = onOpenRecipe, onOpenCalendar = onOpenCalendar, onOpenShoppingList = onOpenShoppingList)
+            GettingStartedCard(uiState.gettingStarted)
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -305,6 +322,75 @@ private fun RecipeList(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** A greeting for the time of day and tonight's plan, with the two things a cook does next. */
+@Composable
+private fun HomeStrip(next: ScheduledRecipe?, onOpenRecipe: (String) -> Unit, onOpenCalendar: () -> Unit, onOpenShoppingList: () -> Unit) {
+    val context = LocalContext.current
+    val hour = LocalTime.now().hour
+    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
+        Text(
+            text = stringResource(if (hour < 12) R.string.greeting_morning else if (hour < 18) R.string.greeting_afternoon else R.string.greeting_evening),
+            style = MaterialTheme.typography.headlineSmall,
+        )
+        Text(
+            text = if (next == null) stringResource(R.string.nothing_planned_next) else whenLabel(context, next.scheduledAt) + ": " + next.recipeTitle,
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (next == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (next != null) Modifier.clickable { onOpenRecipe(next.recipeId) } else Modifier)
+                .padding(vertical = 4.dp),
+        )
+        Row {
+            TextButton(onClick = onOpenCalendar) { Text(stringResource(R.string.plan_a_meal)) }
+            TextButton(onClick = onOpenShoppingList) { Text(stringResource(R.string.shopping_list)) }
+        }
+    }
+}
+
+/** "Getting started, 2 of 5 done": the first things to try, until all are done or the cook hides it. */
+@Composable
+private fun GettingStartedCard(started: GettingStarted) {
+    val context = LocalContext.current
+    var hidden by remember { mutableStateOf(GettingStartedPreferences.isHidden(context)) }
+    if (hidden || started.allDone) return
+    val labels = listOf(R.string.started_add, R.string.started_import, R.string.started_plan, R.string.started_cook, R.string.started_favorite)
+    PageCard(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.getting_started), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text(
+                    text = stringResource(R.string.started_progress, started.done, started.steps.size),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            started.steps.forEachIndexed { index, done ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                    Text(if (done) "✓" else "○", color = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    StruckText(
+                        text = stringResource(labels[index]),
+                        struck = done,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+            TextButton(
+                onClick = {
+                    GettingStartedPreferences.hide(context)
+                    hidden = true
+                },
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringResource(R.string.hide))
             }
         }
     }

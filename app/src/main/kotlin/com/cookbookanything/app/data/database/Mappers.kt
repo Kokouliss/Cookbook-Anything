@@ -25,6 +25,7 @@ fun RecipeSummaryRow.toModel() =
         waitMinutes = waitMinutes,
         rating = rating,
         favorite = favorite,
+        source = source,
         timesCooked = timesCooked,
         lastCookedAt = lastCookedAt,
     )

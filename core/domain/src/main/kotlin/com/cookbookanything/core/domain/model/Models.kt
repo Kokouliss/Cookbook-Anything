@@ -81,6 +81,7 @@ data class RecipeSummary(
     val waitMinutes: Int? = null,
     val rating: Int? = null,
     val favorite: Boolean = false,
+    val source: String? = null,
     val timesCooked: Int = 0,
     val lastCookedAt: Long? = null,
 )

@@ -187,6 +187,7 @@ data class RecipeSummaryRow(
     val waitMinutes: Int?,
     val rating: Int?,
     val favorite: Boolean,
+    val source: String?,
     val timesCooked: Int,
     val lastCookedAt: Long?,
 )
