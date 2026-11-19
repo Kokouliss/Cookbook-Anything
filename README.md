@@ -18,6 +18,8 @@ A personal cookbook app for Android. Keep your own recipes with ingredients, ste
 - A backup of the whole cookbook in one file, and restore from it
 - Automatic weekly backups into a folder you pick (phone storage or a cloud drive), with "Last backup" in Settings and a line on the recipe list when one is overdue
 - Paste a whole recipe: the text is split into name, servings, ingredients and steps. Text shared from another app opens as a new recipe the same way
+- Paste or share a link: a recipe site's page gives the exact recipe (name, servings, times, ingredients, steps, picture); an Instagram, TikTok or Facebook post or reel gives its caption and picture or video thumbnail, split like pasted text
+- Read a recipe from a photo of a page, in Greek or English (Google Cloud Vision, see below); offline, the photo waits and is read when the phone is back online
 - Ingredients and steps are dragged into order by their handle, and swiped away with Undo
 - Cooking mode shows one step per card: the ingredients that step uses, a timer button when the step says "20 min", swipe between cards
 - "Cooked 3 times, last on 12 Nov" on each recipe, and sorting by last edited, A to Z, cooked recently or not for a while
@@ -32,7 +34,7 @@ A personal cookbook app for Android. Keep your own recipes with ingredients, ste
 
 Everything is stored on the phone and works offline. Still to come: cloud sync of the recipes to the account, and the one-time lifetime purchase through Google Play.
 
-Not built on purpose: reading a recipe from a photo. The on-device text recognition (ML Kit) has no Greek model, so it would only work for English recipes.
+Reading a recipe from a photo uses Google Cloud Vision, because the on-device text recognition (ML Kit) has no Greek model. See "Recipe from a photo" below for the one switch it needs.
 
 ## Trying it on a phone
 
@@ -63,12 +65,21 @@ To get sign-in into the builds:
 
 Deleting the account from Settings deletes the Firebase user. Nothing else is stored in the cloud yet.
 
+### Recipe from a photo (Cloud Vision)
+
+The "Read a recipe from a photo" button in the editor sends the photo to Google Cloud Vision, which reads Greek and English, printed and handwritten, and fills the form like pasted text. It uses the same Firebase config as sign-in, so it only appears in builds that have `google-services.json`. Offline, the photo is kept and read as soon as the phone is back online; it then becomes a new recipe with the photo attached, announced by a notification.
+
+1. Open the [Cloud Vision API page](https://console.cloud.google.com/apis/library/vision.googleapis.com), pick the Firebase project at the top, and press **Enable**. The project is on the Blaze plan, so billing is already in place: the first 1,000 photos a month are free, then about 1.50 USD per 1,000.
+2. Recommended, so nobody else can run up the bill with the key from the app: in [Credentials](https://console.cloud.google.com/apis/credentials), open the **Android key (auto created by Firebase)**, set **Application restrictions** to Android apps with the package `com.cookbookanything.app` and the SHA-1 of each signing key (the debug key from `app/debug.keystore` and later the release keys), and under **API restrictions** allow Cloud Vision API together with the Firebase APIs already listed. The app sends the package name and certificate with every call, so the restriction works.
+
 ### Known limits
 
 - The cooking timer rings through a notification that Android may delay by a few minutes on a sleeping phone; the countdown on the screen is exact.
 - The morning reminder (09:00) and the weekly backup run through WorkManager, which can shift them by up to a few hours to save battery.
 - The widget shows the next planned recipe from today on; it updates when recipes or the calendar change.
 - The sort order on the recipe list is not remembered when the app restarts.
+- Reading a photo needs the internet and takes a few seconds; a blurry or dark photo comes back as "No text was found".
+- Links: Instagram, TikTok and Facebook sometimes answer with a login page instead of the post, which comes back as "No recipe was found"; copy the caption and paste it then. The caption is read as text, so a recipe written in prose rather than lines may land in the wrong place and need a tidy.
 
 ## How the code is laid out
 
@@ -81,6 +92,7 @@ Deleting the account from Settings deletes the Firebase user. Nothing else is st
 | `app/.../reminders` | Calendar notifications, the morning reminder and the cooking timer |
 | `app/.../widget` | The "Tonight" home-screen widget (Glance) |
 | `app/.../data/account` | Email and password accounts (Firebase Auth) |
+| `app/.../data/text` | Reading a recipe off a photo (Cloud Vision) or a web page |
 | `app/src/main/res/values` and `values-el` | English and Greek texts |
 
 Stack: Kotlin, Jetpack Compose with Material 3, Hilt, Room 3, Navigation 3, WorkManager, Coil, Glance, Firebase Auth.

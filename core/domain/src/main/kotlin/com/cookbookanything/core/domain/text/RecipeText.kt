@@ -8,6 +8,10 @@ data class ParsedRecipe(
     val servings: Int? = null,
     val ingredients: List<String> = emptyList(),
     val steps: List<String> = emptyList(),
+    val prepMinutes: Int? = null,
+    val cookMinutes: Int? = null,
+    /** The picture of the dish on a web page, to download as the recipe photo. */
+    val imageUrl: String? = null,
 ) {
     val isEmpty: Boolean get() = title == null && ingredients.isEmpty() && steps.isEmpty()
 }
