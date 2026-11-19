@@ -261,4 +261,23 @@
         <item>Optional ingredients: mark them in the editor and the shopping list skips them.</item>
         <item>A recipe read from a link or a photo remembers where it came from.</item>
     </string-array>
+    <!-- Home strip and getting started -->
+    <string name="greeting_morning">Good morning</string>
+    <string name="greeting_afternoon">Good afternoon</string>
+    <string name="greeting_evening">Good evening</string>
+    <string name="nothing_planned_next">Nothing planned yet. What are you cooking?</string>
+    <string name="plan_a_meal">Plan a meal</string>
+    <string name="getting_started">Getting started</string>
+    <string name="started_progress">%1$d of %2$d done</string>
+    <string name="started_add">Add your first recipe</string>
+    <string name="started_import">Import a recipe from a link or a photo</string>
+    <string name="started_plan">Plan a meal in the calendar</string>
+    <string name="started_cook">Cook a recipe in cooking mode</string>
+    <string name="started_favorite">Mark a favourite with the heart</string>
+    <string name="hide">Hide</string>
+
+    <!-- Scale by one ingredient -->
+    <string name="scale_by_ingredient">Scale by an ingredient</string>
+    <string name="scale_have">I have</string>
+    <string name="scale_apply">Scale</string>
 </resources>

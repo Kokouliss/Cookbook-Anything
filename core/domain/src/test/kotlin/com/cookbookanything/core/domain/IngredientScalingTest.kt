@@ -1,5 +1,6 @@
 package com.cookbookanything.core.domain
 
+import com.cookbookanything.core.domain.scaling.ingredientAmount
 import com.cookbookanything.core.domain.scaling.scaleIngredient
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,5 +37,14 @@ class IngredientScalingTest {
         assertEquals("a pinch of 2 spices", scaleIngredient("a pinch of 2 spices", 3.0))
         assertEquals("1/0 cup", scaleIngredient("1/0 cup", 2.0))
         assertEquals("2 eggs", scaleIngredient("2 eggs", 1.0))
+    }
+
+    @Test
+    fun `the amount a line starts with is read as a number`() {
+        assertEquals(1.5, ingredientAmount("1½ cups flour"))
+        assertEquals(0.5, ingredientAmount("1/2 κιλό κιμάς"))
+        assertEquals(2.0, ingredientAmount("2-3 cloves garlic"))
+        assertEquals(0.25, ingredientAmount("0,25 l milk"))
+        assertEquals(null, ingredientAmount("salt"))
     }
 }

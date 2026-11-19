@@ -83,23 +83,24 @@ class TonightWidget : GlanceAppWidget() {
         }
     }
 
-    private fun whenLabel(context: Context, at: Long): String {
-        val zone = ZoneId.systemDefault()
-        val locale = context.resources.configuration.locales[0]
-        val dateTime = Instant.ofEpochMilli(at).atZone(zone)
-        val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).format(dateTime)
-        val today = LocalDate.now(zone)
-        return when (dateTime.toLocalDate()) {
-            today -> context.getString(R.string.widget_today, time)
-            today.plusDays(1) -> context.getString(R.string.widget_tomorrow, time)
-            else -> DateTimeFormatter.ofPattern("EEEE", locale).format(dateTime).replaceFirstChar { it.titlecase(locale) } + ", " + time
-        }
-    }
-
     companion object {
         suspend fun refresh(context: Context) {
             runCatching { TonightWidget().updateAll(context) }
         }
+    }
+}
+
+/** "Today, 19:00", "Tomorrow, 12:30" or "Saturday, 13:00": shared by the widget and the home strip. */
+internal fun whenLabel(context: Context, at: Long): String {
+    val zone = ZoneId.systemDefault()
+    val locale = context.resources.configuration.locales[0]
+    val dateTime = Instant.ofEpochMilli(at).atZone(zone)
+    val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).format(dateTime)
+    val today = LocalDate.now(zone)
+    return when (dateTime.toLocalDate()) {
+        today -> context.getString(R.string.widget_today, time)
+        today.plusDays(1) -> context.getString(R.string.widget_tomorrow, time)
+        else -> DateTimeFormatter.ofPattern("EEEE", locale).format(dateTime).replaceFirstChar { it.titlecase(locale) } + ", " + time
     }
 }
 

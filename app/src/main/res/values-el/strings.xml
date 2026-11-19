@@ -256,4 +256,23 @@
         <item>Προαιρετικά υλικά: σημείωσέ τα στην επεξεργασία και η λίστα αγορών τα παραλείπει.</item>
         <item>Μια συνταγή από σύνδεσμο ή φωτογραφία θυμάται από πού ήρθε.</item>
     </string-array>
+    <!-- Home strip and getting started -->
+    <string name="greeting_morning">Καλημέρα</string>
+    <string name="greeting_afternoon">Καλό μεσημέρι</string>
+    <string name="greeting_evening">Καλησπέρα</string>
+    <string name="nothing_planned_next">Δεν έχεις προγραμματίσει κάτι. Τι θα μαγειρέψεις;</string>
+    <string name="plan_a_meal">Προγραμμάτισε ένα γεύμα</string>
+    <string name="getting_started">Ξεκινώντας</string>
+    <string name="started_progress">%1$d από %2$d έτοιμα</string>
+    <string name="started_add">Πρόσθεσε την πρώτη σου συνταγή</string>
+    <string name="started_import">Εισαγωγή συνταγής από σύνδεσμο ή φωτογραφία</string>
+    <string name="started_plan">Προγραμμάτισε ένα γεύμα στο ημερολόγιο</string>
+    <string name="started_cook">Μαγείρεψε μια συνταγή στη λειτουργία μαγειρέματος</string>
+    <string name="started_favorite">Σημείωσε ένα αγαπημένο με την καρδιά</string>
+    <string name="hide">Απόκρυψη</string>
+
+    <!-- Scale by one ingredient -->
+    <string name="scale_by_ingredient">Κλιμάκωση από ένα υλικό</string>
+    <string name="scale_have">Έχω</string>
+    <string name="scale_apply">Κλιμάκωση</string>
 </resources>

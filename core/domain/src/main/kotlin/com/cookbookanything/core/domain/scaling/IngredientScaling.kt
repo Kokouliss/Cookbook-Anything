@@ -30,9 +30,12 @@ fun scaleIngredient(text: String, factor: Double): String {
     }
 }
 
-private fun scaleAmount(amount: String, factor: Double): String? {
+/** The amount an ingredient line starts with, as a number: "1½ cups" is 1.5, "2-3 cloves" is 2. Null when it has none. */
+fun ingredientAmount(text: String): Double? = leadingAmount.find(text)?.let { parseAmount(it.groupValues[2]) }
+
+private fun parseAmount(amount: String): Double? {
     val fraction = amount.lastOrNull()?.let(vulgarFractions::get)
-    val value = if (fraction != null) {
+    return if (fraction != null) {
         amount.dropLast(1).trim().toDoubleOrNull().let { it ?: 0.0 } + fraction
     } else if ('/' in amount) {
         val parts = amount.trim().split(Regex("\\s+"))
@@ -42,6 +45,11 @@ private fun scaleAmount(amount: String, factor: Double): String? {
     } else {
         amount.replace(',', '.').toDouble()
     }
+}
+
+private fun scaleAmount(amount: String, factor: Double): String? {
+    val fraction = amount.lastOrNull()?.let(vulgarFractions::get)
+    val value = parseAmount(amount) ?: return null
     val rounded = (value * factor * 100).roundToLong() / 100.0
     val whole = rounded.toLong()
     if (fraction != null) {

@@ -29,6 +29,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +43,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -48,6 +53,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,15 +80,18 @@ import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Comment
+import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.model.Step
+import com.cookbookanything.core.domain.scaling.ingredientAmount
 import com.cookbookanything.core.domain.scaling.scaleIngredient
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun RecipeDetailRoute(
@@ -289,10 +299,13 @@ private fun RecipeContent(
     val context = LocalContext.current
     var pickingDateTime by rememberSaveable { mutableStateOf(false) }
     val requestNotificationPermission = rememberNotificationPermissionRequest()
-    // The cook can view the recipe for more or fewer people; the stored recipe does not change.
+    // The cook can view the recipe for more or fewer people, or for the amount of one ingredient they
+    // have; one factor scales every amount and the stored recipe does not change.
     val baseServings = recipe.servings
-    var shownServings by rememberSaveable(baseServings) { mutableIntStateOf(baseServings ?: 1) }
-    val scale = if (baseServings == null) 1.0 else shownServings.toDouble() / baseServings
+    var scale by rememberSaveable(baseServings) { mutableDoubleStateOf(1.0) }
+    val shownServings = baseServings?.let { (it * scale).roundToInt().coerceAtLeast(1) }
+    var scalingByIngredient by rememberSaveable { mutableStateOf(false) }
+    val canScaleByIngredient = recipe.ingredients.any { ingredientAmount(it.text) != null }
 
     // The page of a printed cookbook: the picture, the name in the book serif, the facts between two
     // hairlines, then the sections, each with its own rule.
@@ -347,7 +360,8 @@ private fun RecipeContent(
                 }
                 if (recipe.steps.isNotEmpty()) {
                     Button(
-                        onClick = { onStartCooking(shownServings.takeIf { baseServings != null }) },
+                        // shortcut: cooking mode scales by whole servings, so an ingredient-based factor is rounded to the nearest serving
+                        onClick = { onStartCooking(shownServings) },
                         modifier = Modifier.padding(top = 8.dp),
                     ) {
                         Text(stringResource(R.string.start_cooking))
@@ -363,8 +377,19 @@ private fun RecipeContent(
                     progress = "${recipe.ingredients.count { it.checked }}/${recipe.ingredients.size}",
                 )
             }
-            if (baseServings != null) {
-                item { ServingsStepper(servings = shownServings, onChange = { shownServings = it }) }
+            if (baseServings != null || canScaleByIngredient) {
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (baseServings != null && shownServings != null) {
+                            ServingsStepper(servings = shownServings, onChange = { scale = it.toDouble() / baseServings })
+                        }
+                        if (canScaleByIngredient) {
+                            TextButton(onClick = { scalingByIngredient = true }, modifier = Modifier.padding(start = 8.dp)) {
+                                Text(stringResource(R.string.scale_by_ingredient))
+                            }
+                        }
+                    }
+                }
             }
             items(recipe.ingredients, key = { it.id }) { ingredient ->
                 CheckRow(
@@ -418,6 +443,17 @@ private fun RecipeContent(
             CommentRow(comment = comment, locale = locale, onDelete = { onDeleteComment(comment.id) })
         }
         item { CommentInput(onAddComment = onAddComment) }
+    }
+
+    if (scalingByIngredient) {
+        ScaleByIngredientDialog(
+            ingredients = recipe.ingredients.filter { ingredientAmount(it.text) != null },
+            onConfirm = { factor ->
+                scale = factor
+                scalingByIngredient = false
+            },
+            onDismiss = { scalingByIngredient = false },
+        )
     }
 
     if (pickingDateTime) {
@@ -476,6 +512,54 @@ private fun SectionHeader(title: String, progress: String? = null) {
         }
         HorizontalDivider()
     }
+}
+
+/**
+ * "I have 300 g of flour": pick the ingredient, type the amount at hand, and every amount in the
+ * recipe is scaled by the same factor.
+ */
+@Composable
+private fun ScaleByIngredientDialog(ingredients: List<Ingredient>, onConfirm: (Double) -> Unit, onDismiss: () -> Unit) {
+    var selected by rememberSaveable { mutableIntStateOf(0) }
+    var have by rememberSaveable { mutableStateOf("") }
+    val chosen = ingredients.getOrNull(selected)
+    val original = chosen?.let { ingredientAmount(it.text) }
+    val factor = have.replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 && original != null && original > 0 }?.let { it / original!! }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.scale_by_ingredient)) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                ingredients.forEachIndexed { index, ingredient ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selected = index },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = index == selected, onClick = { selected = index })
+                        Text(ingredient.text, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                OutlinedTextField(
+                    value = have,
+                    onValueChange = { have = it },
+                    label = { Text(stringResource(R.string.scale_have)) },
+                    // The unit is whatever the line uses: "300" against "250 g flour" means 300 g.
+                    placeholder = { chosen?.let { Text(it.text) } },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { factor?.let(onConfirm) }, enabled = factor != null) { Text(stringResource(R.string.scale_apply)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 @Composable
