@@ -46,6 +46,8 @@ data class Recipe(
     val ingredients: List<Ingredient> = emptyList(),
     val steps: List<Step> = emptyList(),
     val comments: List<Comment> = emptyList(),
+    /** When cooking mode was finished for this recipe, newest last. */
+    val cookedAt: List<Long> = emptyList(),
     val createdAt: Long = 0,
     val updatedAt: Long = 0,
 )
@@ -57,6 +59,11 @@ data class RecipeSummary(
     val coverPhoto: String?,
     /** Every ingredient line of the recipe, for search. */
     val ingredients: String = "",
+    val servings: Int? = null,
+    val prepMinutes: Int? = null,
+    val cookMinutes: Int? = null,
+    val timesCooked: Int = 0,
+    val lastCookedAt: Long? = null,
 )
 
 data class ScheduledRecipe(

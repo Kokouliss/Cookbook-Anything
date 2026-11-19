@@ -13,6 +13,7 @@ import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.Step
 import com.cookbookanything.core.domain.repository.CategoryRepository
 import com.cookbookanything.core.domain.repository.RecipeRepository
+import com.cookbookanything.core.domain.text.parseRecipeText
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -42,7 +43,8 @@ data class RecipeEditUiState(
 
 @HiltViewModel(assistedFactory = RecipeEditViewModel.Factory::class)
 class RecipeEditViewModel @AssistedInject constructor(
-    @Assisted private val recipeId: String?,
+    @Assisted("recipeId") private val recipeId: String?,
+    @Assisted("pastedText") pastedText: String?,
     private val recipeRepository: RecipeRepository,
     private val categoryRepository: CategoryRepository,
     private val photoStore: PhotoStore,
@@ -75,6 +77,7 @@ class RecipeEditViewModel @AssistedInject constructor(
                 ingredients = recipe?.ingredients.orEmpty().withTrailingBlank(),
                 steps = recipe?.steps.orEmpty().withTrailingBlankStep(),
             )
+            if (pastedText != null) applyText(pastedText)
         }
         viewModelScope.launch {
             categoryRepository.observeCategories().collect { uiState = uiState.copy(categories = it) }
@@ -106,12 +109,51 @@ class RecipeEditViewModel @AssistedInject constructor(
         copy(ingredients = ingredients.filterNot { it.id == id }.withTrailingBlank())
     }
 
+    /** Puts a removed ingredient back where it was, for Undo. */
+    fun restoreIngredient(index: Int, ingredient: Ingredient) = edit {
+        copy(ingredients = ingredients.toMutableList().apply { add(index.coerceIn(0, size), ingredient) }.withTrailingBlank())
+    }
+
+    fun moveIngredient(from: Int, to: Int) = edit {
+        // The spare blank row goes back to the end whatever was dragged past it.
+        copy(ingredients = ingredients.toMutableList().apply { add(to, removeAt(from)) }.filterNot { it.text.isBlank() }.withTrailingBlank())
+    }
+
     fun setStepText(id: String, text: String) = edit {
         copy(steps = steps.map { if (it.id == id) it.copy(text = text) else it }.withTrailingBlankStep())
     }
 
     fun removeStep(id: String) = edit {
         copy(steps = steps.filterNot { it.id == id }.withTrailingBlankStep())
+    }
+
+    fun restoreStep(index: Int, step: Step) = edit {
+        copy(steps = steps.toMutableList().apply { add(index.coerceIn(0, size), step) }.withTrailingBlankStep())
+    }
+
+    fun moveStep(from: Int, to: Int) = edit {
+        copy(steps = steps.toMutableList().apply { add(to, removeAt(from)) }.filterNot { it.isBlank() }.withTrailingBlankStep())
+    }
+
+    /**
+     * Fills the form from pasted or shared text. The name and servings are only taken when the form
+     * has none yet; ingredients and steps are added after the ones already typed. Returns how many
+     * ingredients and steps were added.
+     */
+    fun applyText(text: String): Pair<Int, Int> {
+        val parsed = parseRecipeText(text)
+        if (parsed.isEmpty) return 0 to 0
+        edit {
+            copy(
+                title = title.ifBlank { parsed.title ?: title },
+                titleMissing = false,
+                servings = servings.ifBlank { parsed.servings?.toString() ?: servings },
+                ingredients = (ingredients.filterNot { it.text.isBlank() } + parsed.ingredients.map { Ingredient(id = newId(), text = it) })
+                    .withTrailingBlank(),
+                steps = (steps.filterNot { it.isBlank() } + parsed.steps.map { Step(id = newId(), text = it) }).withTrailingBlankStep(),
+            )
+        }
+        return parsed.ingredients.size to parsed.steps.size
     }
 
     /** Adds picked photos to the step with [stepId], or to the recipe itself when it is null. */
@@ -175,7 +217,7 @@ class RecipeEditViewModel @AssistedInject constructor(
 
     @AssistedFactory
     interface Factory {
-        fun create(recipeId: String?): RecipeEditViewModel
+        fun create(@Assisted("recipeId") recipeId: String?, @Assisted("pastedText") pastedText: String?): RecipeEditViewModel
     }
 }
 

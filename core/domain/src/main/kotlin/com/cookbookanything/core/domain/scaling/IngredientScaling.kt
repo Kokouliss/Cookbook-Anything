@@ -2,14 +2,15 @@ package com.cookbookanything.core.domain.scaling
 
 import kotlin.math.roundToLong
 
-private const val AMOUNT = """\d+\s+\d+/\d+|\d+/\d+|\d+(?:[.,]\d+)?"""
+private const val AMOUNT = """\d+\s*[½¼¾⅓⅔⅛]|[½¼¾⅓⅔⅛]|\d+\s+\d+/\d+|\d+/\d+|\d+(?:[.,]\d+)?"""
+private val vulgarFractions = mapOf('½' to 0.5, '¼' to 0.25, '¾' to 0.75, '⅓' to 1.0 / 3, '⅔' to 2.0 / 3, '⅛' to 0.125)
 private val leadingAmount = Regex("""^(\s*)($AMOUNT)""")
 private val rangeEnd = Regex("""^(\s*[-–]\s*)($AMOUNT)""")
 
 /**
  * Multiplies the amount an ingredient line starts with: "2 eggs" becomes "4 eggs", "1/2 cup" becomes
- * "1 cup" and "2-3 cloves" becomes "4-6 cloves". Lines that do not start with a number are returned
- * unchanged.
+ * "1 cup", "½ φλ." becomes "1 φλ." and "2-3 cloves" becomes "4-6 cloves". The unit after the amount
+ * ("g", "κ.σ.", "φλ.") is left as it is. Lines that do not start with a number are returned unchanged.
  */
 // shortcut: amounts later in the line ("1 can (400 g)") are not scaled, parse the whole line if that matters
 fun scaleIngredient(text: String, factor: Double): String {
@@ -30,7 +31,10 @@ fun scaleIngredient(text: String, factor: Double): String {
 }
 
 private fun scaleAmount(amount: String, factor: Double): String? {
-    val value = if ('/' in amount) {
+    val fraction = amount.lastOrNull()?.let(vulgarFractions::get)
+    val value = if (fraction != null) {
+        amount.dropLast(1).trim().toDoubleOrNull().let { it ?: 0.0 } + fraction
+    } else if ('/' in amount) {
         val parts = amount.trim().split(Regex("\\s+"))
         val (numerator, denominator) = parts.last().split('/').map(String::toDouble)
         if (denominator == 0.0) return null
@@ -39,6 +43,12 @@ private fun scaleAmount(amount: String, factor: Double): String? {
         amount.replace(',', '.').toDouble()
     }
     val rounded = (value * factor * 100).roundToLong() / 100.0
-    val text = if (rounded == rounded.toLong().toDouble()) rounded.toLong().toString() else rounded.toString()
+    val whole = rounded.toLong()
+    if (fraction != null) {
+        // Written with a fraction glyph, so the answer keeps that look when it has a neat fraction.
+        val glyph = vulgarFractions.entries.firstOrNull { ((rounded - whole) * 100).roundToLong() == (it.value * 100).roundToLong() }?.key
+        if (glyph != null) return (if (whole == 0L) "" else whole.toString()) + glyph
+    }
+    val text = if (rounded == whole.toDouble()) whole.toString() else rounded.toString()
     return if (',' in amount) text.replace('.', ',') else text
 }

@@ -3,7 +3,11 @@ package com.cookbookanything.app
 import android.app.Application
 import com.cookbookanything.app.data.database.RecipeDao
 import com.cookbookanything.app.data.photos.PhotoStore
+import com.cookbookanything.app.data.share.AutoBackupWorker
+import com.cookbookanything.app.data.share.BackupPreferences
+import com.cookbookanything.app.reminders.MorningReminderWorker
 import com.cookbookanything.app.reminders.ReminderWorker
+import com.cookbookanything.app.ui.theme.NightMode
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -15,12 +19,16 @@ import kotlinx.coroutines.launch
 class CookbookApplication : Application() {
     @Inject lateinit var recipeDao: RecipeDao
     @Inject lateinit var photoStore: PhotoStore
+    @Inject lateinit var backupPreferences: BackupPreferences
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
+        NightMode.apply(this)
         ReminderWorker.createChannel(this)
+        MorningReminderWorker.schedule(this)
+        if (backupPreferences.status.value.folder != null) AutoBackupWorker.schedule(this)
 
         // Photo files of deleted recipes and abandoned edits are cleaned up here, once per start.
         val startedAt = System.currentTimeMillis()

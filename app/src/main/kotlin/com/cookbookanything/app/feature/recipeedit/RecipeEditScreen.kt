@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -22,31 +23,39 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -63,6 +72,10 @@ import com.cookbookanything.app.ui.components.TextInputDialog
 import com.cookbookanything.app.ui.components.rememberPhotoPicker
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
+import com.cookbookanything.core.domain.model.Ingredient
+import com.cookbookanything.core.domain.model.Step
+import kotlinx.coroutines.launch
+import sh.calvin.reorderable.ReorderableColumn
 
 @Composable
 fun RecipeEditRoute(
@@ -85,8 +98,13 @@ fun RecipeEditRoute(
         onCookMinutesChange = viewModel::setCookMinutes,
         onIngredientChange = viewModel::setIngredientText,
         onRemoveIngredient = viewModel::removeIngredient,
+        onRestoreIngredient = viewModel::restoreIngredient,
+        onMoveIngredient = viewModel::moveIngredient,
         onStepChange = viewModel::setStepText,
         onRemoveStep = viewModel::removeStep,
+        onRestoreStep = viewModel::restoreStep,
+        onMoveStep = viewModel::moveStep,
+        onPasteText = viewModel::applyText,
         onAddPhotos = viewModel::addPhotos,
         onRemovePhoto = viewModel::removePhoto,
         newCameraTarget = viewModel::newCameraTarget,
@@ -106,13 +124,34 @@ fun RecipeEditScreen(
     onCookMinutesChange: (String) -> Unit,
     onIngredientChange: (String, String) -> Unit,
     onRemoveIngredient: (String) -> Unit,
+    onRestoreIngredient: (Int, Ingredient) -> Unit,
+    onMoveIngredient: (Int, Int) -> Unit,
     onStepChange: (String, String) -> Unit,
     onRemoveStep: (String) -> Unit,
+    onRestoreStep: (Int, Step) -> Unit,
+    onMoveStep: (Int, Int) -> Unit,
     onAddPhotos: (String?, List<Uri>) -> Unit,
     onRemovePhoto: (String?, String) -> Unit,
     newCameraTarget: () -> Uri,
+    onPasteText: (String) -> Pair<Int, Int>,
 ) {
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val pasteNothing = stringResource(R.string.paste_nothing)
+    val undo = stringResource(R.string.undo)
+    val ingredientRemoved = stringResource(R.string.ingredient_removed)
+    val stepRemoved = stringResource(R.string.step_removed)
+    /** Removes a row and offers Undo for a moment. */
+    fun removeWithUndo(message: String, remove: () -> Unit, restore: () -> Unit) {
+        remove()
+        scope.launch {
+            val result = snackbarHostState.showSnackbar(message, actionLabel = undo, duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) restore()
+        }
+    }
     // Which step the photo picker was opened for; null means the recipe itself.
     var photoTargetStepId by rememberSaveable { mutableStateOf<String?>(null) }
     val photoPicker = rememberPhotoPicker(
@@ -140,17 +179,32 @@ fun RecipeEditScreen(
                     AppIconButton(R.drawable.ic_close, stringResource(R.string.close), onClick = close)
                 },
                 actions = {
-                    TextButton(
-                        onClick = onSave,
+                    AppIconButton(
+                        icon = R.drawable.ic_content_paste,
+                        contentDescription = stringResource(R.string.paste_recipe),
                         enabled = !uiState.loading,
-                        // The default primary text would vanish on the brand-coloured bar.
-                        colors = ButtonDefaults.textButtonColors(contentColor = LocalContentColor.current),
-                    ) {
+                        onClick = {
+                            scope.launch {
+                                val clip = clipboard.getClipEntry()?.clipData
+                                val text = clip?.let { data ->
+                                    (0 until data.itemCount).joinToString("\n") { data.getItemAt(it).coerceToText(context) }
+                                }
+                                if (text.isNullOrBlank()) {
+                                    snackbarHostState.showSnackbar(pasteNothing)
+                                } else {
+                                    val (ingredients, steps) = onPasteText(text)
+                                    snackbarHostState.showSnackbar(context.getString(R.string.pasted_summary, ingredients, steps))
+                                }
+                            }
+                        },
+                    )
+                    TextButton(onClick = onSave, enabled = !uiState.loading) {
                         Text(stringResource(R.string.save))
                     }
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         if (uiState.loading) {
             Box(
@@ -230,40 +284,73 @@ fun RecipeEditScreen(
                 label = stringResource(R.string.servings),
                 modifier = Modifier.fillMaxWidth(0.5f),
             )
-            uiState.ingredients.forEach { ingredient ->
+            // Rows are dragged by their handle and swiped left to remove; the last row is the always-empty spare one.
+            ReorderableColumn(
+                list = uiState.ingredients,
+                onSettle = onMoveIngredient,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) { index, ingredient, _ ->
                 // Keyed by id so focus stays with the right field when a row above is removed.
                 key(ingredient.id) {
-                    RemovableField(
-                        value = ingredient.text,
-                        onValueChange = { onIngredientChange(ingredient.id, it) },
-                        placeholder = stringResource(R.string.ingredient_hint),
-                        singleLine = true,
-                        // The last row is the always-empty spare one.
-                        onRemove = { onRemoveIngredient(ingredient.id) }
-                            .takeIf { ingredient !== uiState.ingredients.last() },
-                    )
+                    val spare = index == uiState.ingredients.lastIndex
+                    ReorderableItem {
+                        SwipeToRemove(
+                            enabled = !spare,
+                            onRemove = {
+                                removeWithUndo(ingredientRemoved, { onRemoveIngredient(ingredient.id) }, { onRestoreIngredient(index, ingredient) })
+                            },
+                        ) {
+                            RemovableField(
+                                value = ingredient.text,
+                                onValueChange = { onIngredientChange(ingredient.id, it) },
+                                placeholder = stringResource(R.string.ingredient_hint),
+                                singleLine = true,
+                                onRemove = {
+                                    removeWithUndo(ingredientRemoved, { onRemoveIngredient(ingredient.id) }, { onRestoreIngredient(index, ingredient) })
+                                }.takeIf { !spare },
+                                handle = { DragHandle(modifier = Modifier.draggableHandle(enabled = !spare), visible = !spare) },
+                            )
+                        }
+                    }
                 }
             }
 
             SectionTitle(stringResource(R.string.steps))
-            uiState.steps.forEachIndexed { index, step ->
+            ReorderableColumn(
+                list = uiState.steps,
+                onSettle = onMoveStep,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) { index, step, _ ->
                 key(step.id) {
-                    RemovableField(
-                        value = step.text,
-                        onValueChange = { onStepChange(step.id, it) },
-                        placeholder = stringResource(R.string.step_hint, index + 1),
-                        singleLine = false,
-                        onRemove = { onRemoveStep(step.id) }.takeIf { step !== uiState.steps.last() },
-                        trailing = {
-                            AddPhotoButton(
-                                picker = photoPicker,
-                                onBeforePick = { photoTargetStepId = step.id },
-                                iconOnly = true,
-                            )
-                        },
-                    )
-                    if (step.photos.isNotEmpty()) {
-                        PhotoStrip(photos = step.photos, onRemove = { onRemovePhoto(step.id, it) })
+                    val spare = index == uiState.steps.lastIndex
+                    ReorderableItem {
+                        Column {
+                            SwipeToRemove(
+                                enabled = !spare,
+                                onRemove = { removeWithUndo(stepRemoved, { onRemoveStep(step.id) }, { onRestoreStep(index, step) }) },
+                            ) {
+                                RemovableField(
+                                    value = step.text,
+                                    onValueChange = { onStepChange(step.id, it) },
+                                    placeholder = stringResource(R.string.step_hint, index + 1),
+                                    singleLine = false,
+                                    onRemove = {
+                                        removeWithUndo(stepRemoved, { onRemoveStep(step.id) }, { onRestoreStep(index, step) })
+                                    }.takeIf { !spare },
+                                    handle = { DragHandle(modifier = Modifier.draggableHandle(enabled = !spare), visible = !spare) },
+                                    trailing = {
+                                        AddPhotoButton(
+                                            picker = photoPicker,
+                                            onBeforePick = { photoTargetStepId = step.id },
+                                            iconOnly = true,
+                                        )
+                                    },
+                                )
+                            }
+                            if (step.photos.isNotEmpty()) {
+                                PhotoStrip(photos = step.photos, onRemove = { onRemovePhoto(step.id, it) })
+                            }
+                        }
                     }
                 }
             }
@@ -373,6 +460,53 @@ private fun NumberField(
     )
 }
 
+/** The grip at the start of a row. Pressing it starts the drag at once, so the text field keeps its own long press. */
+@Composable
+private fun DragHandle(modifier: Modifier, visible: Boolean) {
+    if (visible) {
+        AppIcon(
+            icon = R.drawable.ic_drag_handle,
+            contentDescription = stringResource(R.string.drag_to_reorder),
+            modifier = modifier
+                .padding(end = 4.dp)
+                .size(32.dp)
+                .padding(4.dp),
+        )
+    } else {
+        Box(modifier = Modifier.width(36.dp))
+    }
+}
+
+/** Swiping the row to the start removes it; the row itself stays put, because it leaves the list. */
+@Composable
+private fun SwipeToRemove(enabled: Boolean, onRemove: () -> Unit, content: @Composable () -> Unit) {
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) onRemove()
+            false
+        },
+    )
+    SwipeToDismissBox(
+        state = state,
+        enableDismissFromStartToEnd = false,
+        gesturesEnabled = enabled,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(end = 16.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                AppIcon(R.drawable.ic_delete, contentDescription = null)
+            }
+        },
+    ) {
+        content()
+    }
+}
+
 @Composable
 private fun RemovableField(
     value: String,
@@ -380,9 +514,11 @@ private fun RemovableField(
     placeholder: String,
     singleLine: Boolean,
     onRemove: (() -> Unit)?,
+    handle: @Composable () -> Unit = {},
     trailing: @Composable () -> Unit = {},
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
+        handle()
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,

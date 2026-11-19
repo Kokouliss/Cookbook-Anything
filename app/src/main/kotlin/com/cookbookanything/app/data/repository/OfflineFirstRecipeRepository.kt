@@ -1,6 +1,7 @@
 package com.cookbookanything.app.data.repository
 
 import com.cookbookanything.app.data.database.CommentEntity
+import com.cookbookanything.app.data.database.CookedEntity
 import com.cookbookanything.app.data.database.RecipeDao
 import com.cookbookanything.app.data.database.RecipeSummaryRow
 import com.cookbookanything.app.data.database.ScheduleDao
@@ -10,6 +11,7 @@ import com.cookbookanything.app.data.database.toModel
 import com.cookbookanything.app.data.database.toPhotoEntities
 import com.cookbookanything.app.data.database.toStepEntities
 import com.cookbookanything.app.reminders.ReminderScheduler
+import com.cookbookanything.app.widget.TonightWidgetUpdater
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.repository.RecipeRepository
@@ -25,6 +27,7 @@ class OfflineFirstRecipeRepository @Inject constructor(
     private val recipeDao: RecipeDao,
     private val scheduleDao: ScheduleDao,
     private val reminders: ReminderScheduler,
+    private val widget: TonightWidgetUpdater,
 ) : RecipeRepository {
 
     override fun observeSummaries(): Flow<List<RecipeSummary>> =
@@ -50,6 +53,8 @@ class OfflineFirstRecipeRepository @Inject constructor(
         scheduleDao.idsForRecipe(id).forEach(reminders::cancel)
         // Photo files are swept on the next app start, see CookbookApplication.
         recipeDao.deleteRecipe(id)
+        // Its calendar entries went with it.
+        widget.refresh()
     }
 
     override suspend fun setIngredientChecked(ingredientId: String, checked: Boolean) =
@@ -59,6 +64,12 @@ class OfflineFirstRecipeRepository @Inject constructor(
         recipeDao.setStepDone(stepId, done)
 
     override suspend fun resetProgress(recipeId: String) = recipeDao.resetProgress(recipeId)
+
+    override suspend fun markCooked(recipeId: String) {
+        recipeDao.insertCooked(
+            listOf(CookedEntity(id = UUID.randomUUID().toString(), recipeId = recipeId, cookedAt = System.currentTimeMillis())),
+        )
+    }
 
     override suspend fun addComment(recipeId: String, text: String) {
         recipeDao.insertComment(

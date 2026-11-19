@@ -4,19 +4,27 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Pot body, family red -->
+    <path
+        android:fillColor="#B4472E"
+        android:pathData="M34,52h40v18a8,8 0,0 1,-8 8H42a8,8 0,0 1,-8 -8z" />
+    <!-- Lid, ochre -->
+    <path
+        android:fillColor="#B58428"
+        android:pathData="M32,52C32,44 76,44 76,52z" />
+    <!-- Knob, white -->
     <path
         android:fillColor="#FFF8F4"
-        android:pathData="M36,55h36v13a8,8 0,0 1,-8 8H44a8,8 0,0 1,-8 -8z" />
+        android:pathData="M50,44h8a2,2 0,0 1,2 2v1H48v-1a2,2 0,0 1,2 -2z" />
+    <!-- Handles, teal -->
     <path
-        android:fillColor="#FFF8F4"
-        android:pathData="M31,47h46a2,2 0,0 1,2 2v1a2,2 0,0 1,-2 2H31a2,2 0,0 1,-2 -2v-1a2,2 0,0 1,2 -2z" />
-    <path
-        android:fillColor="#FFF8F4"
-        android:pathData="M50,41h8a2,2 0,0 1,2 2v2H48v-2a2,2 0,0 1,2 -2z" />
+        android:fillColor="#2F7F92"
+        android:pathData="M24,56h10v4H24zM74,56h10v4H74z" />
+    <!-- Steam, white lines -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M46,36c-2,-2 2,-4 0,-6M54,36c-2,-2 2,-4 0,-6M62,36c-2,-2 2,-4 0,-6"
-        android:strokeWidth="2.5"
+        android:pathData="M46,38c-2,-3 2,-6 0,-9M54,38c-2,-3 2,-6 0,-9M62,38c-2,-3 2,-6 0,-9"
+        android:strokeWidth="3"
         android:strokeColor="#FFF8F4"
         android:strokeLineCap="round" />
 </vector>

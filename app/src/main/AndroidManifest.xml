@@ -34,7 +34,32 @@
                 <data android:mimeType="application/x-zip-compressed" />
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
+
+            <!-- Text shared from another app becomes a new recipe. -->
+            <intent-filter android:label="@string/paste_recipe">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
+
+        <!-- Rings when a cooking-mode timer ends. -->
+        <receiver
+            android:name=".reminders.TimerReceiver"
+            android:exported="false" />
+
+        <!-- "Tonight" home-screen widget: the next planned recipe. -->
+        <receiver
+            android:name=".widget.TonightWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/tonight_widget_info" />
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

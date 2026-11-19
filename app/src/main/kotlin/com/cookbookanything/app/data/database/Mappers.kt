@@ -8,6 +8,7 @@ import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.model.ShoppingItem
 import com.cookbookanything.core.domain.model.Step
+import java.util.UUID
 
 fun CategoryEntity.toModel() = Category(id = id, name = name)
 
@@ -18,6 +19,11 @@ fun RecipeSummaryRow.toModel() =
         categoryId = categoryId,
         coverPhoto = coverPhoto,
         ingredients = ingredientLines.orEmpty(),
+        servings = servings,
+        prepMinutes = prepMinutes,
+        cookMinutes = cookMinutes,
+        timesCooked = timesCooked,
+        lastCookedAt = lastCookedAt,
     )
 
 fun ShoppingItemRow.toModel() = ShoppingItem(
@@ -53,6 +59,7 @@ fun RecipeWithDetails.toModel(): Recipe {
         },
         comments = comments.sortedBy { it.createdAt }
             .map { Comment(id = it.id, text = it.text, createdAt = it.createdAt) },
+        cookedAt = cooked.map { it.cookedAt }.sorted(),
         createdAt = recipe.createdAt,
         updatedAt = recipe.updatedAt,
     )
@@ -94,4 +101,8 @@ fun Recipe.toPhotoEntities(): List<PhotoEntity> =
 
 fun Recipe.toCommentEntities() = comments.map {
     CommentEntity(id = it.id, recipeId = id, text = it.text, createdAt = it.createdAt)
+}
+
+fun Recipe.toCookedEntities() = cookedAt.map {
+    CookedEntity(id = UUID.randomUUID().toString(), recipeId = id, cookedAt = it)
 }
