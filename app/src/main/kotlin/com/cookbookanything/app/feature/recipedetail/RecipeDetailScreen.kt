@@ -12,6 +12,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cookbookanything.app.R
 import com.cookbookanything.app.data.share.PdfLabels
+import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.CheckRow
 import com.cookbookanything.app.ui.components.ConfirmDialog
@@ -97,6 +99,9 @@ fun RecipeDetailRoute(
         ingredients = stringResource(R.string.ingredients),
         steps = stringResource(R.string.steps),
         summary = (uiState as? RecipeDetailUiState.Success)?.let { recipeFacts(it.recipe, withServings = true) },
+        notes = stringResource(R.string.notes),
+        optional = stringResource(R.string.optional_mark),
+        source = stringResource(R.string.source),
     )
 
     LaunchedEffect(viewModel) {
@@ -121,6 +126,8 @@ fun RecipeDetailRoute(
         onIngredientChecked = viewModel::setIngredientChecked,
         onStepDone = viewModel::setStepDone,
         onResetProgress = viewModel::resetProgress,
+        onFavorite = viewModel::setFavorite,
+        onRate = viewModel::rate,
         onAddComment = viewModel::addComment,
         onDeleteComment = viewModel::deleteComment,
         onSchedule = viewModel::schedule,
@@ -151,6 +158,8 @@ fun RecipeDetailScreen(
     onIngredientChecked: (String, Boolean) -> Unit,
     onStepDone: (String, Boolean) -> Unit,
     onResetProgress: () -> Unit,
+    onFavorite: (Boolean) -> Unit,
+    onRate: (Int) -> Unit,
     onAddComment: (String) -> Unit,
     onDeleteComment: (String) -> Unit,
     onSchedule: (Long) -> Unit,
@@ -170,6 +179,12 @@ fun RecipeDetailScreen(
                 },
                 actions = {
                     if (loaded) {
+                        val favorite = uiState.recipe.favorite
+                        AppIconButton(
+                            icon = if (favorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
+                            contentDescription = stringResource(if (favorite) R.string.unfavorite else R.string.favorite),
+                            onClick = { onFavorite(!favorite) },
+                        )
                         Box {
                             AppIconButton(
                                 icon = R.drawable.ic_share,
@@ -219,6 +234,7 @@ fun RecipeDetailScreen(
                 onIngredientChecked = onIngredientChecked,
                 onStepDone = onStepDone,
                 onResetProgress = onResetProgress,
+                onRate = onRate,
                 onAddComment = onAddComment,
                 onDeleteComment = onDeleteComment,
                 onSchedule = onSchedule,
@@ -262,6 +278,7 @@ private fun RecipeContent(
     onIngredientChecked: (String, Boolean) -> Unit,
     onStepDone: (String, Boolean) -> Unit,
     onResetProgress: () -> Unit,
+    onRate: (Int) -> Unit,
     onAddComment: (String) -> Unit,
     onDeleteComment: (String) -> Unit,
     onSchedule: (Long) -> Unit,
@@ -269,6 +286,7 @@ private fun RecipeContent(
 ) {
     val recipe = uiState.recipe
     val locale = currentLocale()
+    val context = LocalContext.current
     var pickingDateTime by rememberSaveable { mutableStateOf(false) }
     val requestNotificationPermission = rememberNotificationPermissionRequest()
     // The cook can view the recipe for more or fewer people; the stored recipe does not change.
@@ -291,6 +309,14 @@ private fun RecipeContent(
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(recipe.title, style = MaterialTheme.typography.headlineLarge)
+                recipe.description?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
                 recipeFacts(recipe, withServings = false)?.let { facts ->
                     HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
                     Text(
@@ -308,6 +334,13 @@ private fun RecipeContent(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                Rating(stars = recipe.rating, onRate = onRate)
+                recipe.source?.let { source ->
+                    SourceRow(source = source, onOpen = {
+                        // A bad or unknown link must not crash the page.
+                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(source))) }
+                    })
                 }
                 if (uiState.categoryName != null) {
                     AssistChip(onClick = {}, label = { Text(uiState.categoryName) })
@@ -335,7 +368,7 @@ private fun RecipeContent(
             }
             items(recipe.ingredients, key = { it.id }) { ingredient ->
                 CheckRow(
-                    text = scaleIngredient(ingredient.text, scale),
+                    text = scaleIngredient(ingredient.text, scale) + if (ingredient.optional) " " + stringResource(R.string.optional_mark) else "",
                     checked = ingredient.checked,
                     onCheckedChange = { onIngredientChecked(ingredient.id, it) },
                 )
@@ -360,6 +393,11 @@ private fun RecipeContent(
                     Text(stringResource(R.string.reset_checks))
                 }
             }
+        }
+
+        recipe.notes?.let { notes ->
+            item { SectionHeader(title = stringResource(R.string.notes)) }
+            item { Text(notes, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
         }
 
         item { SectionHeader(title = stringResource(R.string.tab_calendar)) }
@@ -466,7 +504,42 @@ private fun recipeFacts(recipe: Recipe, withServings: Boolean): String? = listOf
     recipe.servings?.takeIf { withServings }?.let { stringResource(R.string.servings_count, it) },
     recipe.prepMinutes?.let { stringResource(R.string.prep_time, it) },
     recipe.cookMinutes?.let { stringResource(R.string.cook_time, it) },
+    recipe.waitMinutes?.let { stringResource(R.string.wait_time, it) },
 ).joinToString(" · ").ifEmpty { null }
+
+/** Five stars; tapping one rates the recipe, tapping the lit one again clears it. */
+@Composable
+private fun Rating(stars: Int?, onRate: (Int) -> Unit) {
+    Row {
+        (1..5).forEach { star ->
+            AppIconButton(
+                icon = if (star <= (stars ?: 0)) R.drawable.ic_star else R.drawable.ic_star_border,
+                contentDescription = stringResource(R.string.rate_stars, star),
+                onClick = { onRate(star) },
+            )
+        }
+    }
+}
+
+/** Where the recipe came from: the site it was read from (tap opens it) or "From a photo". */
+@Composable
+private fun SourceRow(source: String, onOpen: () -> Unit) {
+    val isLink = source.startsWith("http")
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (isLink) Modifier.clickable(onClick = onOpen) else Modifier)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (isLink) AppIcon(R.drawable.ic_link, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+        Text(
+            text = if (isLink) stringResource(R.string.source) + ": " + (Uri.parse(source).host ?: source) else stringResource(R.string.source_photo),
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isLink) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 /** A step with its number set large in red in the margin, as in a printed method. */
 @Composable

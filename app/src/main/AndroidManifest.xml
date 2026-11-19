@@ -36,7 +36,7 @@
             </intent-filter>
 
             <!-- Text shared from another app becomes a new recipe. -->
-            <intent-filter android:label="@string/paste_recipe">
+            <intent-filter android:label="@string/import_recipe">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />

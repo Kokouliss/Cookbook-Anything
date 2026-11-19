@@ -1,5 +1,6 @@
 package com.cookbookanything.app.data.database
 
+import androidx.room3.ColumnInfo
 import androidx.room3.Embedded
 import androidx.room3.Entity
 import androidx.room3.ForeignKey
@@ -36,6 +37,13 @@ data class RecipeEntity(
     val servings: Int? = null,
     val prepMinutes: Int? = null,
     val cookMinutes: Int? = null,
+    // Version 4. The default values let the auto-migration add the columns to existing rows.
+    val waitMinutes: Int? = null,
+    val description: String? = null,
+    val notes: String? = null,
+    val source: String? = null,
+    val rating: Int? = null,
+    @ColumnInfo(defaultValue = "0") val favorite: Boolean = false,
 )
 
 @Entity(
@@ -56,6 +64,7 @@ data class IngredientEntity(
     val text: String,
     val checked: Boolean,
     val position: Int,
+    @ColumnInfo(defaultValue = "0") val optional: Boolean = false,
 )
 
 @Entity(
@@ -175,6 +184,9 @@ data class RecipeSummaryRow(
     val servings: Int?,
     val prepMinutes: Int?,
     val cookMinutes: Int?,
+    val waitMinutes: Int?,
+    val rating: Int?,
+    val favorite: Boolean,
     val timesCooked: Int,
     val lastCookedAt: Long?,
 )

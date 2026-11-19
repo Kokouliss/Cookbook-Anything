@@ -231,4 +231,34 @@
     <string name="photo_read_title">Recipe read from your photo</string>
     <string name="photo_read_full">The cookbook is full. Delete a recipe or unlock, and the photo is read the next time the app opens.</string>
     <string name="photo_recipe_title">Recipe from a photo</string>
+    <!-- Description, notes, waiting time, optional ingredients -->
+    <string name="description">Description</string>
+    <string name="description_hint">A line about the dish, for example “Sunday lunch at grandma’s”</string>
+    <string name="notes">Notes</string>
+    <string name="notes_hint">Your own notes, for example “next time less salt”</string>
+    <string name="wait_time_label">Waiting time</string>
+    <string name="wait_time">Waiting %1$d min</string>
+    <string name="optional_mark">(optional)</string>
+    <string name="mark_optional">Optional: left off the shopping list</string>
+
+    <!-- Favourites, rating, source -->
+    <string name="favorite">Add to favourites</string>
+    <string name="unfavorite">Remove from favourites</string>
+    <string name="favorites">Favourites</string>
+    <string name="no_favorites">No favourites yet. Tap the heart on a recipe.</string>
+    <string name="rate_stars">Rate %1$d of 5</string>
+    <string name="source">Source</string>
+    <string name="source_photo">Read from a photo</string>
+
+    <!-- What's new -->
+    <string name="whats_new">What’s new</string>
+    <string name="whats_new_title">What’s new in version %1$s</string>
+    <string-array name="whats_new_items">
+        <item>A description under the recipe name and a notes box at the end.</item>
+        <item>Favourites: tap the heart on a recipe, filter the list by it.</item>
+        <item>Rate a recipe with one to five stars.</item>
+        <item>Waiting time next to prep and cooking time.</item>
+        <item>Optional ingredients: mark them in the editor and the shopping list skips them.</item>
+        <item>A recipe read from a link or a photo remembers where it came from.</item>
+    </string-array>
 </resources>

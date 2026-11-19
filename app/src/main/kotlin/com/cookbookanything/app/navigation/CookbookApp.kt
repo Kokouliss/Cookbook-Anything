@@ -51,6 +51,8 @@ import com.cookbookanything.app.feature.recipeedit.RecipeEditViewModel
 import com.cookbookanything.app.feature.recipelist.RecipeListRoute
 import com.cookbookanything.app.feature.settings.SettingsScreen
 import com.cookbookanything.app.feature.shopping.ShoppingListRoute
+import com.cookbookanything.app.feature.whatsnew.WhatsNew
+import com.cookbookanything.app.feature.whatsnew.WhatsNewDialog
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.core.domain.FreeTier
 
@@ -62,11 +64,14 @@ fun CookbookApp(viewModel: MainViewModel) {
     val backStack = rememberNavBackStack(RecipeListKey)
     val snackbarHostState = remember { SnackbarHostState() }
     var showPaywall by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    // Shown once after an update, and again from Settings on request.
+    var showWhatsNew by rememberSaveable { mutableStateOf(WhatsNew.isUnseen(context)) }
     val importFailedMessage = stringResource(R.string.import_failed)
     val backupSavedMessage = stringResource(R.string.backup_saved)
     val backupFailedMessage = stringResource(R.string.backup_failed)
     val nothingNewMessage = stringResource(R.string.backup_nothing_new)
-    val resources = LocalContext.current.resources
+    val resources = context.resources
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -205,8 +210,18 @@ fun CookbookApp(viewModel: MainViewModel) {
                         account = uiState.account,
                         onOpenAccount = { backStack.add(AccountKey) },
                         onSignOut = viewModel::signOut,
+                        onShowWhatsNew = { showWhatsNew = true },
                     )
                 }
+            },
+        )
+    }
+
+    if (showWhatsNew) {
+        WhatsNewDialog(
+            onDismiss = {
+                WhatsNew.markSeen(context)
+                showWhatsNew = false
             },
         )
     }

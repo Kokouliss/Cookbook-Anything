@@ -26,6 +26,7 @@ sealed interface RecipeListUiState {
         val selectedCategoryId: String?,
         val cookbookIsEmpty: Boolean,
         val sort: RecipeSort,
+        val onlyFavorites: Boolean,
     ) : RecipeListUiState
 }
 
@@ -38,22 +39,24 @@ class RecipeListViewModel @Inject constructor(
     private val query = MutableStateFlow("")
     // shortcut: the sort is forgotten when the app restarts, store it in preferences if that annoys
     private val sort = MutableStateFlow(RecipeSort.RECENT)
+    private val onlyFavorites = MutableStateFlow(false)
 
     val uiState: StateFlow<RecipeListUiState> = combine(
         recipeRepository.observeSummaries(),
         categoryRepository.observeCategories(),
         selectedCategoryId,
         query,
-        sort,
-    ) { recipes, categories, selected, searchText, order ->
+        combine(sort, onlyFavorites, ::Pair),
+    ) { recipes, categories, selected, searchText, (order, favorites) ->
         // A deleted category must not keep filtering the list.
         val active = selected?.takeIf { id -> categories.any { it.id == id } }
         RecipeListUiState.Success(
-            recipes = recipes.filter { (active == null || it.categoryId == active) && it.matches(searchText) }.sortedBy(order),
+            recipes = recipes.filter { (active == null || it.categoryId == active) && (!favorites || it.favorite) && it.matches(searchText) }.sortedBy(order),
             categories = categories,
             selectedCategoryId = active,
             cookbookIsEmpty = recipes.isEmpty(),
             sort = order,
+            onlyFavorites = favorites,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecipeListUiState.Loading)
 
@@ -67,5 +70,9 @@ class RecipeListViewModel @Inject constructor(
 
     fun setSort(order: RecipeSort) {
         sort.value = order
+    }
+
+    fun setOnlyFavorites(value: Boolean) {
+        onlyFavorites.value = value
     }
 }
