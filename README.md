@@ -38,7 +38,12 @@ Reading a recipe from a photo uses Google Cloud Vision, because the on-device te
 
 ## Trying it on a phone
 
-Every pull request builds an installable app. Open the pull request on GitHub, go to **Checks**, open the **Build** run and download **cookbook-anything-debug-apk**. Unzip it, copy the `.apk` to an Android phone (Android 9 or newer) and open it to install.
+Every pull request publishes an installable app on the [Releases](https://github.com/Kokouliss/Cookbook-Anything/releases) page. Open the page on an Android phone (Android 9 or newer), download the `.apk` and open it to install.
+
+- While a pull request is open it has a pre-release named **PR #number**, replaced each time the pull request changes.
+- When it is merged, that pre-release goes away and a numbered release (`v0.1.<build>`) takes its place. The [latest release](https://github.com/Kokouliss/Cookbook-Anything/releases/latest) is always the newest merged build.
+
+Every build has a higher build number than the one before and the same signing key, so it installs over the app you have and keeps your recipes. Android refuses to go back to a lower build number, so installing an older build means uninstalling first, which deletes the recipes on the phone.
 
 In these test builds the "Unlock unlimited recipes" dialog has an **Unlock (test build)** button, because real purchases are not wired in yet.
 
@@ -99,4 +104,4 @@ Stack: Kotlin, Jetpack Compose with Material 3, Hilt, Room 3, Navigation 3, Work
 
 The colours live in `core/domain/.../design/Palette.kt` so that a unit test can check every text and background pair for contrast (WCAG AA). The look follows the AnyKind family: an index card from a recipe box, the family red, ochre and teal, serif headings, ink doodles on empty screens.
 
-`app/debug.keystore` is a throwaway signing key for test builds only, so that each new test build can update the previous one without wiping your recipes. It must never sign a release.
+`app/debug.keystore` is a throwaway signing key for test builds only, so that each new test build can update the previous one without wiping your recipes. It must never sign a Google Play release.

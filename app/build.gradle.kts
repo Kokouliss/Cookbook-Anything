@@ -23,8 +23,9 @@ android {
         applicationId = "com.cookbookanything.app"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        // The Build workflow passes a rising number, so each test build installs over the previous one.
+        versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
+        versionName = findProperty("versionName") as String? ?: "0.1.0"
     }
 
     signingConfigs {
