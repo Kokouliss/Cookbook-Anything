@@ -17,8 +17,8 @@ data class ParsedRecipe(
 }
 
 // Compared through searchKey(), which also turns a final ς into σ.
-private val INGREDIENT_HEADERS = setOf("ingredients", "ingredient", "υλικά", "συστατικά", "τα υλικά").map { it.searchKey() }
-private val STEP_HEADERS = setOf(
+internal val INGREDIENT_HEADERS = setOf("ingredients", "ingredient", "υλικά", "συστατικά", "τα υλικά").map { it.searchKey() }
+internal val STEP_HEADERS = setOf(
     "steps", "step", "method", "directions", "instructions", "preparation", "procedure",
     "εκτέλεση", "διαδικασία", "οδηγίες", "βήματα", "παρασκευή", "μέθοδος", "προετοιμασία",
 ).map { it.searchKey() }
