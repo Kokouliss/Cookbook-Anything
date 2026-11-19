@@ -10,7 +10,11 @@ permissions:
 
 concurrency:
   group: build-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer push replaces a pull request's build, but every merge to main gets its own release.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  VERSION: 0.1.${{ github.run_number }}
 
 jobs:
   build:
@@ -35,7 +39,7 @@ jobs:
         run: printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
       - name: Test and build the debug app
-        run: ./gradlew :core:domain:test :app:assembleDebug
+        run: ./gradlew :core:domain:test :app:assembleDebug -PversionCode=${{ github.run_number }} -PversionName="$VERSION"
 
       # Room writes the database schema during the build. It has to be committed, because future
       # versions need it to migrate users' recipes instead of losing them.
@@ -56,3 +60,56 @@ jobs:
           name: cookbook-anything-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: ignore
+
+  # Publishes the APK as a GitHub release, so it can be downloaded straight onto a phone: a
+  # pre-release "pr-<number>" for each open pull request (replaced on every push), and a numbered
+  # release for each merge to main. A separate job, so the build never holds a token that can write.
+  release:
+    needs: build
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cookbook-anything-debug-apk
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          keeps="Download the APK below and open it on the phone. It installs over the version you have and keeps your recipes."
+          if [ -n "$PR_NUMBER" ]; then
+            tag="pr-$PR_NUMBER"
+            target="$PR_HEAD"
+            title="PR #$PR_NUMBER: $PR_TITLE (build $VERSION)"
+            notes="Test build of pull request #$PR_NUMBER, replaced every time the pull request changes. $keeps"
+            apk="cookbook-anything-pr-$PR_NUMBER-$VERSION.apk"
+            kind=--prerelease
+          else
+            # The pull request this merge came from names the release, and its test build is retired.
+            merged=$(gh api "repos/$GH_REPO/commits/$GITHUB_SHA/pulls" --jq '.[0] // empty | "\(.number) \(.title)"' || true)
+            tag="v$VERSION"
+            target="$GITHUB_SHA"
+            title="$tag"
+            notes="$keeps"
+            if [ -n "$merged" ]; then
+              title="$tag: ${merged#* } (#${merged%% *})"
+              notes="Built from pull request #${merged%% *}. $keeps"
+              gh release delete "pr-${merged%% *}" --cleanup-tag --yes 2>/dev/null || true
+            fi
+            apk="cookbook-anything-$VERSION.apk"
+            kind=--latest
+          fi
+          mv ./*.apk "$apk"
+          # Deleting first makes a re-run, or a new push to the pull request, replace the release.
+          gh release delete "$tag" --cleanup-tag --yes 2>/dev/null || true
+          gh release create "$tag" "$apk" --target "$target" --title "$title" --notes "$notes" "$kind"
