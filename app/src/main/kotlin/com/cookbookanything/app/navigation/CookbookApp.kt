@@ -29,6 +29,13 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import com.cookbookanything.app.BuildConfig
 import com.cookbookanything.app.MainEvent
 import com.cookbookanything.app.MainViewModel
@@ -113,6 +120,9 @@ fun CookbookApp(viewModel: MainViewModel) {
                 .padding(padding)
                 .consumeWindowInsets(padding),
             onBack = { backStack.removeLastOrNull() },
+            transitionSpec = { pageTurn(forward = true) },
+            popTransitionSpec = { pageTurn(forward = false) },
+            predictivePopTransitionSpec = { pageTurn(forward = false) },
             entryDecorators = listOf(
                 rememberSaveableStateHolderNavEntryDecorator(),
                 rememberViewModelStoreNavEntryDecorator(),
@@ -251,4 +261,13 @@ private fun PaywallDialog(onUnlock: () -> Unit, onDismiss: () -> Unit) {
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
     )
+}
+
+private const val PAGE_TURN_MILLIS = 220
+
+/** A screen comes in from the right like a page turned forward, and goes back the other way. */
+private fun pageTurn(forward: Boolean): ContentTransform {
+    val direction = if (forward) 1 else -1
+    return (fadeIn(tween(PAGE_TURN_MILLIS)) + slideInHorizontally(tween(PAGE_TURN_MILLIS)) { direction * it / 12 })
+        .togetherWith(fadeOut(tween(PAGE_TURN_MILLIS)) + slideOutHorizontally(tween(PAGE_TURN_MILLIS)) { -direction * it / 12 })
 }

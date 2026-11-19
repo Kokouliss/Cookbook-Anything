@@ -1,30 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Panos's cookbook icon (graphite kit, cookbook-icon.svg): the bowl in white with the family's
+     three shapes above it. The 100-unit tile is scaled to the 72 dp an adaptive icon shows. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Pot body, family red -->
-    <path
-        android:fillColor="#B4472E"
-        android:pathData="M34,52h40v18a8,8 0,0 1,-8 8H42a8,8 0,0 1,-8 -8z" />
-    <!-- Lid, ochre -->
-    <path
-        android:fillColor="#B58428"
-        android:pathData="M32,52C32,44 76,44 76,52z" />
-    <!-- Knob, white -->
-    <path
-        android:fillColor="#FFF8F4"
-        android:pathData="M50,44h8a2,2 0,0 1,2 2v1H48v-1a2,2 0,0 1,2 -2z" />
-    <!-- Handles, teal -->
-    <path
-        android:fillColor="#2F7F92"
-        android:pathData="M24,56h10v4H24zM74,56h10v4H74z" />
-    <!-- Steam, white lines -->
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M46,38c-2,-3 2,-6 0,-9M54,38c-2,-3 2,-6 0,-9M62,38c-2,-3 2,-6 0,-9"
-        android:strokeWidth="3"
-        android:strokeColor="#FFF8F4"
-        android:strokeLineCap="round" />
+    <group android:scaleX="0.72" android:scaleY="0.72" android:translateX="18" android:translateY="18">
+        <group android:scaleX="0.9" android:scaleY="0.9" android:translateX="5" android:translateY="5">
+            <path android:fillColor="#FFFFFF" android:pathData="M16 54H84A34 34 0 0 1 16 54Z" />
+            <path android:fillColor="#B4472E" android:pathData="M18.5 34a9.5 9.5 0 1 0 19 0a9.5 9.5 0 1 0 -19 0Z" />
+            <group android:rotation="15" android:pivotX="50.5" android:pivotY="17.5">
+                <path android:fillColor="#B58428" android:pathData="M44 9H57A2 2 0 0 1 59 11V24A2 2 0 0 1 57 26H44A2 2 0 0 1 42 24V11A2 2 0 0 1 44 9Z" />
+            </group>
+            <group android:rotation="-15" android:pivotX="73" android:pivotY="35">
+                <path android:fillColor="#2F7F92" android:pathData="M73 21.2L85 42H61Z" />
+            </group>
+        </group>
+    </group>
 </vector>

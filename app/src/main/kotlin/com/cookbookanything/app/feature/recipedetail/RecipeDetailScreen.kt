@@ -6,7 +6,12 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -65,7 +69,6 @@ import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
-import com.cookbookanything.app.ui.components.ruledLines
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Comment
 import com.cookbookanything.core.domain.model.Recipe
@@ -273,38 +276,30 @@ private fun RecipeContent(
     var shownServings by rememberSaveable(baseServings) { mutableIntStateOf(baseServings ?: 1) }
     val scale = if (baseServings == null) 1.0 else shownServings.toDouble() / baseServings
 
-    // The page is one index card: card stock, the red rule along the top, faint ruled lines behind.
+    // The page of a printed cookbook: the picture, the name in the book serif, the facts between two
+    // hairlines, then the sections, each with its own rule.
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
-            .padding(horizontal = 12.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .ruledLines(MaterialTheme.colorScheme.onSurface)
             .imePadding(),
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(MaterialTheme.colorScheme.primary),
-            )
-        }
         if (recipe.photos.isNotEmpty()) {
-            item { PhotoRow(photos = recipe.photos, height = 220, modifier = Modifier.padding(top = 12.dp)) }
+            item { PhotoRow(photos = recipe.photos, height = 240, modifier = Modifier.padding(top = 4.dp)) }
         }
         item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text(recipe.title, style = MaterialTheme.typography.headlineMedium)
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Text(recipe.title, style = MaterialTheme.typography.headlineLarge)
                 recipeFacts(recipe, withServings = false)?.let { facts ->
+                    HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
                     Text(
                         text = facts,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp),
                     )
+                    HorizontalDivider()
                 }
                 if (recipe.cookedAt.isNotEmpty()) {
                     val times = LocalContext.current.resources.getQuantityString(R.plurals.cooked_times, recipe.cookedAt.size, recipe.cookedAt.size)
@@ -412,32 +407,36 @@ private fun PhotoRow(photos: List<String>, height: Int, modifier: Modifier = Mod
                 modifier = Modifier
                     .height(height.dp)
                     .width((height * 4 / 3).dp)
-                    .clip(RoundedCornerShape(16.dp)),
+                    .clip(MaterialTheme.shapes.medium),
             )
         }
     }
 }
 
+/** A section head as a cookbook sets it: the name in red over a hairline, the count at the right. */
 @Composable
 private fun SectionHeader(title: String, progress: String? = null) {
-    Column(modifier = Modifier.padding(top = 16.dp)) {
-        HorizontalDivider()
+    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 4.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
             if (progress != null) {
-                Text(
-                    text = progress,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                // The count rolls up like a counter wheel when a line is ticked.
+                AnimatedContent(
+                    targetState = progress,
+                    transitionSpec = { (slideInVertically { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut()) },
+                    label = "progress",
+                ) { count ->
+                    Text(count, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
+        HorizontalDivider()
     }
 }
 
@@ -469,10 +468,22 @@ private fun recipeFacts(recipe: Recipe, withServings: Boolean): String? = listOf
     recipe.cookMinutes?.let { stringResource(R.string.cook_time, it) },
 ).joinToString(" · ").ifEmpty { null }
 
+/** A step with its number set large in red in the margin, as in a printed method. */
 @Composable
 private fun StepRow(number: Int, step: Step, onDoneChange: (Boolean) -> Unit) {
     Column {
-        CheckRow(text = "$number. ${step.text}", checked = step.done, onCheckedChange = onDoneChange)
+        Row(verticalAlignment = Alignment.Top) {
+            Text(
+                text = number.toString(),
+                style = MaterialTheme.typography.titleLarge,
+                color = if (step.done) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.End,
+                modifier = Modifier
+                    .width(36.dp)
+                    .padding(top = 10.dp),
+            )
+            CheckRow(text = step.text, checked = step.done, onCheckedChange = onDoneChange, modifier = Modifier.weight(1f))
+        }
         if (step.photos.isNotEmpty()) {
             PhotoRow(photos = step.photos, height = 120, modifier = Modifier.padding(bottom = 8.dp))
         }

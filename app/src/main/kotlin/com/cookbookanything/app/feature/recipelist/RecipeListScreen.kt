@@ -5,7 +5,10 @@ package com.cookbookanything.app.feature.recipelist
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -57,8 +61,8 @@ import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.Doodle
 import com.cookbookanything.app.ui.components.DoodleImage
 import com.cookbookanything.app.ui.components.EmptyState
-import com.cookbookanything.app.ui.components.IndexCard
 import com.cookbookanything.app.ui.components.RecipePhoto
+import com.cookbookanything.app.ui.components.pressScale
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
@@ -128,7 +132,11 @@ fun RecipeListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddRecipe, containerColor = MaterialTheme.colorScheme.secondary) {
+            FloatingActionButton(
+                onClick = onAddRecipe,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
                 AppIcon(R.drawable.ic_add, contentDescription = stringResource(R.string.add_recipe))
             }
         },
@@ -266,7 +274,7 @@ private fun RecipeList(
 
             else -> {
                 val categoryNames = uiState.categories.associate { it.id to it.name }
-                // Cards from the box, two across on a phone, more on a tablet.
+                // Pictures like a cookbook's index, two across on a phone, more on a tablet.
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(160.dp),
                     // Bottom space keeps the last card clear of the add button.
@@ -316,14 +324,21 @@ private fun CategoryFilter(
     }
 }
 
-/** One recipe card: the photo (or an ink doodle) on top, the name in the serif, one line of facts. */
+/** One recipe: the photo (or an ink doodle) with the name in the book serif and a line of facts under it. */
 @Composable
 private fun RecipeCard(recipe: RecipeSummary, categoryName: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    IndexCard(onClick = onClick, modifier = modifier) {
+    val interaction = remember { MutableInteractionSource() }
+    Column(
+        modifier = modifier
+            .pressScale(interaction)
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick),
+    ) {
         val coverPhoto = recipe.coverPhoto
         val photoModifier = Modifier
             .fillMaxWidth()
             .aspectRatio(4f / 3f)
+            .clip(MaterialTheme.shapes.medium)
         if (coverPhoto != null) {
             RecipePhoto(name = coverPhoto, modifier = photoModifier)
         } else {
@@ -331,7 +346,7 @@ private fun RecipeCard(recipe: RecipeSummary, categoryName: String?, onClick: ()
                 DoodleImage(Doodle.Pot)
             }
         }
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
             Text(
                 text = recipe.title,
                 style = MaterialTheme.typography.titleMedium,

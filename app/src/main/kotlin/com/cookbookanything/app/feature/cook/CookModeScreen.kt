@@ -55,7 +55,7 @@ import com.cookbookanything.app.feature.recipedetail.RecipeDetailViewModel
 import com.cookbookanything.app.feature.recipedetail.StepTimer
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
-import com.cookbookanything.app.ui.components.IndexCard
+import com.cookbookanything.app.ui.components.PageCard
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.cooking.ingredientsForStep
@@ -177,7 +177,7 @@ fun CookModeScreen(
             val step = steps[page]
             val stepIngredients = remember(step.text, ingredientTexts) { ingredientsForStep(step.text, ingredientTexts) }
             val minutes = remember(step.text) { timerMinutes(step.text) }
-            IndexCard(modifier = Modifier.fillMaxSize(), ruled = true) {
+            PageCard(modifier = Modifier.fillMaxSize()) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()

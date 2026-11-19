@@ -1,11 +1,15 @@
 package com.cookbookanything.app.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -17,10 +21,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,12 +35,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -48,6 +49,8 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.cookbookanything.app.R
 import com.cookbookanything.app.data.photos.photoDirectory
 import java.io.File
@@ -85,7 +88,8 @@ fun RecipePhoto(
 ) {
     val context = LocalContext.current
     AsyncImage(
-        model = File(photoDirectory(context), name),
+        // A photo fades in once decoded instead of popping into a blank space.
+        model = ImageRequest.Builder(context).data(File(photoDirectory(context), name)).crossfade(true).build(),
         contentDescription = contentDescription,
         modifier = modifier,
         contentScale = contentScale,
@@ -154,15 +158,7 @@ fun CheckRow(
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            // Teal for "have it" and "done", so progress reads at a glance.
-            colors = CheckboxDefaults.colors(
-                checkedColor = MaterialTheme.colorScheme.secondary,
-                checkmarkColor = MaterialTheme.colorScheme.onSecondary,
-            ),
-        )
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Column(modifier = Modifier.padding(end = 16.dp, top = 8.dp, bottom = 8.dp)) {
             StruckText(
                 text = text,
@@ -204,53 +200,38 @@ fun StruckText(text: String, struck: Boolean, style: TextStyle, color: Color) {
     )
 }
 
-private val RuledLineGap = 32.dp
-private const val RULED_LINE_ALPHA = 0.08f
+private const val PRESSED_SCALE = 0.97f
 
-/** Faint ruled lines, like an index card's. Decoration only, well behind whatever is written on top. */
-fun Modifier.ruledLines(line: Color): Modifier = drawBehind {
-    val gap = RuledLineGap.toPx()
-    var y = gap
-    while (y < size.height) {
-        drawLine(line.copy(alpha = RULED_LINE_ALPHA), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
-        y += gap
+/** Shrinks what is pressed a little while the finger is down, like a key going in, and springs back. */
+@Composable
+fun Modifier.pressScale(interaction: MutableInteractionSource): Modifier {
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) PRESSED_SCALE else 1f, spring(stiffness = Spring.StiffnessMedium), label = "press")
+    return graphicsLayer {
+        scaleX = scale
+        scaleY = scale
     }
 }
 
-/** An index card: card stock with the family red rule across its top. */
+/** A page of the book: white paper with a hairline edge, no shadow. */
 @Composable
-fun IndexCard(
+fun PageCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    ruled: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-    val body: @Composable ColumnScope.() -> Unit = {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(3.dp)
-                .background(MaterialTheme.colorScheme.primary),
-        )
-        Column(modifier = if (ruled) Modifier.ruledLines(MaterialTheme.colorScheme.onSurface) else Modifier, content = content)
-    }
+    val edge = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     if (onClick != null) {
-        Card(onClick = onClick, modifier = modifier, colors = colors, content = body)
+        val interaction = remember { MutableInteractionSource() }
+        Card(onClick = onClick, modifier = modifier.pressScale(interaction), colors = colors, border = edge, interactionSource = interaction, content = content)
     } else {
-        Card(modifier = modifier, colors = colors, content = body)
+        Card(modifier = modifier, colors = colors, border = edge, content = content)
     }
 }
 
-/** The logo of AnyKind, the collection this app belongs to. Its letters take the colour of the text around it. */
+/** The wordmark of AnyKind, the collection this app belongs to, from Panos's logo files. */
 @Composable
 fun AnyKindWordmark(modifier: Modifier = Modifier) {
-    Box(modifier) {
-        Image(painterResource(R.drawable.logo_anykind_mark), contentDescription = "AnyKind")
-        Image(
-            painter = painterResource(R.drawable.logo_anykind_letters),
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(LocalContentColor.current),
-        )
-    }
+    Image(painterResource(R.drawable.logo_anykind_wordmark), contentDescription = "AnyKind", modifier = modifier.height(32.dp))
 }

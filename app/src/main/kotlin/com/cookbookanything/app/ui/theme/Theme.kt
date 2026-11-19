@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class)
 
 package com.cookbookanything.app.ui.theme
 
@@ -14,14 +14,20 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.cookbookanything.app.R
 import com.cookbookanything.core.domain.design.Palette.Dark
 import com.cookbookanything.core.domain.design.Palette.Light
 
-// A box of index cards: cream box, white cards, the family red for the rule across each card, teal
-// for ticks and ochre for the category tabs. Fixed colours on purpose, so the app keeps its own look
-// instead of following the wallpaper. The values and their contrast test live in core/domain.
+// A printed cookbook: paper, ink, and the family red as the one lead colour for buttons, links and
+// selections (secondaryContainer carries selected chips and tonal buttons, so it is red too). Fixed
+// colours on purpose, so the app keeps its own look instead of following the wallpaper. The values
+// and their contrast test live in core/domain.
 private val LightColors = lightColorScheme(
     primary = Color(Light.RED),
     onPrimary = Color(Light.ON_RED),
@@ -29,8 +35,8 @@ private val LightColors = lightColorScheme(
     onPrimaryContainer = Color(Light.ON_RED_CONTAINER),
     secondary = Color(Light.TEAL),
     onSecondary = Color(Light.ON_TEAL),
-    secondaryContainer = Color(Light.TEAL_CONTAINER),
-    onSecondaryContainer = Color(Light.ON_TEAL_CONTAINER),
+    secondaryContainer = Color(Light.RED_CONTAINER),
+    onSecondaryContainer = Color(Light.ON_RED_CONTAINER),
     tertiary = Color(Light.OCHRE),
     onTertiary = Color(Light.ON_OCHRE),
     tertiaryContainer = Color(Light.OCHRE_CONTAINER),
@@ -60,8 +66,8 @@ private val DarkColors = darkColorScheme(
     onPrimaryContainer = Color(Dark.ON_RED_CONTAINER),
     secondary = Color(Dark.TEAL),
     onSecondary = Color(Dark.ON_TEAL),
-    secondaryContainer = Color(Dark.TEAL_CONTAINER),
-    onSecondaryContainer = Color(Dark.ON_TEAL_CONTAINER),
+    secondaryContainer = Color(Dark.RED_CONTAINER),
+    onSecondaryContainer = Color(Dark.ON_RED_CONTAINER),
     tertiary = Color(Dark.OCHRE),
     onTertiary = Color(Dark.ON_OCHRE),
     tertiaryContainer = Color(Dark.OCHRE_CONTAINER),
@@ -84,27 +90,38 @@ private val DarkColors = darkColorScheme(
     error = Color(Dark.ERROR),
 )
 
-// Headings in the phone's serif, like the printed head of a recipe card; body text stays sans.
+// Literata, the book serif Google made for Play Books (SIL Open Font License, Greek included), for
+// every heading and title, cut at the optical size of a title. Body text stays in the phone's sans.
+private val Literata = FontFamily(
+    listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold).map { weight ->
+        Font(
+            resId = R.font.literata,
+            weight = weight,
+            variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight), FontVariation.Setting("opsz", 24f)),
+        )
+    },
+)
+
 private val CookbookTypography = Typography().let { base ->
     base.copy(
-        displayLarge = base.displayLarge.copy(fontFamily = FontFamily.Serif),
-        displayMedium = base.displayMedium.copy(fontFamily = FontFamily.Serif),
-        displaySmall = base.displaySmall.copy(fontFamily = FontFamily.Serif),
-        headlineLarge = base.headlineLarge.copy(fontFamily = FontFamily.Serif),
-        headlineMedium = base.headlineMedium.copy(fontFamily = FontFamily.Serif),
-        headlineSmall = base.headlineSmall.copy(fontFamily = FontFamily.Serif),
-        titleLarge = base.titleLarge.copy(fontFamily = FontFamily.Serif),
-        titleMedium = base.titleMedium.copy(fontFamily = FontFamily.Serif),
+        displayLarge = base.displayLarge.copy(fontFamily = Literata),
+        displayMedium = base.displayMedium.copy(fontFamily = Literata),
+        displaySmall = base.displaySmall.copy(fontFamily = Literata),
+        headlineLarge = base.headlineLarge.copy(fontFamily = Literata),
+        headlineMedium = base.headlineMedium.copy(fontFamily = Literata),
+        headlineSmall = base.headlineSmall.copy(fontFamily = Literata),
+        titleLarge = base.titleLarge.copy(fontFamily = Literata),
+        titleMedium = base.titleMedium.copy(fontFamily = Literata),
     )
 }
 
-// Corners a little tighter than Material's, like cut card stock.
+// Corners nearer to square than Material's, like a printed page and its photos.
 private val CookbookShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(14.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(28.dp),
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(6.dp),
+    medium = RoundedCornerShape(10.dp),
+    large = RoundedCornerShape(14.dp),
+    extraLarge = RoundedCornerShape(20.dp),
 )
 
 @Composable
@@ -117,7 +134,7 @@ fun CookbookTheme(content: @Composable () -> Unit) {
     )
 }
 
-/** Top bars are part of the box, not a coloured band: same colour as the background, ink text. */
+/** Top bars are part of the page, not a coloured band: same colour as the background, ink text. */
 @Composable
 fun appBarColors(): TopAppBarColors {
     val scheme = MaterialTheme.colorScheme

@@ -102,6 +102,6 @@ The "Read a recipe from a photo" button in the editor sends the photo to Google 
 
 Stack: Kotlin, Jetpack Compose with Material 3, Hilt, Room 3, Navigation 3, WorkManager, Coil, Glance, Firebase Auth.
 
-The colours live in `core/domain/.../design/Palette.kt` so that a unit test can check every text and background pair for contrast (WCAG AA). The look follows the AnyKind family: an index card from a recipe box, the family red, ochre and teal, serif headings, ink doodles on empty screens.
+The colours live in `core/domain/.../design/Palette.kt` so that a unit test can check every text and background pair for contrast (WCAG AA). The look is a printed cookbook in the AnyKind family's graphite palette (Panos's `app-palette.css`, with the family red as the lead colour): paper and ink, headings in Literata (the Google Play Books serif, SIL Open Font License in `app/licenses/`, Greek included), photos and pages with hairline edges, ink doodles on empty screens. The launcher icon and the AnyKind wordmark are his logo files.
 
 `app/debug.keystore` is a throwaway signing key for test builds only, so that each new test build can update the previous one without wiping your recipes. It must never sign a Google Play release.
