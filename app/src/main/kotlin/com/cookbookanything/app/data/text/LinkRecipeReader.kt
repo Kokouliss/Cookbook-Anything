@@ -7,6 +7,7 @@ import androidx.core.content.FileProvider
 import com.cookbookanything.app.BuildConfig
 import com.cookbookanything.app.data.photos.PhotoStore
 import com.cookbookanything.core.domain.text.ParsedRecipe
+import com.cookbookanything.core.domain.text.instagramEmbedUrl
 import com.cookbookanything.core.domain.text.parseRecipeHtml
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
@@ -21,7 +22,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Fetches the page behind a link and reads the recipe on it; recipe sites give an exact record,
- * Instagram, TikTok and Facebook give the caption and the picture or video thumbnail. Pages that
+ * Instagram (through its embed page), TikTok and Facebook give the caption and the picture or video thumbnail. Pages that
  * only show a login wall come back as "nothing found". The picture is stored as the recipe photo.
  */
 @Singleton
@@ -37,13 +38,14 @@ class LinkRecipeReader @Inject constructor(
     suspend fun read(url: String): Pair<ParsedRecipe, String?>? = withContext(Dispatchers.IO) {
         // A plain request first, it is quick; sites that refuse it (403) or draw the recipe with
         // JavaScript get a second try through the phone's browser engine.
-        val plain = runCatching { fetch(url) }
+        val address = instagramEmbedUrl(url) ?: url
+        val plain = runCatching { fetch(address) }
         var recipe = plain.getOrNull()?.let(::parseRecipeHtml)
         if (recipe == null) {
-            val rendered = browser.load(url) { parseRecipeHtml(it) != null }
+            val rendered = browser.load(address) { parseRecipeHtml(it) != null }
             recipe = rendered?.let(::parseRecipeHtml)
             if (recipe == null) {
-                writeDetails(url, plain, rendered)
+                writeDetails("$url, read from $address", plain, rendered)
                 plain.exceptionOrNull()?.let { throw it }
                 return@withContext null
             }

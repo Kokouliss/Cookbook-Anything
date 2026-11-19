@@ -27,6 +27,10 @@ private val pageTitle = Regex("""<title[^>]*>(.*?)</title>""", setOf(RegexOption
 // Instagram's title and description wrap the caption: `name on Instagram: "caption"`.
 private val quotedCaption = Regex("""^[^"]*: "(.*)"\s*$""", RegexOption.DOT_MATCHES_ALL)
 private val lenientJson = Json { isLenient = true; ignoreUnknownKeys = true }
+private val instagramPost = Regex("""instagram\.com/(?!share/)(?:[\w.]+/)?(?:p|reels?|tv)/([\w-]+)""")
+private val captionBox = Regex("""<div[^>]*\bclass\s*=\s*["']Caption["'][^>]*>""")
+private val captionExtras = Regex("""(?is)<a[^>]*\bCaptionUsername\b[^>]*>.*?</a>|<div[^>]*\bCaptionComments\b.*""")
+private val embeddedImage = Regex("""<img[^>]*\bEmbeddedMediaImage\b[^>]*>""")
 
 private const val LINK_SURROUNDING_TEXT = 120
 private const val HEADING_LENGTH = 40
@@ -38,11 +42,21 @@ fun linkIn(text: String): String? {
 }
 
 /**
+ * The address of an Instagram post's embed page, or null for any other link. Asked for the post
+ * itself, Instagram hands a signed-out app an error page and pushes a browser into its own app; the
+ * embed page is the one it shows to everybody.
+ * shortcut: instagram.com/share/… links hold no post code and are left alone, follow their redirect first if they turn up.
+ */
+fun instagramEmbedUrl(url: String): String? =
+    instagramPost.find(url)?.let { "https://www.instagram.com/p/${it.groupValues[1]}/embed/captioned/" }
+
+/**
  * The recipe on a web page, tried in this order:
  * 1. a schema.org Recipe record in JSON-LD, which recipe sites carry for search engines;
  * 2. the same record as microdata (`itemprop="recipeIngredient"` and friends) in the page's HTML;
- * 3. the visible text from its "Ingredients"/"Υλικά" heading on, read like pasted text;
- * 4. the title and description (for an Instagram post or reel, the caption), read like pasted text.
+ * 3. the caption of an Instagram embed page, read like pasted text;
+ * 4. the visible text from its "Ingredients"/"Υλικά" heading on, read like pasted text;
+ * 5. the title and description (for a social post, the caption), read like pasted text.
  * The picture is the record's image or the page's og:image (a reel's thumbnail). Null when the page
  * holds no recipe at all.
  */
@@ -62,6 +76,9 @@ fun parseRecipeHtml(html: String): ParsedRecipe? {
     val microdata = parseMicrodata(html)
     if (microdata != null) return microdata.copy(title = title, imageUrl = microdata.imageUrl ?: image)
 
+    val caption = instagramCaption(html)?.let(::parseRecipeText)
+    if (caption != null && !caption.isEmpty) return caption.copy(imageUrl = instagramImage(html) ?: image)
+
     val lines = textLines(html)
     val from = lines.indexOfFirst { it.removeSuffix(":").searchKey() in INGREDIENT_HEADERS }
     if (from >= 0) {
@@ -70,8 +87,8 @@ fun parseRecipeHtml(html: String): ParsedRecipe? {
     }
 
     val description = meta["og:description"] ?: meta["description"] ?: return null
-    val caption = quotedCaption.find(description)?.groupValues?.get(1)
-    val parsed = parseRecipeText(caption ?: listOfNotNull(title, description).joinToString("\n"))
+    val quoted = quotedCaption.find(description)?.groupValues?.get(1)
+    val parsed = parseRecipeText(quoted ?: listOfNotNull(title, description).joinToString("\n"))
     return if (parsed.isEmpty) null else parsed.copy(imageUrl = image)
 }
 
@@ -142,6 +159,36 @@ private fun image(element: JsonElement?): String? = when (element) {
     is JsonArray -> element.firstNotNullOfOrNull(::image)
     is JsonObject -> element.string("url") ?: element.string("contentUrl")
     null -> null
+}
+
+// ---- Instagram embed ----
+
+/** The caption is either drawn in a "Caption" box, after the author's name and before the comments, or only held in the page's data. */
+private fun instagramCaption(html: String): String? {
+    // The author link next to it tells Instagram's box from any other site's "Caption".
+    val box = captionBox.find(html)?.takeIf { "CaptionUsername" in html } ?: return jsonString(html, "edge_media_to_caption", "text")
+    return textLines(innerHtml(html, box.range.last + 1, "div").replace(captionExtras, "")).joinToString("\n").ifBlank { null }
+}
+
+private fun instagramImage(html: String): String? =
+    embeddedImage.find(html)?.let { attributes(it.value)["src"]?.decodeEntities() } ?: jsonString(html, "display_url", "display_url")
+
+/**
+ * The first string under [key] at or after [anchor], in JSON found anywhere in the page. Instagram
+ * also ships its data as JSON inside a JSON string, where every quote is `\"`; that is read too.
+ */
+private fun jsonString(html: String, anchor: String, key: String): String? {
+    // Two back, so the anchor may be the key itself: its opening quote, escaped or not, is still ahead.
+    val from = (html.indexOf(anchor).takeIf { it >= 0 } ?: return null).minus(2).coerceAtLeast(0)
+    val opening = Regex("""\\?"$key\\?"\s*:\s*(\\?)"""").find(html, from) ?: return null
+    val nested = opening.groupValues[1].isNotEmpty()
+    // The closing quote is the first one not escaped at its own level: after 0, 2, 4… backslashes, or nested after 1, 5, 9…
+    val closing = Regex(if (nested) """(?<!\\)(?:\\{4})*\\"""" else """(?<!\\)(?:\\{2})*"""").find(html, opening.range.last + 1) ?: return null
+    var text = html.substring(opening.range.last + 1, closing.range.last - if (nested) 1 else 0)
+    repeat(if (nested) 2 else 1) {
+        text = runCatching { (lenientJson.parseToJsonElement("\"$text\"") as JsonPrimitive).content }.getOrNull() ?: return null
+    }
+    return text.ifBlank { null }
 }
 
 // ---- microdata ----
