@@ -28,6 +28,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -259,7 +260,7 @@ fun RecipeEditScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // A photo or a link takes a few seconds to read; the line says so without blocking typing.
-            if (uiState.reading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            AnimatedVisibility(visible = uiState.reading) { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
             OutlinedTextField(
                 value = uiState.title,
                 onValueChange = onTitleChange,

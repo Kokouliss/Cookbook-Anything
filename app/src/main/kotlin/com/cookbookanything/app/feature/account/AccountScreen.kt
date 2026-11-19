@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -92,7 +93,7 @@ fun AccountScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (uiState.busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            AnimatedVisibility(visible = uiState.busy) { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
             when (val account = uiState.account) {
                 AccountState.Unavailable -> Text(stringResource(R.string.account_unavailable), style = MaterialTheme.typography.bodyLarge)
 

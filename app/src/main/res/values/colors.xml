@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Window chrome before Compose draws; the palette itself lives in core/domain Palette.kt. -->
-    <color name="window_background">#F6EFE3</color>
+    <color name="window_background">#F7F7FA</color>
     <color name="launcher_background">#171A21</color>
 </resources>
