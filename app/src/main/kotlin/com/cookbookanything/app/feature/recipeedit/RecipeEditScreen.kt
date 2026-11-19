@@ -28,6 +28,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -74,6 +75,7 @@ import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Step
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableColumn
 
@@ -104,7 +106,9 @@ fun RecipeEditRoute(
         onRemoveStep = viewModel::removeStep,
         onRestoreStep = viewModel::restoreStep,
         onMoveStep = viewModel::moveStep,
-        onPasteText = viewModel::applyText,
+        onPaste = viewModel::paste,
+        onReadPhotos = if (viewModel.canReadPhotos) viewModel::readPhotos else null,
+        readResults = viewModel.readResultFlow,
         onAddPhotos = viewModel::addPhotos,
         onRemovePhoto = viewModel::removePhoto,
         newCameraTarget = viewModel::newCameraTarget,
@@ -133,7 +137,10 @@ fun RecipeEditScreen(
     onAddPhotos: (String?, List<Uri>) -> Unit,
     onRemovePhoto: (String?, String) -> Unit,
     newCameraTarget: () -> Uri,
-    onPasteText: (String) -> Pair<Int, Int>,
+    onPaste: (String) -> Unit,
+    /** Null when sign-in is not set up in this build, which also means no Cloud Vision. */
+    onReadPhotos: ((List<Uri>) -> Unit)?,
+    readResults: Flow<ReadResult>,
 ) {
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -144,6 +151,27 @@ fun RecipeEditScreen(
     val undo = stringResource(R.string.undo)
     val ingredientRemoved = stringResource(R.string.ingredient_removed)
     val stepRemoved = stringResource(R.string.step_removed)
+    // Photos of a recipe page are read, not attached; the camera file is swept with the other orphans.
+    val readPicker = rememberPhotoPicker(newCameraTarget = newCameraTarget, onPicked = { uris -> onReadPhotos?.invoke(uris) })
+    val photoNothing = stringResource(R.string.photo_nothing)
+    val photoFailed = stringResource(R.string.photo_failed)
+    val photoSavedOffline = stringResource(R.string.photo_saved_offline)
+    val linkNothing = stringResource(R.string.link_nothing)
+    val linkFailed = stringResource(R.string.link_failed)
+    LaunchedEffect(readResults) {
+        readResults.collect { result ->
+            snackbarHostState.showSnackbar(
+                when (result) {
+                    is ReadResult.Added -> context.getString(R.string.pasted_summary, result.ingredients, result.steps)
+                    ReadResult.PhotoNothing -> photoNothing
+                    ReadResult.PhotoFailed -> photoFailed
+                    ReadResult.PhotoSavedForLater -> photoSavedOffline
+                    ReadResult.LinkNothing -> linkNothing
+                    ReadResult.LinkFailed -> linkFailed
+                },
+            )
+        }
+    }
     /** Removes a row and offers Undo for a moment. */
     fun removeWithUndo(message: String, remove: () -> Unit, restore: () -> Unit) {
         remove()
@@ -179,6 +207,14 @@ fun RecipeEditScreen(
                     AppIconButton(R.drawable.ic_close, stringResource(R.string.close), onClick = close)
                 },
                 actions = {
+                    if (onReadPhotos != null) {
+                        AddPhotoButton(
+                            picker = readPicker,
+                            iconOnly = true,
+                            icon = R.drawable.ic_document_scanner,
+                            label = stringResource(R.string.photo_recipe),
+                        )
+                    }
                     AppIconButton(
                         icon = R.drawable.ic_content_paste,
                         contentDescription = stringResource(R.string.paste_recipe),
@@ -189,12 +225,7 @@ fun RecipeEditScreen(
                                 val text = clip?.let { data ->
                                     (0 until data.itemCount).joinToString("\n") { data.getItemAt(it).coerceToText(context) }
                                 }
-                                if (text.isNullOrBlank()) {
-                                    snackbarHostState.showSnackbar(pasteNothing)
-                                } else {
-                                    val (ingredients, steps) = onPasteText(text)
-                                    snackbarHostState.showSnackbar(context.getString(R.string.pasted_summary, ingredients, steps))
-                                }
+                                if (text.isNullOrBlank()) snackbarHostState.showSnackbar(pasteNothing) else onPaste(text)
                             }
                         },
                     )
@@ -227,6 +258,8 @@ fun RecipeEditScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // A photo or a link takes a few seconds to read; the line says so without blocking typing.
+            if (uiState.reading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             OutlinedTextField(
                 value = uiState.title,
                 onValueChange = onTitleChange,
