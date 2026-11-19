@@ -64,6 +64,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.cookbookanything.app.R
+import com.cookbookanything.app.feature.recipedetail.shareFile
 import com.cookbookanything.app.ui.components.AddPhotoButton
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
@@ -108,6 +109,7 @@ fun RecipeEditRoute(
         onRestoreStep = viewModel::restoreStep,
         onMoveStep = viewModel::moveStep,
         onPaste = viewModel::paste,
+        linkDetails = viewModel::linkDetails,
         onReadPhotos = if (viewModel.canReadPhotos) viewModel::readPhotos else null,
         readResults = viewModel.readResultFlow,
         onAddPhotos = viewModel::addPhotos,
@@ -139,6 +141,7 @@ fun RecipeEditScreen(
     onRemovePhoto: (String?, String) -> Unit,
     newCameraTarget: () -> Uri,
     onPaste: (String) -> Unit,
+    linkDetails: () -> Uri?,
     /** Null when sign-in is not set up in this build, which also means no Cloud Vision. */
     onReadPhotos: ((List<Uri>) -> Unit)?,
     readResults: Flow<ReadResult>,
@@ -159,10 +162,15 @@ fun RecipeEditScreen(
     val photoSavedOffline = stringResource(R.string.photo_saved_offline)
     val linkNothing = stringResource(R.string.link_nothing)
     val linkFailed = stringResource(R.string.link_failed)
+    val sendDetails = stringResource(R.string.link_send_details)
     LaunchedEffect(readResults) {
         readResults.collect { result ->
-            snackbarHostState.showSnackbar(
-                when (result) {
+            // A link that was not read offers the page the site answered with, so the reason can be found.
+            val unreadLink = result == ReadResult.LinkNothing || result == ReadResult.LinkFailed
+            val pressed = snackbarHostState.showSnackbar(
+                actionLabel = sendDetails.takeIf { unreadLink },
+                duration = if (unreadLink) SnackbarDuration.Long else SnackbarDuration.Short,
+                message = when (result) {
                     is ReadResult.Added -> context.getString(R.string.pasted_summary, result.ingredients, result.steps)
                     ReadResult.PhotoNothing -> photoNothing
                     ReadResult.PhotoFailed -> photoFailed
@@ -171,6 +179,7 @@ fun RecipeEditScreen(
                     ReadResult.LinkFailed -> linkFailed
                 },
             )
+            if (pressed == SnackbarResult.ActionPerformed) linkDetails()?.let { context.shareFile(it, "text/plain", sendDetails) }
         }
     }
     /** Removes a row and offers Undo for a moment. */

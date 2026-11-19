@@ -1,9 +1,16 @@
 package com.cookbookanything.app.data.text
 
+import android.content.Context
+import android.net.Uri
+import android.os.Build
+import androidx.core.content.FileProvider
+import com.cookbookanything.app.BuildConfig
 import com.cookbookanything.app.data.photos.PhotoStore
 import com.cookbookanything.core.domain.text.ParsedRecipe
 import com.cookbookanything.core.domain.text.parseRecipeHtml
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -19,23 +26,53 @@ import kotlinx.coroutines.withContext
  */
 @Singleton
 class LinkRecipeReader @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val photoStore: PhotoStore,
     private val browser: BrowserPageLoader,
 ) {
+    // In the folder the file provider already shares from.
+    private val details get() = File(context.cacheDir, "shared/link-details.txt")
 
     /** The recipe and the name of its downloaded picture, or null when the page has none. Throws [IOException] when it cannot load. */
     suspend fun read(url: String): Pair<ParsedRecipe, String?>? = withContext(Dispatchers.IO) {
         // A plain request first, it is quick; sites that refuse it (403) or draw the recipe with
         // JavaScript get a second try through the phone's browser engine.
         val plain = runCatching { fetch(url) }
-        val recipe = plain.getOrNull()?.let(::parseRecipeHtml)
-            ?: browser.load(url) { parseRecipeHtml(it) != null }?.let(::parseRecipeHtml)
-            ?: plain.exceptionOrNull()?.let { throw it }
-            ?: return@withContext null
+        var recipe = plain.getOrNull()?.let(::parseRecipeHtml)
+        if (recipe == null) {
+            val rendered = browser.load(url) { parseRecipeHtml(it) != null }
+            recipe = rendered?.let(::parseRecipeHtml)
+            if (recipe == null) {
+                writeDetails(url, plain, rendered)
+                plain.exceptionOrNull()?.let { throw it }
+                return@withContext null
+            }
+        }
         val photo = recipe.imageUrl?.let { image ->
             runCatching { open(image).let { c -> try { c.inputStream.use { photoStore.importStream(it, MAX_IMAGE_BYTES) } } finally { c.disconnect() } } }.getOrNull()
         }
         recipe to photo
+    }
+
+    /** What the site answered to the last link that could not be read, as a file to send to the developer. Null when there is none. */
+    fun detailsFile(): Uri? = details.takeIf { it.exists() }?.let { FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it) }
+
+    private fun writeDetails(url: String, plain: Result<String>, rendered: String?) {
+        // Best effort: a report that cannot be written must not change what the read answers.
+        runCatching {
+            details.parentFile?.mkdirs()
+            details.writeText(
+                buildString {
+                    appendLine("Cookbook Anything ${BuildConfig.VERSION_NAME} on Android ${Build.VERSION.RELEASE}")
+                    appendLine("Link: $url")
+                    appendLine("Plain request: ${plain.fold({ "${it.length} characters" }, { "failed, $it" })}")
+                    appendLine("Browser: ${rendered?.let { "${it.length} characters" } ?: "nothing"}")
+                    appendLine("Each page below starts with a comment that holds the address it ended at.")
+                    appendLine("\n===== plain request =====\n${plain.getOrNull().orEmpty()}")
+                    appendLine("\n===== browser =====\n${rendered.orEmpty()}")
+                },
+            )
+        }
     }
 
     private fun fetch(url: String): String {
@@ -43,7 +80,8 @@ class LinkRecipeReader @Inject constructor(
         try {
             // shortcut: the charset comes from the header or is UTF-8, read the <meta charset> if an old Greek site comes out garbled
             val charset = connection.contentType?.substringAfter("charset=", "")?.substringBefore(';')?.trim()?.ifEmpty { null } ?: "UTF-8"
-            return String(connection.inputStream.use { it.readUpTo(MAX_PAGE_BYTES) }, charset(charset))
+            // The address after redirects goes in front as a comment, for the details file.
+            return "<!-- ${connection.url} -->\n" + String(connection.inputStream.use { it.readUpTo(MAX_PAGE_BYTES) }, charset(charset))
         } finally {
             connection.disconnect()
         }

@@ -164,6 +164,9 @@ class RecipeEditViewModel @AssistedInject constructor(
         if (link != null) readLink(link) else viewModelScope.launch { readResults.send(applyParsed(parseRecipeText(text))) }
     }
 
+    /** What the site answered to the link that was just not read, to send on. */
+    fun linkDetails(): Uri? = linkRecipeReader.detailsFile()
+
     private fun readLink(url: String) = read(ReadResult.LinkFailed) {
         val (recipe, photo) = linkRecipeReader.read(url) ?: return@read ReadResult.LinkNothing
         if (photo != null) edit { copy(photos = photos + photo) }
