@@ -128,7 +128,7 @@ fun RecipeDetailRoute(
     )
 }
 
-private fun Context.shareFile(uri: Uri, mimeType: String, chooserTitle: String) {
+internal fun Context.shareFile(uri: Uri, mimeType: String, chooserTitle: String) {
     val send = Intent(Intent.ACTION_SEND)
         .setType(mimeType)
         .putExtra(Intent.EXTRA_STREAM, uri)

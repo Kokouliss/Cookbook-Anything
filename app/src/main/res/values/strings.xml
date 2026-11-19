@@ -223,6 +223,7 @@
     <string name="anykind_apps" translatable="false">AnyKind Apps</string>
     <string name="photo_recipe">Read a recipe from a photo</string>
     <string name="link_nothing">No recipe was found at that link. Copy the text of the recipe instead.</string>
+    <string name="link_send_details">Send details</string>
     <string name="link_failed">The page could not be loaded. Check the connection and the link.</string>
     <string name="photo_nothing">No text was found in the photo.</string>
     <string name="photo_failed">The photo could not be read. Check the connection, and that Cloud Vision is switched on for the project.</string>
