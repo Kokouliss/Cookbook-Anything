@@ -135,13 +135,35 @@ data class ScheduleEntity(
     val scheduledAt: Long,
 )
 
+/** One finished run of cooking mode. Added in database version 3. */
+@Entity(
+    tableName = "cooked",
+    foreignKeys = [
+        ForeignKey(
+            entity = RecipeEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["recipeId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("recipeId")],
+)
+data class CookedEntity(
+    @PrimaryKey val id: String,
+    val recipeId: String,
+    val cookedAt: Long,
+)
+
 data class RecipeWithDetails(
     @Embedded val recipe: RecipeEntity,
     @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val ingredients: List<IngredientEntity>,
     @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val steps: List<StepEntity>,
     @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val photos: List<PhotoEntity>,
     @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val comments: List<CommentEntity>,
-)
+    @Relation(parentColumns = ["id"], entityColumns = ["recipeId"]) val cooked: List<CookedEntity>,
+) {
+    val coverPhoto: String? get() = photos.filter { it.stepId == null }.minByOrNull { it.position }?.fileName
+}
 
 data class RecipeSummaryRow(
     val id: String,
@@ -150,6 +172,11 @@ data class RecipeSummaryRow(
     val coverPhoto: String?,
     /** All ingredient lines joined by line breaks; null when the recipe has none. */
     val ingredientLines: String?,
+    val servings: Int?,
+    val prepMinutes: Int?,
+    val cookMinutes: Int?,
+    val timesCooked: Int,
+    val lastCookedAt: Long?,
 )
 
 data class ScheduledRecipeRow(

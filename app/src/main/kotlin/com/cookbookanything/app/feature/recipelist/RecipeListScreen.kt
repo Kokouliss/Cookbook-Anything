@@ -11,34 +11,39 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -49,10 +54,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cookbookanything.app.R
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
+import com.cookbookanything.app.ui.components.Doodle
+import com.cookbookanything.app.ui.components.DoodleImage
+import com.cookbookanything.app.ui.components.EmptyState
+import com.cookbookanything.app.ui.components.IndexCard
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
+import com.cookbookanything.core.domain.sort.RecipeSort
 
 @Composable
 fun RecipeListRoute(
@@ -60,6 +70,8 @@ fun RecipeListRoute(
     onOpenRecipe: (String) -> Unit,
     onImportRecipe: (Uri) -> Unit,
     onManageCategories: () -> Unit,
+    backupOverdue: Boolean,
+    onOpenSettings: () -> Unit,
     viewModel: RecipeListViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,6 +83,9 @@ fun RecipeListRoute(
         onManageCategories = onManageCategories,
         onSelectCategory = viewModel::selectCategory,
         onSearch = viewModel::search,
+        onSort = viewModel::setSort,
+        backupOverdue = backupOverdue,
+        onOpenSettings = onOpenSettings,
     )
 }
 
@@ -83,6 +98,9 @@ fun RecipeListScreen(
     onManageCategories: () -> Unit,
     onSelectCategory: (String?) -> Unit,
     onSearch: (String) -> Unit,
+    onSort: (RecipeSort) -> Unit,
+    backupOverdue: Boolean,
+    onOpenSettings: () -> Unit,
 ) {
     // Any file type: chat apps deliver recipe files as generic documents.
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -95,6 +113,7 @@ fun RecipeListScreen(
                 colors = appBarColors(),
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
+                    (uiState as? RecipeListUiState.Success)?.let { SortMenu(current = it.sort, onSort = onSort) }
                     AppIconButton(
                         icon = R.drawable.ic_download,
                         contentDescription = stringResource(R.string.import_recipe),
@@ -130,9 +149,38 @@ fun RecipeListScreen(
                 onOpenRecipe = onOpenRecipe,
                 onSelectCategory = onSelectCategory,
                 onSearch = onSearch,
+                backupOverdue = backupOverdue,
+                onOpenSettings = onOpenSettings,
             )
         }
     }
+}
+
+@Composable
+private fun SortMenu(current: RecipeSort, onSort: (RecipeSort) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        AppIconButton(R.drawable.ic_sort, stringResource(R.string.sort), onClick = { open = true })
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            RecipeSort.entries.forEach { sort ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(sort.label())) },
+                    leadingIcon = { RadioButton(selected = sort == current, onClick = null) },
+                    onClick = {
+                        onSort(sort)
+                        open = false
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun RecipeSort.label(): Int = when (this) {
+    RecipeSort.RECENT -> R.string.sort_recent
+    RecipeSort.A_TO_Z -> R.string.sort_a_to_z
+    RecipeSort.COOKED_RECENTLY -> R.string.sort_cooked_recently
+    RecipeSort.NOT_FOR_A_WHILE -> R.string.sort_not_for_a_while
 }
 
 @Composable
@@ -142,6 +190,8 @@ private fun RecipeList(
     onOpenRecipe: (String) -> Unit,
     onSelectCategory: (String?) -> Unit,
     onSearch: (String) -> Unit,
+    backupOverdue: Boolean,
+    onOpenSettings: () -> Unit,
 ) {
     // The typed text lives here so the field never lags behind fast typing; the view model only filters.
     var query by rememberSaveable { mutableStateOf("") }
@@ -153,6 +203,24 @@ private fun RecipeList(
             .fillMaxSize()
             .padding(contentPadding),
     ) {
+        if (backupOverdue && !uiState.cookbookIsEmpty) {
+            // Said in words, not only by colour, and gone as soon as a backup folder is set.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(start = 16.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.backup_overdue),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.backup_overdue_action)) }
+            }
+        }
         if (!uiState.cookbookIsEmpty) {
             OutlinedTextField(
                 value = query,
@@ -177,39 +245,44 @@ private fun RecipeList(
                 onSelectCategory = onSelectCategory,
             )
         }
-        if (uiState.recipes.isEmpty()) {
-            Box(
+        when {
+            uiState.cookbookIsEmpty -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                EmptyState(Doodle.Pot, stringResource(R.string.no_recipes_yet))
+            }
+
+            uiState.recipes.isEmpty() -> Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(32.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = stringResource(
-                        when {
-                            uiState.cookbookIsEmpty -> R.string.no_recipes_yet
-                            query.isNotBlank() -> R.string.no_search_results
-                            else -> R.string.no_recipes_in_category
-                        },
-                    ),
+                    text = stringResource(if (query.isNotBlank()) R.string.no_search_results else R.string.no_recipes_in_category),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
             }
-        } else {
-            val categoryNames = uiState.categories.associate { it.id to it.name }
-            LazyColumn(
-                // Bottom space keeps the last card clear of the add button.
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(uiState.recipes, key = { it.id }) { recipe ->
-                    RecipeCard(
-                        recipe = recipe,
-                        categoryName = categoryNames[recipe.categoryId],
-                        onClick = { onOpenRecipe(recipe.id) },
-                    )
+
+            else -> {
+                val categoryNames = uiState.categories.associate { it.id to it.name }
+                // Cards from the box, two across on a phone, more on a tablet.
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(160.dp),
+                    // Bottom space keeps the last card clear of the add button.
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(uiState.recipes, key = { it.id }) { recipe ->
+                        RecipeCard(
+                            recipe = recipe,
+                            categoryName = categoryNames[recipe.categoryId],
+                            onClick = { onOpenRecipe(recipe.id) },
+                            // A sort or a filter moves cards to their new place instead of redrawing the grid.
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
                 }
             }
         }
@@ -243,40 +316,49 @@ private fun CategoryFilter(
     }
 }
 
+/** One recipe card: the photo (or an ink doodle) on top, the name in the serif, one line of facts. */
 @Composable
-private fun RecipeCard(recipe: RecipeSummary, categoryName: String?, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val photoModifier = Modifier
-                .padding(8.dp)
-                .size(72.dp)
-                .clip(RoundedCornerShape(12.dp))
-            val coverPhoto = recipe.coverPhoto
-            if (coverPhoto != null) {
-                RecipePhoto(name = coverPhoto, modifier = photoModifier)
-            } else {
-                Box(
-                    modifier = photoModifier.background(MaterialTheme.colorScheme.surfaceVariant),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(R.drawable.ic_restaurant, contentDescription = null)
-                }
+private fun RecipeCard(recipe: RecipeSummary, categoryName: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    IndexCard(onClick = onClick, modifier = modifier) {
+        val coverPhoto = recipe.coverPhoto
+        val photoModifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(4f / 3f)
+        if (coverPhoto != null) {
+            RecipePhoto(name = coverPhoto, modifier = photoModifier)
+        } else {
+            Box(modifier = photoModifier.background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+                DoodleImage(Doodle.Pot)
             }
-            Column(modifier = Modifier.padding(end = 16.dp)) {
+        }
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+            Text(
+                text = recipe.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val facts = recipeFacts(recipe) ?: categoryName
+            if (facts != null) {
                 Text(
-                    text = recipe.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
+                    text = facts,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (categoryName != null) {
-                    Text(
-                        text = categoryName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
         }
     }
+}
+
+@Composable
+private fun recipeFacts(recipe: RecipeSummary): String? {
+    val resources = LocalContext.current.resources
+    val minutes = (recipe.prepMinutes ?: 0) + (recipe.cookMinutes ?: 0)
+    return listOfNotNull(
+        minutes.takeIf { it > 0 }?.let { stringResource(R.string.total_minutes, it) },
+        recipe.servings?.let { stringResource(R.string.servings_count, it) },
+        recipe.timesCooked.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.cooked_times, it, it) },
+    ).joinToString(" · ").ifEmpty { null }
 }

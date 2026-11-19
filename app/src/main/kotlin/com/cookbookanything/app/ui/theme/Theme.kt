@@ -3,100 +3,129 @@
 package com.cookbookanything.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import com.cookbookanything.core.domain.design.Palette.Dark
+import com.cookbookanything.core.domain.design.Palette.Light
 
-// Market-stall palette: tomato red, basil green and aubergine on saffron-tinted cream. Fixed colours
-// on purpose, so the app keeps its own look instead of following the wallpaper.
+// A box of index cards: cream box, white cards, the family red for the rule across each card, teal
+// for ticks and ochre for the category tabs. Fixed colours on purpose, so the app keeps its own look
+// instead of following the wallpaper. The values and their contrast test live in core/domain.
 private val LightColors = lightColorScheme(
-    primary = Color(0xFFC8321E),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFFFD2C2),
-    onPrimaryContainer = Color(0xFF3B0900),
-    secondary = Color(0xFF2E7D32),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFBDE8B5),
-    onSecondaryContainer = Color(0xFF05210A),
-    tertiary = Color(0xFF7B2D5E),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFD7EA),
-    onTertiaryContainer = Color(0xFF36072A),
-    background = Color(0xFFFFFBF5),
-    onBackground = Color(0xFF1E1410),
-    surface = Color(0xFFFFFBF5),
-    onSurface = Color(0xFF1E1410),
-    surfaceVariant = Color(0xFFF6E3C4),
-    onSurfaceVariant = Color(0xFF4D3F2C),
-    outline = Color(0xFF7C6A4F),
-    outlineVariant = Color(0xFFDCC9A6),
-    surfaceDim = Color(0xFFEBDDC8),
-    surfaceBright = Color(0xFFFFFBF5),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFFFF4E0),
-    surfaceContainer = Color(0xFFFDECCF),
-    surfaceContainerHigh = Color(0xFFF9E4C0),
-    surfaceContainerHighest = Color(0xFFF5DCB0),
+    primary = Color(Light.RED),
+    onPrimary = Color(Light.ON_RED),
+    primaryContainer = Color(Light.RED_CONTAINER),
+    onPrimaryContainer = Color(Light.ON_RED_CONTAINER),
+    secondary = Color(Light.TEAL),
+    onSecondary = Color(Light.ON_TEAL),
+    secondaryContainer = Color(Light.TEAL_CONTAINER),
+    onSecondaryContainer = Color(Light.ON_TEAL_CONTAINER),
+    tertiary = Color(Light.OCHRE),
+    onTertiary = Color(Light.ON_OCHRE),
+    tertiaryContainer = Color(Light.OCHRE_CONTAINER),
+    onTertiaryContainer = Color(Light.ON_OCHRE_CONTAINER),
+    background = Color(Light.BACKGROUND),
+    onBackground = Color(Light.INK),
+    surface = Color(Light.BACKGROUND),
+    onSurface = Color(Light.INK),
+    surfaceVariant = Color(Light.SURFACE_VARIANT),
+    onSurfaceVariant = Color(Light.MUTED),
+    outline = Color(Light.OUTLINE),
+    outlineVariant = Color(Light.OUTLINE_FAINT),
+    surfaceDim = Color(Light.SURFACE_DIM),
+    surfaceBright = Color(Light.CARD),
+    surfaceContainerLowest = Color(Light.SURFACE_LOWEST),
+    surfaceContainerLow = Color(Light.CARD),
+    surfaceContainer = Color(Light.SURFACE_CONTAINER),
+    surfaceContainerHigh = Color(Light.SURFACE_HIGH),
+    surfaceContainerHighest = Color(Light.SURFACE_HIGHEST),
+    error = Color(Light.ERROR),
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFFFB4A1),
-    onPrimary = Color(0xFF5F1407),
-    primaryContainer = Color(0xFF8C1D0E),
-    onPrimaryContainer = Color(0xFFFFDAD1),
-    secondary = Color(0xFF8FD88A),
-    onSecondary = Color(0xFF003909),
-    secondaryContainer = Color(0xFF1B5E20),
-    onSecondaryContainer = Color(0xFFC5F2BE),
-    tertiary = Color(0xFFF5B3D6),
-    onTertiary = Color(0xFF4A0E36),
-    tertiaryContainer = Color(0xFF632249),
-    onTertiaryContainer = Color(0xFFFFD7EA),
-    background = Color(0xFF17110B),
-    onBackground = Color(0xFFF3E4D0),
-    surface = Color(0xFF17110B),
-    onSurface = Color(0xFFF3E4D0),
-    surfaceVariant = Color(0xFF4D3F2C),
-    onSurfaceVariant = Color(0xFFDCC9A6),
-    outline = Color(0xFFA4936F),
-    outlineVariant = Color(0xFF4D3F2C),
-    surfaceDim = Color(0xFF17110B),
-    surfaceBright = Color(0xFF40362A),
-    surfaceContainerLowest = Color(0xFF110C07),
-    surfaceContainerLow = Color(0xFF201810),
-    surfaceContainer = Color(0xFF251C13),
-    surfaceContainerHigh = Color(0xFF30261B),
-    surfaceContainerHighest = Color(0xFF3B3024),
+    primary = Color(Dark.RED),
+    onPrimary = Color(Dark.ON_RED),
+    primaryContainer = Color(Dark.RED_CONTAINER),
+    onPrimaryContainer = Color(Dark.ON_RED_CONTAINER),
+    secondary = Color(Dark.TEAL),
+    onSecondary = Color(Dark.ON_TEAL),
+    secondaryContainer = Color(Dark.TEAL_CONTAINER),
+    onSecondaryContainer = Color(Dark.ON_TEAL_CONTAINER),
+    tertiary = Color(Dark.OCHRE),
+    onTertiary = Color(Dark.ON_OCHRE),
+    tertiaryContainer = Color(Dark.OCHRE_CONTAINER),
+    onTertiaryContainer = Color(Dark.ON_OCHRE_CONTAINER),
+    background = Color(Dark.BACKGROUND),
+    onBackground = Color(Dark.INK),
+    surface = Color(Dark.BACKGROUND),
+    onSurface = Color(Dark.INK),
+    surfaceVariant = Color(Dark.SURFACE_VARIANT),
+    onSurfaceVariant = Color(Dark.MUTED),
+    outline = Color(Dark.OUTLINE),
+    outlineVariant = Color(Dark.OUTLINE_FAINT),
+    surfaceDim = Color(Dark.SURFACE_DIM),
+    surfaceBright = Color(Dark.SURFACE_HIGHEST),
+    surfaceContainerLowest = Color(Dark.SURFACE_LOWEST),
+    surfaceContainerLow = Color(Dark.CARD),
+    surfaceContainer = Color(Dark.SURFACE_CONTAINER),
+    surfaceContainerHigh = Color(Dark.SURFACE_HIGH),
+    surfaceContainerHighest = Color(Dark.SURFACE_HIGHEST),
+    error = Color(Dark.ERROR),
+)
+
+// Headings in the phone's serif, like the printed head of a recipe card; body text stays sans.
+private val CookbookTypography = Typography().let { base ->
+    base.copy(
+        displayLarge = base.displayLarge.copy(fontFamily = FontFamily.Serif),
+        displayMedium = base.displayMedium.copy(fontFamily = FontFamily.Serif),
+        displaySmall = base.displaySmall.copy(fontFamily = FontFamily.Serif),
+        headlineLarge = base.headlineLarge.copy(fontFamily = FontFamily.Serif),
+        headlineMedium = base.headlineMedium.copy(fontFamily = FontFamily.Serif),
+        headlineSmall = base.headlineSmall.copy(fontFamily = FontFamily.Serif),
+        titleLarge = base.titleLarge.copy(fontFamily = FontFamily.Serif),
+        titleMedium = base.titleMedium.copy(fontFamily = FontFamily.Serif),
+    )
+}
+
+// Corners a little tighter than Material's, like cut card stock.
+private val CookbookShapes = Shapes(
+    extraSmall = RoundedCornerShape(6.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(28.dp),
 )
 
 @Composable
 fun CookbookTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
+        typography = CookbookTypography,
+        shapes = CookbookShapes,
         content = content,
     )
 }
 
-/**
- * Top bars carry the brand red. Both variants are dark with light text, which is why MainActivity
- * asks for light status bar icons in every theme.
- */
+/** Top bars are part of the box, not a coloured band: same colour as the background, ink text. */
 @Composable
 fun appBarColors(): TopAppBarColors {
     val scheme = MaterialTheme.colorScheme
-    val dark = isSystemInDarkTheme()
-    val container = if (dark) scheme.primaryContainer else scheme.primary
-    val content = if (dark) scheme.onPrimaryContainer else scheme.onPrimary
     return TopAppBarDefaults.topAppBarColors(
-        containerColor = container,
-        scrolledContainerColor = container,
-        navigationIconContentColor = content,
-        titleContentColor = content,
-        actionIconContentColor = content,
+        containerColor = scheme.background,
+        scrolledContainerColor = scheme.background,
+        navigationIconContentColor = scheme.onBackground,
+        titleContentColor = scheme.onBackground,
+        actionIconContentColor = scheme.onBackground,
     )
 }

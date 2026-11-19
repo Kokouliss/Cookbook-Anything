@@ -16,6 +16,15 @@ class IngredientScalingTest {
     }
 
     @Test
+    fun `fraction glyphs and greek units`() {
+        assertEquals("1 φλ. γάλα", scaleIngredient("½ φλ. γάλα", 2.0))
+        assertEquals("1½ cups rice", scaleIngredient("¾ cups rice", 2.0))
+        assertEquals("4 κ.σ. λάδι", scaleIngredient("2 κ.σ. λάδι", 2.0))
+        assertEquals("⅓ tsp salt", scaleIngredient("1⅓ tsp salt", 0.25))
+        assertEquals("0.42 tsp salt", scaleIngredient("1⅔ tsp salt", 0.25))
+    }
+
+    @Test
     fun `scales both ends of a range`() {
         assertEquals("4-6 cloves", scaleIngredient("2-3 cloves", 2.0))
         assertEquals("1 – 2 tbsp oil", scaleIngredient("2 – 4 tbsp oil", 0.5))

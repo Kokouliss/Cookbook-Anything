@@ -3,7 +3,11 @@ package com.cookbookanything.app
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cookbookanything.app.data.account.AccountRepository
+import com.cookbookanything.app.data.account.AccountState
 import com.cookbookanything.app.data.share.BackupManager
+import com.cookbookanything.app.data.share.BackupPreferences
+import com.cookbookanything.app.data.share.BackupStatus
 import com.cookbookanything.app.data.share.RecipeSharer
 import com.cookbookanything.app.data.share.RestoreResult
 import com.cookbookanything.core.domain.FreeTier
@@ -23,12 +27,18 @@ import kotlinx.coroutines.launch
 data class MainUiState(
     val recipeCount: Int = 0,
     val unlocked: Boolean = false,
+    val backup: BackupStatus = BackupStatus(),
+    val account: AccountState = AccountState.Unavailable,
 ) {
     val canAddRecipe: Boolean get() = FreeTier.canAddRecipe(recipeCount, unlocked)
 }
 
 sealed interface MainEvent {
-    data class OpenRecipe(val recipeId: String) : MainEvent
+    data class OpenRecipe(val recipeId: String, val startCooking: Boolean = false) : MainEvent
+    data object OpenShoppingList : MainEvent
+    data object OpenCalendar : MainEvent
+    /** Opens the editor with a recipe read out of shared text. */
+    data class NewRecipeFromText(val text: String) : MainEvent
     data object ImportFailed : MainEvent
     data object LimitReached : MainEvent
     data class BackupRestored(val added: Int) : MainEvent
@@ -42,19 +52,50 @@ class MainViewModel @Inject constructor(
     private val entitlementRepository: EntitlementRepository,
     private val recipeSharer: RecipeSharer,
     private val backupManager: BackupManager,
+    private val backupPreferences: BackupPreferences,
+    private val accountRepository: AccountRepository,
 ) : ViewModel() {
 
-    val uiState: StateFlow<MainUiState> =
-        combine(recipeRepository.observeCount(), entitlementRepository.isUnlocked) { count, unlocked ->
-            MainUiState(recipeCount = count, unlocked = unlocked)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
+    val uiState: StateFlow<MainUiState> = combine(
+        recipeRepository.observeCount(),
+        entitlementRepository.isUnlocked,
+        backupPreferences.status,
+        accountRepository.state,
+    ) { count, unlocked, backup, account ->
+        MainUiState(recipeCount = count, unlocked = unlocked, backup = backup, account = account)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
 
     private val eventChannel = Channel<MainEvent>(Channel.BUFFERED)
     val events = eventChannel.receiveAsFlow()
 
-    fun openRecipe(recipeId: String) {
-        eventChannel.trySend(MainEvent.OpenRecipe(recipeId))
+    fun openRecipe(recipeId: String, startCooking: Boolean = false) {
+        eventChannel.trySend(MainEvent.OpenRecipe(recipeId, startCooking))
     }
+
+    fun openShoppingList() {
+        eventChannel.trySend(MainEvent.OpenShoppingList)
+    }
+
+    fun openCalendar() {
+        eventChannel.trySend(MainEvent.OpenCalendar)
+    }
+
+    fun newRecipeFromText(text: String) {
+        if (text.isBlank()) return
+        viewModelScope.launch {
+            val canAdd = FreeTier.canAddRecipe(
+                recipeCount = recipeRepository.observeCount().first(),
+                unlocked = entitlementRepository.isUnlocked.first(),
+            )
+            eventChannel.send(if (canAdd) MainEvent.NewRecipeFromText(text) else MainEvent.LimitReached)
+        }
+    }
+
+    fun setBackupFolder(folder: Uri) = backupPreferences.setFolder(folder)
+
+    fun clearBackupFolder() = backupPreferences.clearFolder()
+
+    fun signOut() = accountRepository.signOut()
 
     /** Opens a file from outside the app: a backup of the whole cookbook, or one shared recipe. */
     fun importFile(uri: Uri) {

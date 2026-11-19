@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cookbookanything.app.data.share.PdfLabels
 import com.cookbookanything.app.data.share.RecipeSharer
+import com.cookbookanything.app.reminders.CookingTimer
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.repository.CategoryRepository
@@ -15,6 +16,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -33,6 +35,9 @@ sealed interface RecipeDetailUiState {
     ) : RecipeDetailUiState
 }
 
+/** A running cooking-mode timer: for which step, and when it rings. */
+data class StepTimer(val stepId: String, val endsAt: Long)
+
 sealed interface RecipeDetailEvent {
     data object Deleted : RecipeDetailEvent
     data class Share(val uri: Uri, val mimeType: String) : RecipeDetailEvent
@@ -46,7 +51,11 @@ class RecipeDetailViewModel @AssistedInject constructor(
     categoryRepository: CategoryRepository,
     private val scheduleRepository: ScheduleRepository,
     private val recipeSharer: RecipeSharer,
+    private val cookingTimer: CookingTimer,
 ) : ViewModel() {
+
+    private val _timer = MutableStateFlow<StepTimer?>(null)
+    val timer: StateFlow<StepTimer?> = _timer
 
     val uiState: StateFlow<RecipeDetailUiState> = combine(
         recipeRepository.observeRecipe(recipeId),
@@ -78,6 +87,24 @@ class RecipeDetailViewModel @AssistedInject constructor(
 
     fun resetProgress() {
         viewModelScope.launch { recipeRepository.resetProgress(recipeId) }
+    }
+
+    /** Finishing cooking mode adds a line to the recipe's cooked log. */
+    fun markCooked() {
+        viewModelScope.launch { recipeRepository.markCooked(recipeId) }
+    }
+
+    /** One timer at a time: starting another replaces it. It rings through a notification, so leaving the screen is fine. */
+    fun startTimer(stepId: String, minutes: Int) {
+        val endsAt = System.currentTimeMillis() + minutes * 60_000L
+        val title = (uiState.value as? RecipeDetailUiState.Success)?.recipe?.title.orEmpty()
+        cookingTimer.start(recipeId, title, endsAt)
+        _timer.value = StepTimer(stepId, endsAt)
+    }
+
+    fun stopTimer() {
+        cookingTimer.cancel()
+        _timer.value = null
     }
 
     fun addComment(text: String) {

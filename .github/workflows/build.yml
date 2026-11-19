@@ -26,6 +26,14 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # The Firebase config is not in the repository (it is public). Sign-in only works in builds
+      # that have it, so it comes from a repository secret when one is set.
+      - name: Write the Firebase config
+        if: env.GOOGLE_SERVICES_JSON != ''
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
       - name: Test and build the debug app
         run: ./gradlew :core:domain:test :app:assembleDebug
 

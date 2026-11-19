@@ -16,11 +16,14 @@ data object SettingsKey : NavKey
 data object CategoriesKey : NavKey
 
 @Serializable
+data object AccountKey : NavKey
+
+@Serializable
 data class RecipeDetailKey(val recipeId: String) : NavKey
 
-/** [recipeId] is null when creating a new recipe. */
+/** [recipeId] is null when creating a new recipe; [pastedText] is text shared from another app to start it from. */
 @Serializable
-data class RecipeEditKey(val recipeId: String? = null) : NavKey
+data class RecipeEditKey(val recipeId: String? = null, val pastedText: String? = null) : NavKey
 
 /** [servings] is the number the cook chose on the recipe page, or null to use the recipe as written. */
 @Serializable

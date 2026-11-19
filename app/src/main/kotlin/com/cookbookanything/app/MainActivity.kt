@@ -1,10 +1,8 @@
 package com.cookbookanything.app
 
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.compose.setContent
-import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -18,8 +16,8 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Every screen has a dark brand-coloured top bar, so status bar icons stay light.
-        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT))
+        // Bars share the card box's background, so the status bar icons follow light and dark.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) handleIntent(intent)
         setContent {
@@ -36,11 +34,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
-        intent.getStringExtra(EXTRA_RECIPE_ID)?.let(viewModel::openRecipe)
-        if (intent.action == Intent.ACTION_VIEW) intent.data?.let(viewModel::importFile)
+        intent.getStringExtra(EXTRA_RECIPE_ID)?.let { recipeId ->
+            viewModel.openRecipe(recipeId, startCooking = intent.getBooleanExtra(EXTRA_START_COOKING, false))
+        }
+        if (intent.getBooleanExtra(EXTRA_OPEN_SHOPPING, false)) viewModel.openShoppingList()
+        if (intent.getBooleanExtra(EXTRA_OPEN_CALENDAR, false)) viewModel.openCalendar()
+        when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data?.let(viewModel::importFile)
+            // Text shared from another app (a chat, a browser) becomes a new recipe.
+            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let(viewModel::newRecipeFromText)
+        }
     }
 
     companion object {
         const val EXTRA_RECIPE_ID = "recipeId"
+        const val EXTRA_START_COOKING = "startCooking"
+        const val EXTRA_OPEN_SHOPPING = "openShopping"
+        const val EXTRA_OPEN_CALENDAR = "openCalendar"
     }
 }

@@ -33,6 +33,7 @@ import com.cookbookanything.app.BuildConfig
 import com.cookbookanything.app.MainEvent
 import com.cookbookanything.app.MainViewModel
 import com.cookbookanything.app.R
+import com.cookbookanything.app.feature.account.AccountRoute
 import com.cookbookanything.app.feature.calendar.CalendarRoute
 import com.cookbookanything.app.feature.categories.CategoriesRoute
 import com.cookbookanything.app.feature.cook.CookModeRoute
@@ -63,7 +64,16 @@ fun CookbookApp(viewModel: MainViewModel) {
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                is MainEvent.OpenRecipe -> backStack.add(RecipeDetailKey(event.recipeId))
+                is MainEvent.OpenRecipe -> {
+                    backStack.add(RecipeDetailKey(event.recipeId))
+                    if (event.startCooking) backStack.add(CookModeKey(event.recipeId))
+                }
+                MainEvent.OpenShoppingList -> backStack.add(ShoppingListKey)
+                MainEvent.OpenCalendar -> {
+                    while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+                    backStack.add(CalendarKey)
+                }
+                is MainEvent.NewRecipeFromText -> backStack.add(RecipeEditKey(pastedText = event.text))
                 MainEvent.ImportFailed -> snackbarHostState.showSnackbar(importFailedMessage)
                 MainEvent.LimitReached -> showPaywall = true
                 is MainEvent.BackupSaved ->
@@ -120,6 +130,8 @@ fun CookbookApp(viewModel: MainViewModel) {
                         onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
                         onImportRecipe = viewModel::importFile,
                         onManageCategories = { backStack.add(CategoriesKey) },
+                        backupOverdue = uiState.backup.overdue,
+                        onOpenSettings = { backStack.add(SettingsKey) },
                     )
                 }
                 entry<RecipeDetailKey> { key ->
@@ -141,7 +153,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                             if (key.recipeId == null) backStack.add(RecipeDetailKey(recipeId))
                         },
                         viewModel = hiltViewModel<RecipeEditViewModel, RecipeEditViewModel.Factory> { factory ->
-                            factory.create(key.recipeId)
+                            factory.create(key.recipeId, key.pastedText)
                         },
                     )
                 }
@@ -160,6 +172,9 @@ fun CookbookApp(viewModel: MainViewModel) {
                 entry<CategoriesKey> {
                     CategoriesRoute(onBack = { backStack.removeLastOrNull() })
                 }
+                entry<AccountKey> {
+                    AccountRoute(onBack = { backStack.removeLastOrNull() })
+                }
                 entry<CalendarKey> {
                     CalendarRoute(
                         onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
@@ -174,6 +189,12 @@ fun CookbookApp(viewModel: MainViewModel) {
                         onManageCategories = { backStack.add(CategoriesKey) },
                         onSaveBackup = viewModel::saveBackup,
                         onRestoreBackup = viewModel::importFile,
+                        backup = uiState.backup,
+                        onPickBackupFolder = viewModel::setBackupFolder,
+                        onClearBackupFolder = viewModel::clearBackupFolder,
+                        account = uiState.account,
+                        onOpenAccount = { backStack.add(AccountKey) },
+                        onSignOut = viewModel::signOut,
                     )
                 }
             },

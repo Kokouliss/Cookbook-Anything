@@ -21,6 +21,9 @@ interface RecipeRepository {
     suspend fun setStepDone(stepId: String, done: Boolean)
     suspend fun resetProgress(recipeId: String)
 
+    /** Records that the recipe was cooked now; the recipe page and the sorts read it. */
+    suspend fun markCooked(recipeId: String)
+
     suspend fun addComment(recipeId: String, text: String)
     suspend fun deleteComment(commentId: String)
 }

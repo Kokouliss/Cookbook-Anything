@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="window_background">#FFFBF5</color>
-    <color name="brand">#C8321E</color>
+    <!-- Window chrome before Compose draws; the palette itself lives in core/domain Palette.kt. -->
+    <color name="window_background">#F6EFE3</color>
+    <color name="launcher_background">#171A21</color>
 </resources>

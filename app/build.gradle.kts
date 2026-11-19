@@ -7,6 +7,12 @@ plugins {
     alias(libs.plugins.androidx.room3)
 }
 
+// Firebase (sign-in) needs the project's google-services.json, which stays out of the public
+// repository. Without the file the app still builds and Settings says that sign-in is not set up.
+if (file("google-services.json").exists()) {
+    apply(plugin = libs.plugins.google.services.get().pluginId)
+}
+
 android {
     namespace = "com.cookbookanything.app"
     compileSdk {
@@ -86,4 +92,9 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.reorderable)
+    implementation(libs.androidx.glance.appwidget)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
 }

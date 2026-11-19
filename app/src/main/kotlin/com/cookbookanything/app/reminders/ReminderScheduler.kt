@@ -16,7 +16,7 @@ import javax.inject.Singleton
 class ReminderScheduler @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    fun schedule(scheduleId: String, recipeId: String, recipeTitle: String, at: Long) {
+    fun schedule(scheduleId: String, recipeId: String, recipeTitle: String, coverPhoto: String?, at: Long) {
         val delay = at - System.currentTimeMillis()
         if (delay <= 0) return
         val request = OneTimeWorkRequestBuilder<ReminderWorker>()
@@ -25,6 +25,7 @@ class ReminderScheduler @Inject constructor(
                 workDataOf(
                     ReminderWorker.KEY_RECIPE_ID to recipeId,
                     ReminderWorker.KEY_RECIPE_TITLE to recipeTitle,
+                    ReminderWorker.KEY_COVER_PHOTO to coverPhoto,
                 ),
             )
             .build()

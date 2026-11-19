@@ -6,7 +6,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,8 +26,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -56,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cookbookanything.app.R
@@ -68,6 +65,7 @@ import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
+import com.cookbookanything.app.ui.components.ruledLines
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Comment
 import com.cookbookanything.core.domain.model.Recipe
@@ -275,14 +273,28 @@ private fun RecipeContent(
     var shownServings by rememberSaveable(baseServings) { mutableIntStateOf(baseServings ?: 1) }
     val scale = if (baseServings == null) 1.0 else shownServings.toDouble() / baseServings
 
+    // The page is one index card: card stock, the red rule along the top, faint ruled lines behind.
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
+            .padding(contentPadding)
+            .padding(horizontal = 12.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .ruledLines(MaterialTheme.colorScheme.onSurface)
             .imePadding(),
-        contentPadding = contentPadding,
+        contentPadding = PaddingValues(bottom = 16.dp),
     ) {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+        }
         if (recipe.photos.isNotEmpty()) {
-            item { PhotoRow(photos = recipe.photos, height = 220) }
+            item { PhotoRow(photos = recipe.photos, height = 220, modifier = Modifier.padding(top = 12.dp)) }
         }
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -291,6 +303,14 @@ private fun RecipeContent(
                     Text(
                         text = facts,
                         style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (recipe.cookedAt.isNotEmpty()) {
+                    val times = LocalContext.current.resources.getQuantityString(R.plurals.cooked_times, recipe.cookedAt.size, recipe.cookedAt.size)
+                    Text(
+                        text = times + ", " + stringResource(R.string.cooked_last, formatDate(recipe.cookedAt.last(), locale)),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -526,5 +546,10 @@ private fun CommentInput(onAddComment: (String) -> Unit) {
 
 private fun formatDateTime(epochMillis: Long, locale: Locale): String =
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        .withLocale(locale)
+        .format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
+
+private fun formatDate(epochMillis: Long, locale: Locale): String =
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
         .withLocale(locale)
         .format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))

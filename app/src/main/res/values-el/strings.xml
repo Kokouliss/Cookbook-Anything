@@ -124,4 +124,96 @@
     <string name="minutes_short">λεπτά</string>
     <string name="prep_time">Προετοιμασία %1$d λ.</string>
     <string name="cook_time">Μαγείρεμα %1$d λ.</string>
+
+    <!-- Paste a recipe -->
+    <string name="paste_recipe">Επικόλληση συνταγής</string>
+    <string name="paste_nothing">Δεν υπάρχει κείμενο για επικόλληση. Αντέγραψε πρώτα μια συνταγή.</string>
+    <string name="pasted_summary">Προστέθηκαν %1$d υλικά και %2$d βήματα από το κείμενο.</string>
+
+    <!-- Editor: reorder and remove -->
+    <string name="drag_to_reorder">Σύρε για αλλαγή σειράς</string>
+    <string name="ingredient_removed">Το υλικό αφαιρέθηκε</string>
+    <string name="step_removed">Το βήμα αφαιρέθηκε</string>
+    <string name="undo">Αναίρεση</string>
+
+    <!-- Cooking mode -->
+    <string name="for_this_step">Για αυτό το βήμα</string>
+    <string name="timer_start">Χρονόμετρο %1$d λ.</string>
+    <string name="timer_stop">Διακοπή χρονομέτρου</string>
+    <string name="timer_done">Το χρονόμετρο τελείωσε</string>
+    <string name="timer_finished_short">Τέλος</string>
+    <string name="swipe_steps">Σύρε για το επόμενο βήμα</string>
+
+    <!-- Cooked log and sorting -->
+    <plurals name="cooked_times">
+        <item quantity="one">Μαγειρεύτηκε μία φορά</item>
+        <item quantity="other">Μαγειρεύτηκε %d φορές</item>
+    </plurals>
+    <string name="cooked_last">τελευταία στις %1$s</string>
+    <string name="sort">Ταξινόμηση</string>
+    <string name="sort_recent">Τελευταία επεξεργασία</string>
+    <string name="sort_a_to_z">Αλφαβητικά</string>
+    <string name="sort_cooked_recently">Μαγειρεύτηκαν πρόσφατα</string>
+    <string name="sort_not_for_a_while">Έχουν καιρό να μαγειρευτούν</string>
+    <string name="total_minutes">%1$d λ.</string>
+
+    <!-- Widget -->
+    <string name="widget_name">Απόψε</string>
+    <string name="widget_description">Η επόμενη συνταγή που προγραμμάτισες</string>
+    <string name="widget_nothing">Τίποτα προγραμματισμένο</string>
+    <string name="widget_plan">Πάτησε για να προγραμματίσεις μια συνταγή</string>
+    <string name="widget_today">Σήμερα, %1$s</string>
+    <string name="widget_tomorrow">Αύριο, %1$s</string>
+
+    <!-- Morning reminder -->
+    <plurals name="missing_today_title">
+        <item quantity="one">Λείπει %d υλικό για σήμερα</item>
+        <item quantity="other">Λείπουν %d υλικά για σήμερα</item>
+    </plurals>
+
+    <!-- Shopping list -->
+    <string name="shopping_send">Αποστολή στο List Anything</string>
+    <string name="shopping_share">Κοινοποίηση λίστας</string>
+    <string name="shopping_from">Από: %1$s</string>
+
+    <!-- Automatic backups -->
+    <string name="backup_auto">Αυτόματα αντίγραφα</string>
+    <string name="backup_auto_hint">Κάθε εβδομάδα αποθηκεύεται ένα αντίγραφο σε φάκελο που διαλέγεις, στο τηλέφωνο ή σε cloud. Κρατιούνται τα τρία τελευταία.</string>
+    <string name="backup_choose_folder">Επιλογή φακέλου</string>
+    <string name="backup_auto_on">Κάθε εβδομάδα, στο %1$s</string>
+    <string name="backup_auto_off">Απενεργοποίηση</string>
+    <string name="backup_last">Τελευταίο αντίγραφο: %1$s</string>
+    <string name="backup_never">Κανένα αντίγραφο ακόμη.</string>
+    <string name="backup_overdue">Πάνω από ένα μήνα χωρίς αντίγραφο ασφαλείας.</string>
+    <string name="backup_overdue_action">Ρύθμιση αντιγράφων</string>
+
+    <!-- Appearance -->
+    <string name="appearance">Εμφάνιση</string>
+    <string name="appearance_system">Ίδια με του τηλεφώνου</string>
+    <string name="appearance_light">Φωτεινή</string>
+    <string name="appearance_dark">Σκούρα</string>
+
+    <!-- Account -->
+    <string name="account">Λογαριασμός</string>
+    <string name="account_hint">Ο λογαριασμός είναι εκεί που θα συνδεθεί ο συγχρονισμός στο cloud. Οι συνταγές σου μένουν στο τηλέφωνο προς το παρόν.</string>
+    <string name="account_unavailable">Η σύνδεση δεν έχει ρυθμιστεί σε αυτή την έκδοση.</string>
+    <string name="account_sign_in">Σύνδεση ή εγγραφή</string>
+    <string name="account_signed_in_as">Συνδεδεμένος ως %1$s</string>
+    <string name="sign_out">Αποσύνδεση</string>
+    <string name="delete_account">Διαγραφή λογαριασμού</string>
+    <string name="delete_account_text">Ο λογαριασμός σου διαγράφεται οριστικά. Οι συνταγές σε αυτό το τηλέφωνο μένουν.</string>
+    <string name="email">Email</string>
+    <string name="password">Κωδικός</string>
+    <string name="password_hint">Τουλάχιστον 6 χαρακτήρες</string>
+    <string name="sign_in">Σύνδεση</string>
+    <string name="register">Δημιουργία λογαριασμού</string>
+    <string name="forgot_password">Ξέχασες τον κωδικό σου;</string>
+    <string name="reset_sent">Στείλαμε σύνδεσμο στο %1$s για νέο κωδικό.</string>
+    <string name="error_wrong_credentials">Το email ή ο κωδικός είναι λάθος.</string>
+    <string name="error_email_in_use">Υπάρχει ήδη λογαριασμός με αυτό το email. Κάνε σύνδεση.</string>
+    <string name="error_weak_password">Διάλεξε κωδικό με τουλάχιστον 6 χαρακτήρες.</string>
+    <string name="error_invalid_email">Αυτό δεν μοιάζει με διεύθυνση email.</string>
+    <string name="error_network">Χωρίς σύνδεση. Δοκίμασε ξανά όταν είσαι online.</string>
+    <string name="error_sign_in_again">Κάνε ξανά σύνδεση και μετά διέγραψε τον λογαριασμό.</string>
+    <string name="error_unknown">Κάτι πήγε στραβά. Δοκίμασε ξανά.</string>
 </resources>

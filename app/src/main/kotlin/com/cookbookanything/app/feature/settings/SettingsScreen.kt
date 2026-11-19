@@ -22,19 +22,30 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.cookbookanything.app.BuildConfig
 import com.cookbookanything.app.R
+import com.cookbookanything.app.data.account.AccountState
+import com.cookbookanything.app.data.share.BackupStatus
+import com.cookbookanything.app.ui.components.AnyKindWordmark
 import com.cookbookanything.app.ui.components.AppIcon
+import com.cookbookanything.app.ui.components.currentLocale
+import com.cookbookanything.app.ui.theme.NightMode
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.FreeTier
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun SettingsScreen(
@@ -44,6 +55,12 @@ fun SettingsScreen(
     onManageCategories: () -> Unit,
     onSaveBackup: (Uri) -> Unit,
     onRestoreBackup: (Uri) -> Unit,
+    backup: BackupStatus,
+    onPickBackupFolder: (Uri) -> Unit,
+    onClearBackupFolder: () -> Unit,
+    account: AccountState,
+    onOpenAccount: () -> Unit,
+    onSignOut: () -> Unit,
 ) {
     // The user picks where the backup goes (phone storage, Drive, ...), so no storage permission is needed.
     val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
@@ -52,6 +69,11 @@ fun SettingsScreen(
     val restoreBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onRestoreBackup(uri)
     }
+    val pickFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) onPickBackupFolder(uri)
+    }
+    val context = LocalContext.current
+    val locale = currentLocale()
 
     Scaffold(
         topBar = { TopAppBar(colors = appBarColors(), title = { Text(stringResource(R.string.tab_settings)) }) },
@@ -71,15 +93,46 @@ fun SettingsScreen(
             LanguageOption("Ελληνικά", tag = "el", currentLanguage)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SectionTitle(stringResource(R.string.appearance))
+            val currentMode = NightMode.current(context)
+            val modeLabels = listOf(R.string.appearance_system, R.string.appearance_light, R.string.appearance_dark)
+            NightMode.options.forEachIndexed { index, mode ->
+                RadioRow(
+                    label = stringResource(modeLabels[index]),
+                    selected = currentMode == mode,
+                    onSelect = { NightMode.set(context, mode) },
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SectionTitle(stringResource(R.string.account))
+            when (account) {
+                AccountState.Unavailable -> Body(stringResource(R.string.account_unavailable))
+                AccountState.SignedOut -> {
+                    Body(stringResource(R.string.account_hint), muted = true)
+                    Button(onClick = onOpenAccount, modifier = Modifier.padding(16.dp)) {
+                        Text(stringResource(R.string.account_sign_in))
+                    }
+                }
+                is AccountState.SignedIn -> {
+                    Body(stringResource(R.string.account_signed_in_as, account.email))
+                    Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        OutlinedButton(onClick = onSignOut) { Text(stringResource(R.string.sign_out)) }
+                        TextButton(onClick = onOpenAccount, modifier = Modifier.padding(start = 8.dp)) {
+                            Text(stringResource(R.string.delete_account))
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             SectionTitle(stringResource(R.string.plan))
-            Text(
-                text = if (unlocked) {
+            Body(
+                if (unlocked) {
                     stringResource(R.string.plan_unlocked)
                 } else {
                     stringResource(R.string.plan_free, recipeCount.coerceAtMost(FreeTier.RECIPE_LIMIT), FreeTier.RECIPE_LIMIT)
                 },
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(horizontal = 16.dp),
             )
             if (!unlocked) {
                 Button(onClick = onUnlock, modifier = Modifier.padding(16.dp)) {
@@ -100,13 +153,47 @@ fun SettingsScreen(
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            SectionTitle(stringResource(R.string.backup))
+            SectionTitle(stringResource(R.string.backup_auto))
+            Body(stringResource(R.string.backup_auto_hint), muted = true)
+            val folder = backup.folder
+            if (folder == null) {
+                Button(
+                    onClick = { pickFolder.launch(null) },
+                    modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp),
+                ) {
+                    Text(stringResource(R.string.backup_choose_folder))
+                }
+            } else {
+                // "primary:Backups" is how Android names a folder; the part after the colon is what the user picked.
+                Body(stringResource(R.string.backup_auto_on, folder.lastPathSegment.orEmpty().substringAfter(':')))
+                Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    OutlinedButton(onClick = { pickFolder.launch(folder) }) { Text(stringResource(R.string.backup_choose_folder)) }
+                    TextButton(onClick = onClearBackupFolder, modifier = Modifier.padding(start = 8.dp)) {
+                        Text(stringResource(R.string.backup_auto_off))
+                    }
+                }
+            }
+            val lastBackup = backup.lastBackupAt
             Text(
-                text = stringResource(R.string.backup_hint),
+                text = if (lastBackup == null) {
+                    stringResource(R.string.backup_never)
+                } else {
+                    stringResource(
+                        R.string.backup_last,
+                        DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withLocale(locale)
+                            .format(Instant.ofEpochMilli(lastBackup).atZone(ZoneId.systemDefault())),
+                    )
+                },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                // Overdue is said in words and in the error colour, never by colour alone.
+                color = if (backup.overdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
+            if (backup.overdue) Body(stringResource(R.string.backup_overdue), error = true)
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            SectionTitle(stringResource(R.string.backup))
+            Body(stringResource(R.string.backup_hint), muted = true)
             Button(
                 onClick = { saveBackup.launch("cookbook-backup-${LocalDate.now()}.zip") },
                 modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp),
@@ -127,6 +214,21 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
             )
+            // The maker's mark at the foot of the page, as on every AnyKind app.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                AnyKindWordmark()
+                Text(
+                    text = stringResource(R.string.anykind_apps),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
         }
     }
 }
@@ -142,20 +244,42 @@ private fun SectionTitle(title: String) {
 }
 
 @Composable
+private fun Body(text: String, muted: Boolean = false, error: Boolean = false) {
+    Text(
+        text = text,
+        style = if (muted) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+        color = when {
+            error -> MaterialTheme.colorScheme.error
+            muted -> MaterialTheme.colorScheme.onSurfaceVariant
+            else -> MaterialTheme.colorScheme.onSurface
+        },
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
+}
+
+@Composable
 private fun LanguageOption(label: String, tag: String, currentLanguage: String) {
-    val select = {
-        AppCompatDelegate.setApplicationLocales(
-            if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(tag),
-        )
-    }
+    RadioRow(
+        label = label,
+        selected = currentLanguage == tag,
+        onSelect = {
+            AppCompatDelegate.setApplicationLocales(
+                if (tag.isEmpty()) LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(tag),
+            )
+        },
+    )
+}
+
+@Composable
+private fun RadioRow(label: String, selected: Boolean, onSelect: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = select)
+            .clickable(onClick = onSelect)
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = currentLanguage == tag, onClick = select)
+        RadioButton(selected = selected, onClick = onSelect)
         Text(label, style = MaterialTheme.typography.bodyLarge)
     }
 }

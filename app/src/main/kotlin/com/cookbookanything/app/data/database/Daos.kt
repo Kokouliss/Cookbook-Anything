@@ -12,11 +12,13 @@ import kotlinx.coroutines.flow.Flow
 abstract class RecipeDao {
     @Query(
         """
-        SELECT r.id, r.title, r.categoryId,
+        SELECT r.id, r.title, r.categoryId, r.servings, r.prepMinutes, r.cookMinutes,
             (SELECT p.fileName FROM photos p
              WHERE p.recipeId = r.id AND p.stepId IS NULL
              ORDER BY p.position LIMIT 1) AS coverPhoto,
-            (SELECT group_concat(i.text, char(10)) FROM ingredients i WHERE i.recipeId = r.id) AS ingredientLines
+            (SELECT group_concat(i.text, char(10)) FROM ingredients i WHERE i.recipeId = r.id) AS ingredientLines,
+            (SELECT COUNT(*) FROM cooked c WHERE c.recipeId = r.id) AS timesCooked,
+            (SELECT MAX(c.cookedAt) FROM cooked c WHERE c.recipeId = r.id) AS lastCookedAt
         FROM recipes r
         ORDER BY r.updatedAt DESC
         """,
@@ -109,7 +111,10 @@ abstract class RecipeDao {
     @Insert
     abstract suspend fun insertComments(comments: List<CommentEntity>)
 
-    /** Stores a recipe from a backup, which also carries its comments. */
+    @Insert
+    abstract suspend fun insertCooked(cooked: List<CookedEntity>)
+
+    /** Stores a recipe from a backup, which also carries its comments and cooking history. */
     @Transaction
     open suspend fun restoreRecipe(
         recipe: RecipeEntity,
@@ -117,9 +122,11 @@ abstract class RecipeDao {
         steps: List<StepEntity>,
         photos: List<PhotoEntity>,
         comments: List<CommentEntity>,
+        cooked: List<CookedEntity>,
     ) {
         saveRecipe(recipe, ingredients, steps, photos)
         insertComments(comments)
+        insertCooked(cooked)
     }
 
     @Query("DELETE FROM comments WHERE id = :id")
@@ -169,6 +176,27 @@ interface ScheduleDao {
         """,
     )
     fun observeShoppingList(from: Long): Flow<List<ShoppingItemRow>>
+
+    /** The next planned recipe at or after [from]; what the home-screen widget shows. */
+    @Query(
+        """
+        SELECT s.id, s.recipeId, r.title AS recipeTitle, s.scheduledAt
+        FROM schedules s JOIN recipes r ON r.id = s.recipeId
+        WHERE s.scheduledAt >= :from ORDER BY s.scheduledAt LIMIT 1
+        """,
+    )
+    suspend fun nextScheduled(from: Long): ScheduledRecipeRow?
+
+    /** Ingredients of the recipes planned from [from] up to (not including) [to]. */
+    @Query(
+        """
+        SELECT i.id AS ingredientId, i.text, i.checked, r.id AS recipeId, r.title AS recipeTitle
+        FROM ingredients i JOIN recipes r ON r.id = i.recipeId
+        WHERE r.id IN (SELECT recipeId FROM schedules WHERE scheduledAt >= :from AND scheduledAt < :to)
+        ORDER BY r.id, i.position
+        """,
+    )
+    suspend fun shoppingItemsBetween(from: Long, to: Long): List<ShoppingItemRow>
 
     @Query("SELECT * FROM schedules")
     suspend fun getAll(): List<ScheduleEntity>

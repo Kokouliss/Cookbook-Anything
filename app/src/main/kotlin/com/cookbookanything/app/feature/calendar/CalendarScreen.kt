@@ -47,6 +47,8 @@ import com.cookbookanything.app.R
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.DateTimePickerDialog
+import com.cookbookanything.app.ui.components.Doodle
+import com.cookbookanything.app.ui.components.EmptyState
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
 import com.cookbookanything.app.ui.theme.appBarColors
@@ -155,14 +157,7 @@ fun CalendarScreen(
             }
             val entries = byDate[selectedDate].orEmpty()
             if (entries.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.nothing_scheduled),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
+                item { EmptyState(Doodle.Calendar, stringResource(R.string.nothing_scheduled), modifier = Modifier.fillMaxWidth()) }
             }
             items(entries, key = { it.id }) { entry ->
                 ScheduledRow(
