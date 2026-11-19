@@ -18,7 +18,7 @@ A personal cookbook app for Android. Keep your own recipes with ingredients, ste
 - A backup of the whole cookbook in one file, and restore from it
 - Automatic weekly backups into a folder you pick (phone storage or a cloud drive), with "Last backup" in Settings and a line on the recipe list when one is overdue
 - Paste a whole recipe: the text is split into name, servings, ingredients and steps. Text shared from another app opens as a new recipe the same way
-- Paste or share a link: a recipe site's page gives the exact recipe (name, servings, times, ingredients, steps, picture); an Instagram, TikTok or Facebook post or reel gives its caption and picture or video thumbnail, split like pasted text
+- Paste or share a link: a recipe site's page gives the exact recipe (name, servings, times, ingredients, steps, picture) from its schema.org record, microdata or visible "Ingredients"/"Υλικά" section; an Instagram, TikTok or Facebook post or reel gives its caption and picture or video thumbnail, split like pasted text. A site that refuses plain requests from apps is loaded again, unseen, in the phone's own browser engine
 - Read a recipe from a photo of a page, in Greek or English (Google Cloud Vision, see below); offline, the photo waits and is read when the phone is back online
 - Ingredients and steps are dragged into order by their handle, and swiped away with Undo
 - Cooking mode shows one step per card: the ingredients that step uses, a timer button when the step says "20 min", swipe between cards
@@ -84,7 +84,7 @@ The "Read a recipe from a photo" button in the editor sends the photo to Google 
 - The widget shows the next planned recipe from today on; it updates when recipes or the calendar change.
 - The sort order on the recipe list is not remembered when the app restarts.
 - Reading a photo needs the internet and takes a few seconds; a blurry or dark photo comes back as "No text was found".
-- Links: Instagram, TikTok and Facebook sometimes answer with a login page instead of the post, which comes back as "No recipe was found"; copy the caption and paste it then. The caption is read as text, so a recipe written in prose rather than lines may land in the wrong place and need a tidy.
+- Links: a site whose bot check never lets the page through comes back as "Check the link" after about 25 seconds. Instagram, TikTok and Facebook sometimes answer with a login page instead of the post, which comes back as "No recipe was found"; copy the caption and paste it then. The caption is read as text, so a recipe written in prose rather than lines may land in the wrong place and need a tidy.
 
 ## How the code is laid out
 

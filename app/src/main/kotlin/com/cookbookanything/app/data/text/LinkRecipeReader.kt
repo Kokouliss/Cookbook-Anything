@@ -18,23 +18,35 @@ import kotlinx.coroutines.withContext
  * only show a login wall come back as "nothing found". The picture is stored as the recipe photo.
  */
 @Singleton
-class LinkRecipeReader @Inject constructor(private val photoStore: PhotoStore) {
+class LinkRecipeReader @Inject constructor(
+    private val photoStore: PhotoStore,
+    private val browser: BrowserPageLoader,
+) {
 
     /** The recipe and the name of its downloaded picture, or null when the page has none. Throws [IOException] when it cannot load. */
     suspend fun read(url: String): Pair<ParsedRecipe, String?>? = withContext(Dispatchers.IO) {
-        val connection = open(url)
-        val html = try {
-            // shortcut: the charset comes from the header or is UTF-8, read the <meta charset> if an old Greek site comes out garbled
-            val charset = connection.contentType?.substringAfter("charset=", "")?.substringBefore(';')?.trim()?.ifEmpty { null } ?: "UTF-8"
-            String(connection.inputStream.use { it.readUpTo(MAX_PAGE_BYTES) }, charset(charset))
-        } finally {
-            connection.disconnect()
-        }
-        val recipe = parseRecipeHtml(html) ?: return@withContext null
+        // A plain request first, it is quick; sites that refuse it (403) or draw the recipe with
+        // JavaScript get a second try through the phone's browser engine.
+        val plain = runCatching { fetch(url) }
+        val recipe = plain.getOrNull()?.let(::parseRecipeHtml)
+            ?: browser.load(url) { parseRecipeHtml(it) != null }?.let(::parseRecipeHtml)
+            ?: plain.exceptionOrNull()?.let { throw it }
+            ?: return@withContext null
         val photo = recipe.imageUrl?.let { image ->
             runCatching { open(image).let { c -> try { c.inputStream.use { photoStore.importStream(it, MAX_IMAGE_BYTES) } } finally { c.disconnect() } } }.getOrNull()
         }
         recipe to photo
+    }
+
+    private fun fetch(url: String): String {
+        val connection = open(url)
+        try {
+            // shortcut: the charset comes from the header or is UTF-8, read the <meta charset> if an old Greek site comes out garbled
+            val charset = connection.contentType?.substringAfter("charset=", "")?.substringBefore(';')?.trim()?.ifEmpty { null } ?: "UTF-8"
+            return String(connection.inputStream.use { it.readUpTo(MAX_PAGE_BYTES) }, charset(charset))
+        } finally {
+            connection.disconnect()
+        }
     }
 
     // Redirects are followed by hand, because Java stops at a change of scheme and short links (vm.tiktok.com) change it.
