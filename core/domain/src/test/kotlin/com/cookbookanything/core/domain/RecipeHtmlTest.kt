@@ -77,7 +77,7 @@ class RecipeHtmlTest {
         val recipe = assertNotNull(parseRecipeHtml(html))
         assertEquals("Κοτόπουλο λεμονάτο 🍋", recipe.title)
         assertEquals(listOf("1 κιλό κοτόπουλο", "2 λεμόνια"), recipe.ingredients)
-        assertEquals(listOf("Ψήνουμε για 40 λεπτά στους 180 βαθμούς.", "#chicken"), recipe.steps)
+        assertEquals(listOf("Ψήνουμε για 40 λεπτά στους 180 βαθμούς."), recipe.steps)
         assertEquals("https://scontent.example/reel.jpg?a=1&b=2", recipe.imageUrl)
         // Another site's "Caption" box is not a recipe.
         assertNull(parseRecipeHtml("""<html><body><div class="Caption">Photo by someone</div></body></html>"""))

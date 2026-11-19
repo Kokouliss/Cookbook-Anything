@@ -25,6 +25,8 @@ internal val STEP_HEADERS = setOf(
 private val bullet = Regex("""^\s*(?:[-–—•·*✓✔►▪]|\d{1,2}\s*[.)]|(?:step|βημα)\s*\d{1,2}\s*[.:)]?)\s*""", RegexOption.IGNORE_CASE)
 private val stepNumber = Regex("""^\s*(?:\d{1,2}\s*[.)]|(?:step|βημα)\s*\d{1,2})""", RegexOption.IGNORE_CASE)
 private val amountLed = Regex("""^\s*(?:\d|[½¼¾⅓⅔⅛])""")
+private val onlyHashtags = Regex("""^(?:#\S+\s*)+$""")
+private const val SHORT_LINE = 40
 private val servingsLine = Regex(
     """(?:^|\b)(?:(\d{1,2})\s*(?:servings?|portions?|people|μεριδεσ|ατομα)|(?:serves|servings?|yield|μεριδεσ|για)\D{0,3}(\d{1,2}))(?:\b|$)""",
 )
@@ -32,7 +34,8 @@ private val servingsLine = Regex(
 /**
  * Splits pasted or shared text into a recipe. "Ingredients"/"Υλικά" and "Steps"/"Εκτέλεση" lines
  * switch what the following lines are; without such headers, lines that start with an amount or are
- * short become ingredients and the rest become steps. Bullets and step numbers are dropped.
+ * short become ingredients and the rest become steps. A short line right after an ingredient
+ * ("salt" under "150 g cream") is an ingredient too. Bullets, step numbers and hashtag lines are dropped.
  */
 fun parseRecipeText(text: String): ParsedRecipe {
     val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
@@ -44,6 +47,7 @@ fun parseRecipeText(text: String): ParsedRecipe {
     val steps = mutableListOf<String>()
     // null until a header says which list we are in
     var mode: Mode? = null
+    var lastWasIngredient = false
 
     lines.forEachIndexed { index, raw ->
         val key = raw.removeSuffix(":").trim().searchKey()
@@ -57,16 +61,19 @@ fun parseRecipeText(text: String): ParsedRecipe {
                     return@forEachIndexed
                 }
                 val line = raw.replace(bullet, "").trim()
-                if (line.isEmpty()) return@forEachIndexed
+                if (line.isEmpty() || onlyHashtags.matches(line)) return@forEachIndexed
                 val looksLikeStep = stepNumber.containsMatchIn(raw) || line.length > 60 || line.count { it == '.' } > 1
+                val continuesIngredients = lastWasIngredient && line.length <= SHORT_LINE && !line.endsWith(".") && !stepNumber.containsMatchIn(raw)
+                lastWasIngredient = false
                 when {
                     index == 0 && title == null && mode == null && !amountLed.containsMatchIn(raw) &&
                         !looksLikeStep && !raw.endsWith(".") -> title = line
                     mode == Mode.INGREDIENTS -> ingredients += line
                     mode == Mode.STEPS -> steps += line
-                    amountLed.containsMatchIn(raw) && !stepNumber.containsMatchIn(raw) -> ingredients += line
+                    amountLed.containsMatchIn(raw) && !stepNumber.containsMatchIn(raw) -> { ingredients += line; lastWasIngredient = true }
+                    continuesIngredients -> { ingredients += line; lastWasIngredient = true }
                     looksLikeStep || steps.isNotEmpty() -> steps += line
-                    else -> ingredients += line
+                    else -> { ingredients += line; lastWasIngredient = true }
                 }
             }
         }

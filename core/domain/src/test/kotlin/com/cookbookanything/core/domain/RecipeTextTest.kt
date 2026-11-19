@@ -74,6 +74,28 @@ class RecipeTextTest {
     }
 
     @Test
+    fun `short lines under an ingredient are ingredients, hashtag lines are dropped`() {
+        // The shape of an Instagram caption: two intro sentences, the list, the method, hashtags.
+        val parsed = parseRecipeText(
+            """
+            Στείλε αυτή τη συνταγή στο άτομο που θέλεις να στη φτιάξει ❤️
+            Φτιάξε στο σπίτι το απόλυτο Steak Sandwich με ζουμερό μοσχαρίσιο steak και κρεμώδη Peppercorn Sauce!
+            1 μπαγκέτα
+            150 γρ. κρέμα γάλακτος
+            πατάτες κομμένες σε λεπτές φέτες
+            αλάτι
+            Τηγανίζουμε τις πατάτες μέχρι να είναι έτοιμες.
+            Serve warm
+            #steak #sandwich
+            """.trimIndent(),
+        )
+        assertEquals(listOf("1 μπαγκέτα", "150 γρ. κρέμα γάλακτος", "πατάτες κομμένες σε λεπτές φέτες", "αλάτι"), parsed.ingredients)
+        // The two intro sentences stay as steps, to be removed by hand.
+        assertEquals(4, parsed.steps.size)
+        assertEquals("Serve warm", parsed.steps.last())
+    }
+
+    @Test
     fun `blank text is empty`() {
         assertTrue(parseRecipeText("  \n\n ").isEmpty)
     }
