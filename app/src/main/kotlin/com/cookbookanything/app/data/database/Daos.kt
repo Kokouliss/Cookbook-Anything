@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 abstract class RecipeDao {
     @Query(
         """
-        SELECT r.id, r.title, r.categoryId, r.servings, r.prepMinutes, r.cookMinutes,
+        SELECT r.id, r.title, r.categoryId, r.servings, r.prepMinutes, r.cookMinutes, r.waitMinutes, r.rating, r.favorite,
             (SELECT p.fileName FROM photos p
              WHERE p.recipeId = r.id AND p.stepId IS NULL
              ORDER BY p.position LIMIT 1) AS coverPhoto,
@@ -93,6 +93,12 @@ abstract class RecipeDao {
     @Query("UPDATE steps SET done = :done WHERE id = :id")
     abstract suspend fun setStepDone(id: String, done: Boolean)
 
+    @Query("UPDATE recipes SET favorite = :favorite WHERE id = :id")
+    abstract suspend fun setFavorite(id: String, favorite: Boolean)
+
+    @Query("UPDATE recipes SET rating = :rating WHERE id = :id")
+    abstract suspend fun setRating(id: String, rating: Int?)
+
     @Query("UPDATE ingredients SET checked = 0 WHERE recipeId = :recipeId")
     abstract suspend fun uncheckIngredients(recipeId: String)
 
@@ -162,7 +168,7 @@ interface ScheduleDao {
     )
     fun observeSchedule(): Flow<List<ScheduledRecipeRow>>
 
-    // A recipe planned more than once is listed once, at its earliest date.
+    // A recipe planned more than once is listed once, at its earliest date. Optional ingredients stay off the list.
     @Query(
         """
         SELECT i.id AS ingredientId, i.text, i.checked, r.id AS recipeId, r.title AS recipeTitle
@@ -172,6 +178,7 @@ interface ScheduleDao {
             SELECT recipeId, MIN(scheduledAt) AS firstAt FROM schedules
             WHERE scheduledAt >= :from GROUP BY recipeId
         ) s ON s.recipeId = r.id
+        WHERE i.optional = 0
         ORDER BY s.firstAt, r.id, i.position
         """,
     )
@@ -192,7 +199,7 @@ interface ScheduleDao {
         """
         SELECT i.id AS ingredientId, i.text, i.checked, r.id AS recipeId, r.title AS recipeTitle
         FROM ingredients i JOIN recipes r ON r.id = i.recipeId
-        WHERE r.id IN (SELECT recipeId FROM schedules WHERE scheduledAt >= :from AND scheduledAt < :to)
+        WHERE r.id IN (SELECT recipeId FROM schedules WHERE scheduledAt >= :from AND scheduledAt < :to) AND i.optional = 0
         ORDER BY r.id, i.position
         """,
     )

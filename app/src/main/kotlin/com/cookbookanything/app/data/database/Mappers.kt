@@ -22,6 +22,9 @@ fun RecipeSummaryRow.toModel() =
         servings = servings,
         prepMinutes = prepMinutes,
         cookMinutes = cookMinutes,
+        waitMinutes = waitMinutes,
+        rating = rating,
+        favorite = favorite,
         timesCooked = timesCooked,
         lastCookedAt = lastCookedAt,
     )
@@ -46,9 +49,15 @@ fun RecipeWithDetails.toModel(): Recipe {
         servings = recipe.servings,
         prepMinutes = recipe.prepMinutes,
         cookMinutes = recipe.cookMinutes,
+        waitMinutes = recipe.waitMinutes,
+        description = recipe.description,
+        notes = recipe.notes,
+        source = recipe.source,
+        rating = recipe.rating,
+        favorite = recipe.favorite,
         photos = sortedPhotos.filter { it.stepId == null }.map { it.fileName },
         ingredients = ingredients.sortedBy { it.position }
-            .map { Ingredient(id = it.id, text = it.text, checked = it.checked) },
+            .map { Ingredient(id = it.id, text = it.text, checked = it.checked, optional = it.optional) },
         steps = steps.sortedBy { it.position }.map { step ->
             Step(
                 id = step.id,
@@ -74,6 +83,12 @@ fun Recipe.toEntity() = RecipeEntity(
     servings = servings,
     prepMinutes = prepMinutes,
     cookMinutes = cookMinutes,
+    waitMinutes = waitMinutes,
+    description = description,
+    notes = notes,
+    source = source,
+    rating = rating,
+    favorite = favorite,
 )
 
 fun Recipe.toIngredientEntities() = ingredients.mapIndexed { index, ingredient ->
@@ -83,6 +98,7 @@ fun Recipe.toIngredientEntities() = ingredients.mapIndexed { index, ingredient -
         text = ingredient.text,
         checked = ingredient.checked,
         position = index,
+        optional = ingredient.optional,
     )
 }
 

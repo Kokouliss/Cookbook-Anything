@@ -20,6 +20,10 @@ interface RecipeRepository {
     suspend fun setIngredientChecked(ingredientId: String, checked: Boolean)
     suspend fun setStepDone(stepId: String, done: Boolean)
     suspend fun resetProgress(recipeId: String)
+    suspend fun setFavorite(recipeId: String, favorite: Boolean)
+
+    /** 1 to 5, or null to clear the rating. */
+    suspend fun setRating(recipeId: String, rating: Int?)
 
     /** Records that the recipe was cooked now; the recipe page and the sorts read it. */
     suspend fun markCooked(recipeId: String)

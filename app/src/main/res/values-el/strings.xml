@@ -226,4 +226,34 @@
     <string name="photo_read_title">Η συνταγή διαβάστηκε από τη φωτογραφία σου</string>
     <string name="photo_read_full">Το βιβλίο είναι γεμάτο. Σβήσε μια συνταγή ή ξεκλείδωσε, και η φωτογραφία θα διαβαστεί την επόμενη φορά που θα ανοίξει η εφαρμογή.</string>
     <string name="photo_recipe_title">Συνταγή από φωτογραφία</string>
+    <!-- Description, notes, waiting time, optional ingredients -->
+    <string name="description">Περιγραφή</string>
+    <string name="description_hint">Μια γραμμή για το πιάτο, π.χ. «Κυριακάτικο τραπέζι της γιαγιάς»</string>
+    <string name="notes">Σημειώσεις</string>
+    <string name="notes_hint">Οι σημειώσεις σου, π.χ. «την επόμενη φορά λιγότερο αλάτι»</string>
+    <string name="wait_time_label">Χρόνος αναμονής</string>
+    <string name="wait_time">Αναμονή %1$d λεπτά</string>
+    <string name="optional_mark">(προαιρετικά)</string>
+    <string name="mark_optional">Προαιρετικό: δεν μπαίνει στη λίστα αγορών</string>
+
+    <!-- Favourites, rating, source -->
+    <string name="favorite">Προσθήκη στα αγαπημένα</string>
+    <string name="unfavorite">Αφαίρεση από τα αγαπημένα</string>
+    <string name="favorites">Αγαπημένα</string>
+    <string name="no_favorites">Δεν έχεις αγαπημένα ακόμη. Πάτα την καρδιά σε μια συνταγή.</string>
+    <string name="rate_stars">Βαθμολογία %1$d από 5</string>
+    <string name="source">Πηγή</string>
+    <string name="source_photo">Διαβάστηκε από φωτογραφία</string>
+
+    <!-- What's new -->
+    <string name="whats_new">Τι νέο υπάρχει</string>
+    <string name="whats_new_title">Τι νέο υπάρχει στην έκδοση %1$s</string>
+    <string-array name="whats_new_items">
+        <item>Περιγραφή κάτω από το όνομα της συνταγής και σημειώσεις στο τέλος.</item>
+        <item>Αγαπημένα: πάτα την καρδιά σε μια συνταγή και φίλτραρε τη λίστα.</item>
+        <item>Βαθμολόγησε μια συνταγή με ένα έως πέντε αστέρια.</item>
+        <item>Χρόνος αναμονής δίπλα στην προετοιμασία και το μαγείρεμα.</item>
+        <item>Προαιρετικά υλικά: σημείωσέ τα στην επεξεργασία και η λίστα αγορών τα παραλείπει.</item>
+        <item>Μια συνταγή από σύνδεσμο ή φωτογραφία θυμάται από πού ήρθε.</item>
+    </string-array>
 </resources>

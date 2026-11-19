@@ -89,6 +89,16 @@ class RecipeDetailViewModel @AssistedInject constructor(
         viewModelScope.launch { recipeRepository.resetProgress(recipeId) }
     }
 
+    fun setFavorite(favorite: Boolean) {
+        viewModelScope.launch { recipeRepository.setFavorite(recipeId, favorite) }
+    }
+
+    /** Tapping the star that is already the rating clears it. */
+    fun rate(stars: Int) {
+        val current = (uiState.value as? RecipeDetailUiState.Success)?.recipe?.rating
+        viewModelScope.launch { recipeRepository.setRating(recipeId, stars.takeIf { it != current }) }
+    }
+
     /** Finishing cooking mode adds a line to the recipe's cooked log. */
     fun markCooked() {
         viewModelScope.launch { recipeRepository.markCooked(recipeId) }

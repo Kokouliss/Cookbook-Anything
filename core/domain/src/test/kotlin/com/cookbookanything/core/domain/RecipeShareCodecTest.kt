@@ -8,6 +8,7 @@ import com.cookbookanything.core.domain.share.RecipeShareCodec
 import com.cookbookanything.core.domain.share.toRecipe
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -17,6 +18,12 @@ class RecipeShareCodecTest {
         id = "r1",
         title = "Μουσακάς",
         categoryId = "c1",
+        description = "Της γιαγιάς",
+        notes = "less salt next time",
+        source = "https://example.com/mousaka",
+        waitMinutes = 30,
+        rating = 5,
+        favorite = true,
         photos = listOf("cover.jpg"),
         ingredients = listOf(Ingredient("i1", "2 μελιτζάνες", checked = true)),
         steps = listOf(Step("s1", "Τηγανίζουμε", done = true, photos = listOf("step.jpg", "lost.jpg"))),
@@ -43,6 +50,13 @@ class RecipeShareCodecTest {
         assertTrue(imported.steps.none { it.done })
         assertTrue(imported.comments.isEmpty())
         assertEquals(42L, imported.createdAt)
+        // What the dish is and where it came from travel; the cook's notes, rating and favourite do not.
+        assertEquals("Της γιαγιάς", imported.description)
+        assertEquals("https://example.com/mousaka", imported.source)
+        assertEquals(30, imported.waitMinutes)
+        assertNull(imported.notes)
+        assertNull(imported.rating)
+        assertFalse(imported.favorite)
     }
 
     @Test

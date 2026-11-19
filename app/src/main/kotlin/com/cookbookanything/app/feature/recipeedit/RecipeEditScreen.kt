@@ -32,6 +32,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -55,6 +56,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -100,7 +102,11 @@ fun RecipeEditRoute(
         onServingsChange = viewModel::setServings,
         onPrepMinutesChange = viewModel::setPrepMinutes,
         onCookMinutesChange = viewModel::setCookMinutes,
+        onWaitMinutesChange = viewModel::setWaitMinutes,
+        onDescriptionChange = viewModel::setDescription,
+        onNotesChange = viewModel::setNotes,
         onIngredientChange = viewModel::setIngredientText,
+        onIngredientOptionalChange = viewModel::setIngredientOptional,
         onRemoveIngredient = viewModel::removeIngredient,
         onRestoreIngredient = viewModel::restoreIngredient,
         onMoveIngredient = viewModel::moveIngredient,
@@ -129,7 +135,11 @@ fun RecipeEditScreen(
     onServingsChange: (String) -> Unit,
     onPrepMinutesChange: (String) -> Unit,
     onCookMinutesChange: (String) -> Unit,
+    onWaitMinutesChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
+    onNotesChange: (String) -> Unit,
     onIngredientChange: (String, String) -> Unit,
+    onIngredientOptionalChange: (String, Boolean) -> Unit,
     onRemoveIngredient: (String) -> Unit,
     onRestoreIngredient: (Int, Ingredient) -> Unit,
     onMoveIngredient: (Int, Int) -> Unit,
@@ -287,6 +297,15 @@ fun RecipeEditScreen(
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
+            OutlinedTextField(
+                value = uiState.description,
+                onValueChange = onDescriptionChange,
+                label = { Text(stringResource(R.string.description)) },
+                placeholder = { Text(stringResource(R.string.description_hint)) },
+                minLines = 2,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             CategoryPicker(
                 categories = uiState.categories,
@@ -311,6 +330,13 @@ fun RecipeEditScreen(
                     modifier = Modifier.weight(1f),
                 )
             }
+            NumberField(
+                value = uiState.waitMinutes,
+                onValueChange = onWaitMinutesChange,
+                label = stringResource(R.string.wait_time_label),
+                suffix = stringResource(R.string.minutes_short),
+                modifier = Modifier.fillMaxWidth(0.5f),
+            )
 
             PhotoStrip(
                 photos = uiState.photos,
@@ -352,6 +378,14 @@ fun RecipeEditScreen(
                                     removeWithUndo(ingredientRemoved, { onRemoveIngredient(ingredient.id) }, { onRestoreIngredient(index, ingredient) })
                                 }.takeIf { !spare },
                                 handle = { DragHandle(modifier = Modifier.draggableHandle(enabled = !spare), visible = !spare) },
+                                trailing = {
+                                    if (!spare) {
+                                        OptionalToggle(
+                                            optional = ingredient.optional,
+                                            onChange = { onIngredientOptionalChange(ingredient.id, it) },
+                                        )
+                                    }
+                                },
                             )
                         }
                     }
@@ -397,6 +431,16 @@ fun RecipeEditScreen(
                     }
                 }
             }
+
+            SectionTitle(stringResource(R.string.notes))
+            OutlinedTextField(
+                value = uiState.notes,
+                onValueChange = onNotesChange,
+                placeholder = { Text(stringResource(R.string.notes_hint)) },
+                minLines = 2,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 
@@ -501,6 +545,18 @@ private fun NumberField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
         modifier = modifier,
     )
+}
+
+/** Marks an ingredient as optional: it is shown as such and left off the shopping list. */
+@Composable
+private fun OptionalToggle(optional: Boolean, onChange: (Boolean) -> Unit) {
+    IconToggleButton(checked = optional, onCheckedChange = onChange) {
+        AppIcon(
+            icon = R.drawable.ic_remove_shopping_cart,
+            contentDescription = stringResource(R.string.mark_optional),
+            modifier = Modifier.alpha(if (optional) 1f else 0.4f),
+        )
+    }
 }
 
 /** The grip at the start of a row. Pressing it starts the drag at once, so the text field keeps its own long press. */

@@ -7,8 +7,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * What travels inside a shared recipe file. Personal data (check marks, comments, category, calendar)
- * stays on the sender's phone.
+ * What travels inside a shared recipe file. Personal data (check marks, comments, notes, rating, category,
+ * calendar) stays on the sender's phone.
  */
 @Serializable
 data class SharedRecipe(
@@ -17,7 +17,11 @@ data class SharedRecipe(
     val servings: Int? = null,
     val prepMinutes: Int? = null,
     val cookMinutes: Int? = null,
+    val waitMinutes: Int? = null,
+    val description: String? = null,
+    val source: String? = null,
     val photos: List<String> = emptyList(),
+    // shortcut: the optional mark on an ingredient is not shared, add it when the format gets its next version
     val ingredients: List<String> = emptyList(),
     val steps: List<SharedStep> = emptyList(),
 )
@@ -51,6 +55,9 @@ fun Recipe.toShared(): SharedRecipe = SharedRecipe(
     servings = servings,
     prepMinutes = prepMinutes,
     cookMinutes = cookMinutes,
+    waitMinutes = waitMinutes,
+    description = description,
+    source = source,
     photos = photos,
     ingredients = ingredients.map { it.text },
     steps = steps.map { SharedStep(text = it.text, photos = it.photos) },
@@ -70,6 +77,9 @@ fun SharedRecipe.toRecipe(
     servings = servings,
     prepMinutes = prepMinutes,
     cookMinutes = cookMinutes,
+    waitMinutes = waitMinutes,
+    description = description,
+    source = source,
     photos = photos.mapNotNull(photoNames::get),
     ingredients = ingredients.map { Ingredient(id = newId(), text = it) },
     steps = steps.map { Step(id = newId(), text = it.text, photos = it.photos.mapNotNull(photoNames::get)) },

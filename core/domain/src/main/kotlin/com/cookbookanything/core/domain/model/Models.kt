@@ -15,6 +15,8 @@ data class Ingredient(
     val id: String,
     val text: String,
     val checked: Boolean = false,
+    /** Nice to have, not needed: the shopping list leaves it out. */
+    val optional: Boolean = false,
 )
 
 /** [photos] are file names inside the app's photo folder. */
@@ -42,6 +44,17 @@ data class Recipe(
     val servings: Int? = null,
     val prepMinutes: Int? = null,
     val cookMinutes: Int? = null,
+    /** Marinating, resting, rising: time the cook waits. */
+    val waitMinutes: Int? = null,
+    /** A line under the name: what the dish is. */
+    val description: String? = null,
+    /** The cook's own notes: "next time less salt". */
+    val notes: String? = null,
+    /** Where the recipe came from: the link it was read from, or [SOURCE_PHOTO]. */
+    val source: String? = null,
+    /** 1 to 5 stars, null when not rated. */
+    val rating: Int? = null,
+    val favorite: Boolean = false,
     val photos: List<String> = emptyList(),
     val ingredients: List<Ingredient> = emptyList(),
     val steps: List<Step> = emptyList(),
@@ -51,6 +64,9 @@ data class Recipe(
     val createdAt: Long = 0,
     val updatedAt: Long = 0,
 )
+
+/** The [Recipe.source] of a recipe read from a photo; anything else there is a link. */
+const val SOURCE_PHOTO = "photo"
 
 data class RecipeSummary(
     val id: String,
@@ -62,6 +78,9 @@ data class RecipeSummary(
     val servings: Int? = null,
     val prepMinutes: Int? = null,
     val cookMinutes: Int? = null,
+    val waitMinutes: Int? = null,
+    val rating: Int? = null,
+    val favorite: Boolean = false,
     val timesCooked: Int = 0,
     val lastCookedAt: Long? = null,
 )

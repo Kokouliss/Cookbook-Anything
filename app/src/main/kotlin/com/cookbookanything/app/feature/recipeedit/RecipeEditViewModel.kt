@@ -13,6 +13,7 @@ import com.cookbookanything.app.data.text.PhotoTextReader
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Recipe
+import com.cookbookanything.core.domain.model.SOURCE_PHOTO
 import com.cookbookanything.core.domain.model.Step
 import com.cookbookanything.core.domain.repository.CategoryRepository
 import com.cookbookanything.core.domain.repository.RecipeRepository
@@ -52,6 +53,11 @@ data class RecipeEditUiState(
     val servings: String = "",
     val prepMinutes: String = "",
     val cookMinutes: String = "",
+    val waitMinutes: String = "",
+    val description: String = "",
+    val notes: String = "",
+    /** Set when the recipe was read from a link or a photo; not typed. */
+    val source: String? = null,
     val photos: List<String> = emptyList(),
     // Both lists always end with one empty row, so there is always a place to type the next item.
     val ingredients: List<Ingredient> = emptyList(),
@@ -96,6 +102,10 @@ class RecipeEditViewModel @AssistedInject constructor(
                 servings = recipe?.servings?.toString().orEmpty(),
                 prepMinutes = recipe?.prepMinutes?.toString().orEmpty(),
                 cookMinutes = recipe?.cookMinutes?.toString().orEmpty(),
+                waitMinutes = recipe?.waitMinutes?.toString().orEmpty(),
+                description = recipe?.description.orEmpty(),
+                notes = recipe?.notes.orEmpty(),
+                source = recipe?.source,
                 photos = recipe?.photos.orEmpty(),
                 ingredients = recipe?.ingredients.orEmpty().withTrailingBlank(),
                 steps = recipe?.steps.orEmpty().withTrailingBlankStep(),
@@ -116,6 +126,16 @@ class RecipeEditViewModel @AssistedInject constructor(
     fun setPrepMinutes(value: String) = edit { copy(prepMinutes = value.digits(maxLength = 4)) }
 
     fun setCookMinutes(value: String) = edit { copy(cookMinutes = value.digits(maxLength = 4)) }
+
+    fun setWaitMinutes(value: String) = edit { copy(waitMinutes = value.digits(maxLength = 4)) }
+
+    fun setDescription(value: String) = edit { copy(description = value) }
+
+    fun setNotes(value: String) = edit { copy(notes = value) }
+
+    fun setIngredientOptional(id: String, optional: Boolean) = edit {
+        copy(ingredients = ingredients.map { if (it.id == id) it.copy(optional = optional) else it })
+    }
 
     fun createCategory(name: String) {
         viewModelScope.launch {
@@ -169,7 +189,7 @@ class RecipeEditViewModel @AssistedInject constructor(
 
     private fun readLink(url: String) = read(ReadResult.LinkFailed) {
         val (recipe, photo) = linkRecipeReader.read(url) ?: return@read ReadResult.LinkNothing
-        if (photo != null) edit { copy(photos = photos + photo) }
+        edit { copy(photos = if (photo != null) photos + photo else photos, source = source ?: url) }
         applyParsed(recipe)
     }
 
@@ -249,7 +269,9 @@ class RecipeEditViewModel @AssistedInject constructor(
             return@read ReadResult.PhotoSavedForLater
         }
         val text = uris.mapNotNull { photoTextReader.read(it) }.joinToString("\n")
-        if (text.isBlank()) ReadResult.PhotoNothing else applyParsed(parseRecipeText(text))
+        if (text.isBlank()) return@read ReadResult.PhotoNothing
+        edit { copy(source = source ?: SOURCE_PHOTO) }
+        applyParsed(parseRecipeText(text))
     }
 
     fun save() {
@@ -268,6 +290,12 @@ class RecipeEditViewModel @AssistedInject constructor(
                 servings = state.servings.positiveIntOrNull(),
                 prepMinutes = state.prepMinutes.positiveIntOrNull(),
                 cookMinutes = state.cookMinutes.positiveIntOrNull(),
+                waitMinutes = state.waitMinutes.positiveIntOrNull(),
+                description = state.description.trim().ifEmpty { null },
+                notes = state.notes.trim().ifEmpty { null },
+                source = state.source,
+                rating = original?.rating,
+                favorite = original?.favorite ?: false,
                 photos = state.photos,
                 ingredients = state.ingredients.filter { it.text.isNotBlank() }.map { it.copy(text = it.text.trim()) },
                 steps = state.steps.filterNot { it.isBlank() }.map { it.copy(text = it.text.trim()) },

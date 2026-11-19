@@ -65,6 +65,10 @@ class OfflineFirstRecipeRepository @Inject constructor(
 
     override suspend fun resetProgress(recipeId: String) = recipeDao.resetProgress(recipeId)
 
+    override suspend fun setFavorite(recipeId: String, favorite: Boolean) = recipeDao.setFavorite(recipeId, favorite)
+
+    override suspend fun setRating(recipeId: String, rating: Int?) = recipeDao.setRating(recipeId, rating?.coerceIn(1, 5))
+
     override suspend fun markCooked(recipeId: String) {
         recipeDao.insertCooked(
             listOf(CookedEntity(id = UUID.randomUUID().toString(), recipeId = recipeId, cookedAt = System.currentTimeMillis())),

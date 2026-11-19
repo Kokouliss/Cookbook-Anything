@@ -23,6 +23,7 @@ import com.cookbookanything.app.reminders.ReminderWorker
 import com.cookbookanything.core.domain.FreeTier
 import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Recipe
+import com.cookbookanything.core.domain.model.SOURCE_PHOTO
 import com.cookbookanything.core.domain.model.Step
 import com.cookbookanything.core.domain.text.parseRecipeText
 import dagger.hilt.android.EntryPointAccessors
@@ -105,6 +106,7 @@ class PendingPhotoWorker(context: Context, params: WorkerParameters) : Coroutine
                 id = UUID.randomUUID().toString(),
                 title = parsed.title ?: context.getString(R.string.photo_recipe_title),
                 servings = parsed.servings,
+                source = SOURCE_PHOTO,
                 photos = listOf(name),
                 ingredients = parsed.ingredients.map { Ingredient(id = UUID.randomUUID().toString(), text = it) },
                 steps = parsed.steps.map { Step(id = UUID.randomUUID().toString(), text = it) },

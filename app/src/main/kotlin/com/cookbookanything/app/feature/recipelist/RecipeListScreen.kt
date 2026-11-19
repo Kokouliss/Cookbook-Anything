@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -88,6 +89,7 @@ fun RecipeListRoute(
         onSelectCategory = viewModel::selectCategory,
         onSearch = viewModel::search,
         onSort = viewModel::setSort,
+        onOnlyFavorites = viewModel::setOnlyFavorites,
         backupOverdue = backupOverdue,
         onOpenSettings = onOpenSettings,
     )
@@ -103,6 +105,7 @@ fun RecipeListScreen(
     onSelectCategory: (String?) -> Unit,
     onSearch: (String) -> Unit,
     onSort: (RecipeSort) -> Unit,
+    onOnlyFavorites: (Boolean) -> Unit,
     backupOverdue: Boolean,
     onOpenSettings: () -> Unit,
 ) {
@@ -157,6 +160,7 @@ fun RecipeListScreen(
                 onOpenRecipe = onOpenRecipe,
                 onSelectCategory = onSelectCategory,
                 onSearch = onSearch,
+                onOnlyFavorites = onOnlyFavorites,
                 backupOverdue = backupOverdue,
                 onOpenSettings = onOpenSettings,
             )
@@ -198,6 +202,7 @@ private fun RecipeList(
     onOpenRecipe: (String) -> Unit,
     onSelectCategory: (String?) -> Unit,
     onSearch: (String) -> Unit,
+    onOnlyFavorites: (Boolean) -> Unit,
     backupOverdue: Boolean,
     onOpenSettings: () -> Unit,
 ) {
@@ -246,11 +251,13 @@ private fun RecipeList(
                     .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
             )
         }
-        if (uiState.categories.isNotEmpty()) {
+        if (!uiState.cookbookIsEmpty) {
             CategoryFilter(
                 categories = uiState.categories,
                 selectedCategoryId = uiState.selectedCategoryId,
                 onSelectCategory = onSelectCategory,
+                onlyFavorites = uiState.onlyFavorites,
+                onOnlyFavorites = onOnlyFavorites,
             )
         }
         when {
@@ -265,7 +272,13 @@ private fun RecipeList(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = stringResource(if (query.isNotBlank()) R.string.no_search_results else R.string.no_recipes_in_category),
+                    text = stringResource(
+                    when {
+                        query.isNotBlank() -> R.string.no_search_results
+                        uiState.onlyFavorites -> R.string.no_favorites
+                        else -> R.string.no_recipes_in_category
+                    },
+                ),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -302,14 +315,25 @@ private fun CategoryFilter(
     categories: List<Category>,
     selectedCategoryId: String?,
     onSelectCategory: (String?) -> Unit,
+    onlyFavorites: Boolean,
+    onOnlyFavorites: (Boolean) -> Unit,
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // Favourites narrow whatever category is chosen, so the chip sits apart from the category chips.
         item {
             FilterChip(
-                selected = selectedCategoryId == null,
+                selected = onlyFavorites,
+                onClick = { onOnlyFavorites(!onlyFavorites) },
+                label = { Text(stringResource(R.string.favorites)) },
+                leadingIcon = { AppIcon(R.drawable.ic_favorite, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            )
+        }
+        item {
+            FilterChip(
+                selected = selectedCategoryId == null && categories.isNotEmpty(),
                 onClick = { onSelectCategory(null) },
                 label = { Text(stringResource(R.string.all_recipes)) },
             )
@@ -370,8 +394,9 @@ private fun RecipeCard(recipe: RecipeSummary, categoryName: String?, onClick: ()
 @Composable
 private fun recipeFacts(recipe: RecipeSummary): String? {
     val resources = LocalContext.current.resources
-    val minutes = (recipe.prepMinutes ?: 0) + (recipe.cookMinutes ?: 0)
+    val minutes = (recipe.prepMinutes ?: 0) + (recipe.cookMinutes ?: 0) + (recipe.waitMinutes ?: 0)
     return listOfNotNull(
+        recipe.rating?.let { "★ $it" },
         minutes.takeIf { it > 0 }?.let { stringResource(R.string.total_minutes, it) },
         recipe.servings?.let { stringResource(R.string.servings_count, it) },
         recipe.timesCooked.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.cooked_times, it, it) },

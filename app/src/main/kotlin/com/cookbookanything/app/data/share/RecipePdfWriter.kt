@@ -15,7 +15,14 @@ import java.io.OutputStream
 
 /** Section headings, passed in so the PDF follows the language the user picked in the app. */
 /** [summary] is the line under the title with servings and times, when the recipe has any. */
-data class PdfLabels(val ingredients: String, val steps: String, val summary: String? = null)
+data class PdfLabels(
+    val ingredients: String,
+    val steps: String,
+    val summary: String? = null,
+    val notes: String = "",
+    val optional: String = "",
+    val source: String = "",
+)
 
 /** Lays a recipe out on A4 pages: title, cover photo, ingredients, then numbered steps with photos. */
 class RecipePdfWriter(private val photoFile: (String) -> File) {
@@ -25,12 +32,13 @@ class RecipePdfWriter(private val photoFile: (String) -> File) {
         try {
             val pages = PageCursor(document)
             pages.text(recipe.title, TITLE, spacingAfter = 12f)
+            recipe.description?.let { pages.text(it, BODY, spacingAfter = 8f) }
             labels.summary?.let { pages.text(it, BODY, spacingAfter = 12f) }
             recipe.photos.firstOrNull()?.let { pages.photo(photoFile(it), maxHeight = 260f) }
 
             if (recipe.ingredients.isNotEmpty()) {
                 pages.text(labels.ingredients, HEADING, spacingAfter = 6f)
-                recipe.ingredients.forEach { pages.text("•  ${it.text}", BODY, spacingAfter = 4f) }
+                recipe.ingredients.forEach { pages.text("•  ${it.text}" + if (it.optional) " ${labels.optional}" else "", BODY, spacingAfter = 4f) }
                 pages.gap(12f)
             }
             if (recipe.steps.isNotEmpty()) {
@@ -40,6 +48,13 @@ class RecipePdfWriter(private val photoFile: (String) -> File) {
                     step.photos.forEach { pages.photo(photoFile(it), maxHeight = 170f) }
                 }
             }
+            recipe.notes?.let {
+                pages.gap(12f)
+                pages.text(labels.notes, HEADING, spacingAfter = 6f)
+                pages.text(it, BODY, spacingAfter = 6f)
+            }
+            // Only links are printed; "from a photo" says nothing to a reader.
+            recipe.source?.takeIf { it.startsWith("http") }?.let { pages.text("${labels.source}: $it", BODY, spacingAfter = 6f) }
             pages.finish()
             document.writeTo(output)
         } finally {
