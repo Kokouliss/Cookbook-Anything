@@ -2,6 +2,7 @@ package com.cookbookanything.app.data.text
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -37,6 +38,10 @@ class BrowserPageLoader @Inject constructor(@ApplicationContext private val cont
                 override fun onPageFinished(view: WebView, url: String) {
                     finished = true
                 }
+
+                // Instagram and others try to jump into their app (instagram://…); followed, that swaps the page for an error.
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
+                    request.url.scheme != "http" && request.url.scheme != "https"
             }
             webView.loadUrl(url)
             withTimeoutOrNull(TIMEOUT_MS) {

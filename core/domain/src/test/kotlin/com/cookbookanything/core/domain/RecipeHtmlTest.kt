@@ -1,11 +1,13 @@
 package com.cookbookanything.core.domain
 
+import com.cookbookanything.core.domain.text.instagramEmbedUrl
 import com.cookbookanything.core.domain.text.linkIn
 import com.cookbookanything.core.domain.text.parseRecipeHtml
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlinx.serialization.json.JsonPrimitive
 
 class RecipeHtmlTest {
     @Test
@@ -48,6 +50,52 @@ class RecipeHtmlTest {
         assertEquals(1, recipe.steps.size)
         assertEquals("https://instagram.example/thumb.jpg?a=1&b=2", recipe.imageUrl)
         assertNull(parseRecipeHtml("<html><head><title>Login</title></head></html>"))
+    }
+
+    @Test
+    fun `an instagram post or reel is read from its embed page`() {
+        val embed = "https://www.instagram.com/p/Df0GeX5ivov/embed/captioned/"
+        assertEquals(embed, instagramEmbedUrl("https://www.instagram.com/reel/Df0GeX5ivov/?igsh=MXphNXE1eDBnamh2"))
+        assertEquals(embed, instagramEmbedUrl("https://instagram.com/some.cook/p/Df0GeX5ivov"))
+        assertEquals(embed, instagramEmbedUrl("https://www.instagram.com/reels/Df0GeX5ivov/"))
+        assertNull(instagramEmbedUrl("https://www.instagram.com/share/reel/BAxyz123/"))
+        assertNull(instagramEmbedUrl("https://www.instagram.com/some.cook/"))
+        assertNull(instagramEmbedUrl("https://example.com/p/abc/"))
+    }
+
+    @Test
+    fun `reads the caption box and picture of an instagram embed page`() {
+        val html = """
+            <html><head><title>Instagram</title></head><body>
+            <img class="EmbeddedMediaImage" alt="x" src="https://scontent.example/reel.jpg?a=1&amp;b=2" />
+            <div class="Caption"><a class="CaptionUsername" href="https://www.instagram.com/some.cook/" target="_blank">some.cook</a><br/><br/>
+            Κοτόπουλο λεμονάτο 🍋<br/>Υλικά:<br/>1 κιλό κοτόπουλο<br/>2 λεμόνια<br/>Εκτέλεση:<br/>Ψήνουμε για 40 λεπτά στους 180 βαθμούς.<br/>
+            <a href="https://www.instagram.com/explore/tags/chicken/">#chicken</a>
+            <div class="CaptionComments"><a class="CaptionCommentsExpand" href="#">View all 12 comments</a></div></div>
+            <div class="Footer">Υλικά<br/>Log in</div></body></html>
+        """.trimIndent()
+        val recipe = assertNotNull(parseRecipeHtml(html))
+        assertEquals("Κοτόπουλο λεμονάτο 🍋", recipe.title)
+        assertEquals(listOf("1 κιλό κοτόπουλο", "2 λεμόνια"), recipe.ingredients)
+        assertEquals(listOf("Ψήνουμε για 40 λεπτά στους 180 βαθμούς.", "#chicken"), recipe.steps)
+        assertEquals("https://scontent.example/reel.jpg?a=1&b=2", recipe.imageUrl)
+        // Another site's "Caption" box is not a recipe.
+        assertNull(parseRecipeHtml("""<html><body><div class="Caption">Photo by someone</div></body></html>"""))
+    }
+
+    @Test
+    fun `reads the caption from an instagram embed page's data, plain or inside a JSON string`() {
+        val caption = "Κέικ \"της γιαγιάς\"\nΥλικά\n2 αυγά\n1/2 φλ. ζάχαρη\nΕκτέλεση\nΨήνουμε 45 λεπτά."
+        val data = """{"shortcode_media":{"display_url":"https:\/\/scontent.example\/cake.jpg?a=1\u0026b=2",""" +
+            """"edge_media_to_caption":{"edges":[{"node":{"text":${JsonPrimitive(caption)}}}]}}}"""
+        val nested = """{"contextJSON":${JsonPrimitive(data)}}"""
+        for (script in listOf(data, nested)) {
+            val recipe = assertNotNull(parseRecipeHtml("<html><head><title>Instagram</title></head><body><script>s.handle($script)</script></body></html>"))
+            assertEquals("Κέικ \"της γιαγιάς\"", recipe.title)
+            assertEquals(listOf("2 αυγά", "1/2 φλ. ζάχαρη"), recipe.ingredients)
+            assertEquals(listOf("Ψήνουμε 45 λεπτά."), recipe.steps)
+            assertEquals("https://scontent.example/cake.jpg?a=1&b=2", recipe.imageUrl)
+        }
     }
 
     @Test
