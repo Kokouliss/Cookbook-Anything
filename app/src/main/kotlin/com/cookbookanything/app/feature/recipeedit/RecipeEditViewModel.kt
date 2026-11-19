@@ -7,24 +7,42 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cookbookanything.app.data.photos.PhotoStore
+import com.cookbookanything.app.data.text.LinkRecipeReader
+import com.cookbookanything.app.data.text.PendingPhotoReads
+import com.cookbookanything.app.data.text.PhotoTextReader
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.Step
 import com.cookbookanything.core.domain.repository.CategoryRepository
 import com.cookbookanything.core.domain.repository.RecipeRepository
+import com.cookbookanything.core.domain.text.ParsedRecipe
+import com.cookbookanything.core.domain.text.linkIn
 import com.cookbookanything.core.domain.text.parseRecipeText
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
+/** What came of reading a photo or a link; the screen tells the user in one line. */
+sealed interface ReadResult {
+    data class Added(val ingredients: Int, val steps: Int) : ReadResult
+    data object PhotoNothing : ReadResult
+    data object PhotoFailed : ReadResult
+    data object PhotoSavedForLater : ReadResult
+    data object LinkNothing : ReadResult
+    data object LinkFailed : ReadResult
+}
+
 data class RecipeEditUiState(
     val loading: Boolean = true,
+    /** A photo or a link is being read; takes a few seconds. */
+    val reading: Boolean = false,
     val isNew: Boolean = true,
     val title: String = "",
     val titleMissing: Boolean = false,
@@ -48,6 +66,9 @@ class RecipeEditViewModel @AssistedInject constructor(
     private val recipeRepository: RecipeRepository,
     private val categoryRepository: CategoryRepository,
     private val photoStore: PhotoStore,
+    private val photoTextReader: PhotoTextReader,
+    private val pendingPhotoReads: PendingPhotoReads,
+    private val linkRecipeReader: LinkRecipeReader,
 ) : ViewModel() {
 
     // Compose state rather than a StateFlow: text fields need their value updated synchronously,
@@ -56,6 +77,8 @@ class RecipeEditViewModel @AssistedInject constructor(
         private set
 
     private val savedChannel = Channel<String>(Channel.BUFFERED)
+    private val readResults = Channel<ReadResult>(Channel.BUFFERED)
+    val readResultFlow = readResults.receiveAsFlow()
 
     /** Emits the id of the recipe once it has been saved. */
     val saved = savedChannel.receiveAsFlow()
@@ -77,7 +100,7 @@ class RecipeEditViewModel @AssistedInject constructor(
                 ingredients = recipe?.ingredients.orEmpty().withTrailingBlank(),
                 steps = recipe?.steps.orEmpty().withTrailingBlankStep(),
             )
-            if (pastedText != null) applyText(pastedText)
+            if (pastedText != null) paste(pastedText)
         }
         viewModelScope.launch {
             categoryRepository.observeCategories().collect { uiState = uiState.copy(categories = it) }
@@ -135,25 +158,51 @@ class RecipeEditViewModel @AssistedInject constructor(
         copy(steps = steps.toMutableList().apply { add(to, removeAt(from)) }.filterNot { it.isBlank() }.withTrailingBlankStep())
     }
 
+    /** Pasted or shared text: a link is fetched and read, anything else is split into the form. */
+    fun paste(text: String) {
+        val link = linkIn(text)
+        if (link != null) readLink(link) else viewModelScope.launch { readResults.send(applyParsed(parseRecipeText(text))) }
+    }
+
+    private fun readLink(url: String) = read(ReadResult.LinkFailed) {
+        val (recipe, photo) = linkRecipeReader.read(url) ?: return@read ReadResult.LinkNothing
+        if (photo != null) edit { copy(photos = photos + photo) }
+        applyParsed(recipe)
+    }
+
     /**
-     * Fills the form from pasted or shared text. The name and servings are only taken when the form
-     * has none yet; ingredients and steps are added after the ones already typed. Returns how many
-     * ingredients and steps were added.
+     * Fills the form from a parsed recipe. The name, servings and times are only taken when the form
+     * has none yet; ingredients and steps are added after the ones already typed.
      */
-    fun applyText(text: String): Pair<Int, Int> {
-        val parsed = parseRecipeText(text)
-        if (parsed.isEmpty) return 0 to 0
+    private fun applyParsed(parsed: ParsedRecipe): ReadResult {
+        if (parsed.isEmpty) return ReadResult.Added(0, 0)
         edit {
             copy(
                 title = title.ifBlank { parsed.title ?: title },
                 titleMissing = false,
                 servings = servings.ifBlank { parsed.servings?.toString() ?: servings },
+                prepMinutes = prepMinutes.ifBlank { parsed.prepMinutes?.toString() ?: prepMinutes },
+                cookMinutes = cookMinutes.ifBlank { parsed.cookMinutes?.toString() ?: cookMinutes },
                 ingredients = (ingredients.filterNot { it.text.isBlank() } + parsed.ingredients.map { Ingredient(id = newId(), text = it) })
                     .withTrailingBlank(),
                 steps = (steps.filterNot { it.isBlank() } + parsed.steps.map { Step(id = newId(), text = it) }).withTrailingBlankStep(),
             )
         }
-        return parsed.ingredients.size to parsed.steps.size
+        return ReadResult.Added(parsed.ingredients.size, parsed.steps.size)
+    }
+
+    /** Runs a read with the progress line shown, and reports [failure] when the call throws. */
+    private fun read(failure: ReadResult, block: suspend () -> ReadResult) {
+        viewModelScope.launch {
+            edit { copy(reading = true) }
+            val result = try {
+                block()
+            } catch (e: IOException) {
+                failure
+            }
+            edit { copy(reading = false) }
+            readResults.send(result)
+        }
     }
 
     /** Adds picked photos to the step with [stepId], or to the recipe itself when it is null. */
@@ -183,6 +232,22 @@ class RecipeEditViewModel @AssistedInject constructor(
     }
 
     fun newCameraTarget(): Uri = photoStore.newCameraTarget()
+
+    /** False in a build without the Firebase config, where the "read from a photo" button is hidden. */
+    val canReadPhotos: Boolean get() = photoTextReader.available
+
+    /**
+     * Reads the recipe off photos of a page (several photos for a long recipe) and fills the form
+     * like pasted text. Offline, the photos are kept and read later as a new recipe.
+     */
+    fun readPhotos(uris: List<Uri>) = read(ReadResult.PhotoFailed) {
+        if (!pendingPhotoReads.isOnline()) {
+            pendingPhotoReads.add(uris)
+            return@read ReadResult.PhotoSavedForLater
+        }
+        val text = uris.mapNotNull { photoTextReader.read(it) }.joinToString("\n")
+        if (text.isBlank()) ReadResult.PhotoNothing else applyParsed(parseRecipeText(text))
+    }
 
     fun save() {
         val state = uiState

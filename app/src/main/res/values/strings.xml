@@ -221,4 +221,13 @@
 
     <!-- Family -->
     <string name="anykind_apps" translatable="false">AnyKind Apps</string>
+    <string name="photo_recipe">Read a recipe from a photo</string>
+    <string name="link_nothing">No recipe was found at that link. Copy the text of the recipe instead.</string>
+    <string name="link_failed">The page could not be loaded. Check the connection and the link.</string>
+    <string name="photo_nothing">No text was found in the photo.</string>
+    <string name="photo_failed">The photo could not be read. Check the connection, and that Cloud Vision is switched on for the project.</string>
+    <string name="photo_saved_offline">No internet. The photo is saved and will be read as a new recipe when the phone is back online.</string>
+    <string name="photo_read_title">Recipe read from your photo</string>
+    <string name="photo_read_full">The cookbook is full. Delete a recipe or unlock, and the photo is read the next time the app opens.</string>
+    <string name="photo_recipe_title">Recipe from a photo</string>
 </resources>

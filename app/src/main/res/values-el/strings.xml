@@ -216,4 +216,13 @@
     <string name="error_network">Χωρίς σύνδεση. Δοκίμασε ξανά όταν είσαι online.</string>
     <string name="error_sign_in_again">Κάνε ξανά σύνδεση και μετά διέγραψε τον λογαριασμό.</string>
     <string name="error_unknown">Κάτι πήγε στραβά. Δοκίμασε ξανά.</string>
+    <string name="photo_recipe">Ανάγνωση συνταγής από φωτογραφία</string>
+    <string name="link_nothing">Δεν βρέθηκε συνταγή σε αυτόν τον σύνδεσμο. Αντέγραψε το κείμενο της συνταγής.</string>
+    <string name="link_failed">Η σελίδα δεν φορτώθηκε. Έλεγξε τη σύνδεση και τον σύνδεσμο.</string>
+    <string name="photo_nothing">Δεν βρέθηκε κείμενο στη φωτογραφία.</string>
+    <string name="photo_failed">Η φωτογραφία δεν διαβάστηκε. Έλεγξε τη σύνδεση και ότι το Cloud Vision είναι ενεργό στο έργο.</string>
+    <string name="photo_saved_offline">Χωρίς σύνδεση. Η φωτογραφία αποθηκεύτηκε και θα διαβαστεί ως νέα συνταγή όταν το τηλέφωνο συνδεθεί.</string>
+    <string name="photo_read_title">Η συνταγή διαβάστηκε από τη φωτογραφία σου</string>
+    <string name="photo_read_full">Το βιβλίο είναι γεμάτο. Σβήσε μια συνταγή ή ξεκλείδωσε, και η φωτογραφία θα διαβαστεί την επόμενη φορά που θα ανοίξει η εφαρμογή.</string>
+    <string name="photo_recipe_title">Συνταγή από φωτογραφία</string>
 </resources>

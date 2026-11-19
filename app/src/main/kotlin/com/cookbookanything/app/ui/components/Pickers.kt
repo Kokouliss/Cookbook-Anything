@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.DrawableRes
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -78,14 +79,16 @@ fun AddPhotoButton(
     onBeforePick: () -> Unit = {},
     modifier: Modifier = Modifier,
     iconOnly: Boolean = false,
+    @DrawableRes icon: Int = R.drawable.ic_add_photo,
+    label: String = stringResource(R.string.add_photo),
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
         if (iconOnly) {
-            AppIconButton(R.drawable.ic_add_photo, stringResource(R.string.add_photo), onClick = { expanded = true })
+            AppIconButton(icon, label, onClick = { expanded = true })
         } else {
             OutlinedButton(onClick = { expanded = true }) {
-                Text(stringResource(R.string.add_photo))
+                Text(label)
             }
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
