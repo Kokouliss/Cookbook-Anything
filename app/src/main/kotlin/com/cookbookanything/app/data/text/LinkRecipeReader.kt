@@ -36,24 +36,30 @@ class LinkRecipeReader @Inject constructor(
 
     /** The recipe and the name of its downloaded picture, or null when the page has none. Throws [IOException] when it cannot load. */
     suspend fun read(url: String): Pair<ParsedRecipe, String?>? = withContext(Dispatchers.IO) {
-        // A plain request first, it is quick; sites that refuse it (403) or draw the recipe with
-        // JavaScript get a second try through the phone's browser engine.
-        val address = instagramEmbedUrl(url) ?: url
-        val plain = runCatching { fetch(address) }
-        var recipe = plain.getOrNull()?.let(::parseRecipeHtml)
-        if (recipe == null) {
-            val rendered = browser.load(address) { parseRecipeHtml(it) != null }
-            recipe = rendered?.let(::parseRecipeHtml)
-            if (recipe == null) {
-                writeDetails("$url, read from $address", plain, rendered)
-                plain.exceptionOrNull()?.let { throw it }
-                return@withContext null
-            }
-        }
+        val page = load(url) ?: return@withContext null
+        // A caption that only points at a blog ("full recipe at …") is read from the blog itself.
+        val blog = page.link?.takeIf { page.ingredients.isEmpty() }?.let { runCatching { load(it) }.getOrNull() }?.takeIf { it.ingredients.isNotEmpty() }
+        val recipe = blog?.let { it.copy(title = it.title ?: page.title, description = it.description ?: page.description, imageUrl = it.imageUrl ?: page.imageUrl) } ?: page
         val photo = recipe.imageUrl?.let { image ->
             runCatching { open(image).let { c -> try { c.inputStream.use { photoStore.importStream(it, MAX_IMAGE_BYTES) } } finally { c.disconnect() } } }.getOrNull()
         }
         recipe to photo
+    }
+
+    /** The recipe on the page, or null when it holds none. */
+    private suspend fun load(url: String): ParsedRecipe? {
+        // A plain request first, it is quick; sites that refuse it (403) or draw the recipe with
+        // JavaScript get a second try through the phone's browser engine.
+        val address = instagramEmbedUrl(url) ?: url
+        val plain = runCatching { fetch(address) }
+        val recipe = plain.getOrNull()?.let(::parseRecipeHtml)
+        if (recipe != null) return recipe
+        val rendered = browser.load(address) { parseRecipeHtml(it) != null }
+        return rendered?.let(::parseRecipeHtml) ?: run {
+            writeDetails("$url, read from $address", plain, rendered)
+            plain.exceptionOrNull()?.let { throw it }
+            null
+        }
     }
 
     /** What the site answered to the last link that could not be read, as a file to send to the developer. Null when there is none. */

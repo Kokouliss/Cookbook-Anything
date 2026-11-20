@@ -9,6 +9,8 @@ import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.text.StaticLayout
 import android.text.TextPaint
+import com.cookbookanything.core.domain.ingredients.isHeading
+import com.cookbookanything.core.domain.ingredients.stepNumbers
 import com.cookbookanything.core.domain.model.Recipe
 import java.io.File
 import java.io.OutputStream
@@ -38,13 +40,19 @@ class RecipePdfWriter(private val photoFile: (String) -> File) {
 
             if (recipe.ingredients.isNotEmpty()) {
                 pages.text(labels.ingredients, HEADING, spacingAfter = 6f)
-                recipe.ingredients.forEach { pages.text("•  ${it.text}" + if (it.optional) " ${labels.optional}" else "", BODY, spacingAfter = 4f) }
+                recipe.ingredients.forEach {
+                    if (isHeading(it.text)) pages.text(it.text.trimEnd(':'), SUBHEADING, spacingAfter = 4f)
+                    else pages.text("•  ${it.text}" + if (it.optional) " ${labels.optional}" else "", BODY, spacingAfter = 4f)
+                }
                 pages.gap(12f)
             }
             if (recipe.steps.isNotEmpty()) {
                 pages.text(labels.steps, HEADING, spacingAfter = 6f)
+                val numbers = recipe.steps.stepNumbers()
                 recipe.steps.forEachIndexed { index, step ->
-                    pages.text("${index + 1}.  ${step.text}", BODY, spacingAfter = 6f)
+                    val number = numbers[index]
+                    if (number == null) pages.text(step.text.trimEnd(':'), SUBHEADING, spacingAfter = 4f)
+                    else pages.text("$number.  ${step.text}", BODY, spacingAfter = 6f)
                     step.photos.forEach { pages.photo(photoFile(it), maxHeight = 170f) }
                 }
             }
@@ -125,6 +133,7 @@ class RecipePdfWriter(private val photoFile: (String) -> File) {
 
         val TITLE = textPaint(size = 24f, bold = true)
         val HEADING = textPaint(size = 15f, bold = true)
+        val SUBHEADING = textPaint(size = 12f, bold = true)
         val BODY = textPaint(size = 12f, bold = false)
         val BITMAP = Paint(Paint.FILTER_BITMAP_FLAG)
 

@@ -21,11 +21,25 @@ class ShoppingMergeTest {
             item("d", "Salt", "Bread"),
             item("e", "salt", "Pancakes"),
         ).merged()
-        assertEquals(listOf("200 g + 500 g flour", "2 eggs", "Salt"), merged.map { it.label })
+        assertEquals(listOf("700 g flour", "2 eggs", "Salt"), merged.map { it.label })
         assertEquals(listOf("a", "c"), merged[0].ingredientIds)
         assertEquals(listOf("Pancakes", "Bread"), merged[0].recipeTitles)
         assertTrue(merged[1].checked)
         assertFalse(merged[2].checked)
+    }
+
+    @Test
+    fun `counts add up, plurals meet, headings and aisles`() {
+        val merged = listOf(
+            item("a", "For the batter:", "A"),
+            item("b", "2 eggs", "A"),
+            item("c", "3 egg", "B"),
+            item("d", "1 kg flour", "A"),
+            item("e", "500 g Flour", "B"),
+        ).merged { key -> if (key == "flour") com.cookbookanything.core.domain.shopping.Aisle.PANTRY else null }
+        assertEquals(listOf("5 eggs", "1.5 kg flour"), merged.map { it.label })
+        assertEquals(com.cookbookanything.core.domain.shopping.Aisle.DAIRY_EGGS, merged[0].aisle)
+        assertEquals(com.cookbookanything.core.domain.shopping.Aisle.PANTRY, merged[1].aisle)
     }
 
     @Test

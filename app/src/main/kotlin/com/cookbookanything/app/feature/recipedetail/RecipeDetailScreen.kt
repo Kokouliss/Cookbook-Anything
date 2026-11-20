@@ -45,6 +45,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -79,6 +82,8 @@ import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
 import com.cookbookanything.app.ui.theme.appBarColors
+import com.cookbookanything.core.domain.ingredients.isHeading
+import com.cookbookanything.core.domain.ingredients.stepNumbers
 import com.cookbookanything.core.domain.model.Comment
 import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Recipe
@@ -86,6 +91,10 @@ import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.model.Step
 import com.cookbookanything.core.domain.scaling.ingredientAmount
 import com.cookbookanything.core.domain.scaling.scaleIngredient
+import com.cookbookanything.core.domain.units.MeasurementSystem
+import com.cookbookanything.core.domain.units.convertIngredient
+import com.cookbookanything.core.domain.units.convertTemperatures
+import com.cookbookanything.core.domain.units.hasConvertibleUnits
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -97,7 +106,7 @@ import kotlin.math.roundToInt
 fun RecipeDetailRoute(
     onBack: () -> Unit,
     onEdit: () -> Unit,
-    onStartCooking: (servings: Int?) -> Unit,
+    onStartCooking: (servings: Int?, measurement: MeasurementSystem) -> Unit,
     viewModel: RecipeDetailViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -161,7 +170,7 @@ fun RecipeDetailScreen(
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onEdit: () -> Unit,
-    onStartCooking: (servings: Int?) -> Unit,
+    onStartCooking: (servings: Int?, measurement: MeasurementSystem) -> Unit,
     onDelete: () -> Unit,
     onShareAsPdf: () -> Unit,
     onShareAsRecipeFile: () -> Unit,
@@ -284,7 +293,7 @@ private fun CenteredBox(padding: PaddingValues, content: @Composable () -> Unit)
 private fun RecipeContent(
     uiState: RecipeDetailUiState.Success,
     contentPadding: PaddingValues,
-    onStartCooking: (servings: Int?) -> Unit,
+    onStartCooking: (servings: Int?, measurement: MeasurementSystem) -> Unit,
     onIngredientChecked: (String, Boolean) -> Unit,
     onStepDone: (String, Boolean) -> Unit,
     onResetProgress: () -> Unit,
@@ -306,6 +315,11 @@ private fun RecipeContent(
     val shownServings = baseServings?.let { (it * scale).roundToInt().coerceAtLeast(1) }
     var scalingByIngredient by rememberSaveable { mutableStateOf(false) }
     val canScaleByIngredient = recipe.ingredients.any { ingredientAmount(it.text) != null }
+    // Cups to millilitres or grams to ounces, on this page and in cooking mode; the stored recipe does not change.
+    var measurement by rememberSaveable { mutableStateOf(MeasurementSystem.ORIGINAL) }
+    val convertible = remember(recipe) { hasConvertibleUnits(recipe.ingredients.map { it.text }, recipe.steps.map { it.text }) }
+    val countableIngredients = recipe.ingredients.filterNot { isHeading(it.text) }
+    val countableSteps = recipe.steps.filterNot { isHeading(it.text) }
 
     // The page of a printed cookbook: the picture, the name in the book serif, the facts between two
     // hairlines, then the sections, each with its own rule.
@@ -361,7 +375,7 @@ private fun RecipeContent(
                 if (recipe.steps.isNotEmpty()) {
                     Button(
                         // shortcut: cooking mode scales by whole servings, so an ingredient-based factor is rounded to the nearest serving
-                        onClick = { onStartCooking(shownServings) },
+                        onClick = { onStartCooking(shownServings, measurement) },
                         modifier = Modifier.padding(top = 8.dp),
                     ) {
                         Text(stringResource(R.string.start_cooking))
@@ -374,7 +388,7 @@ private fun RecipeContent(
             item {
                 SectionHeader(
                     title = stringResource(R.string.ingredients),
-                    progress = "${recipe.ingredients.count { it.checked }}/${recipe.ingredients.size}",
+                    progress = "${countableIngredients.count { it.checked }}/${countableIngredients.size}",
                 )
             }
             if (baseServings != null || canScaleByIngredient) {
@@ -391,12 +405,32 @@ private fun RecipeContent(
                     }
                 }
             }
+            if (convertible) {
+                item {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                        MeasurementSystem.entries.forEachIndexed { index, system ->
+                            SegmentedButton(
+                                selected = measurement == system,
+                                onClick = { measurement = system },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = MeasurementSystem.entries.size),
+                            ) {
+                                Text(stringResource(system.label()))
+                            }
+                        }
+                    }
+                }
+            }
             items(recipe.ingredients, key = { it.id }) { ingredient ->
-                CheckRow(
-                    text = scaleIngredient(ingredient.text, scale) + if (ingredient.optional) " " + stringResource(R.string.optional_mark) else "",
-                    checked = ingredient.checked,
-                    onCheckedChange = { onIngredientChecked(ingredient.id, it) },
-                )
+                if (isHeading(ingredient.text)) {
+                    ListHeading(ingredient.text)
+                } else {
+                    CheckRow(
+                        text = convertIngredient(scaleIngredient(ingredient.text, scale), measurement) +
+                            if (ingredient.optional) " " + stringResource(R.string.optional_mark) else "",
+                        checked = ingredient.checked,
+                        onCheckedChange = { onIngredientChecked(ingredient.id, it) },
+                    )
+                }
             }
         }
 
@@ -404,11 +438,17 @@ private fun RecipeContent(
             item {
                 SectionHeader(
                     title = stringResource(R.string.steps),
-                    progress = "${recipe.steps.count { it.done }}/${recipe.steps.size}",
+                    progress = "${countableSteps.count { it.done }}/${countableSteps.size}",
                 )
             }
+            val numbers = recipe.steps.stepNumbers()
             itemsIndexed(recipe.steps, key = { _, step -> step.id }) { index, step ->
-                StepRow(number = index + 1, step = step, onDoneChange = { onStepDone(step.id, it) })
+                val number = numbers[index]
+                if (number == null) {
+                    ListHeading(step.text)
+                } else {
+                    StepRow(number = number, step = step.copy(text = convertTemperatures(step.text, measurement)), onDoneChange = { onStepDone(step.id, it) })
+                }
             }
         }
 
@@ -623,6 +663,23 @@ private fun SourceRow(source: String, onOpen: () -> Unit) {
             color = if (isLink) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+/** "For the sauce:" between the rows, set small in the book's red. */
+@Composable
+private fun ListHeading(text: String) {
+    Text(
+        text = text.trimEnd(':'),
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+    )
+}
+
+private fun MeasurementSystem.label(): Int = when (this) {
+    MeasurementSystem.ORIGINAL -> R.string.measure_original
+    MeasurementSystem.METRIC -> R.string.measure_metric
+    MeasurementSystem.IMPERIAL -> R.string.measure_imperial
 }
 
 /** A step with its number set large in red in the margin, as in a printed method. */

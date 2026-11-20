@@ -41,6 +41,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+
+            <!-- Screenshots of a recipe, shared from the gallery or a social app, are read like photos taken in the app. -->
+            <intent-filter android:label="@string/import_recipe">
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
         </activity>
 
         <!-- Rings when a cooking-mode timer ends. -->

@@ -222,7 +222,7 @@
     <!-- Family -->
     <string name="anykind_apps" translatable="false">AnyKind Apps</string>
     <string name="photo_recipe">Read a recipe from a photo</string>
-    <string name="link_nothing">No recipe was found at that link. Copy the text of the recipe instead.</string>
+    <string name="link_nothing">No recipe was found at that link. Copy the text of the recipe instead, or take screenshots of it and read them with the photo button.</string>
     <string name="link_send_details">Send details</string>
     <string name="link_failed">The page could not be loaded. Check the connection and the link.</string>
     <string name="photo_nothing">No text was found in the photo.</string>
@@ -254,12 +254,13 @@
     <string name="whats_new">What’s new</string>
     <string name="whats_new_title">What’s new in version %1$s</string>
     <string-array name="whats_new_items">
-        <item>A description under the recipe name and a notes box at the end.</item>
-        <item>Favourites: tap the heart on a recipe, filter the list by it.</item>
-        <item>Rate a recipe with one to five stars.</item>
-        <item>Waiting time next to prep and cooking time.</item>
-        <item>Optional ingredients: mark them in the editor and the shopping list skips them.</item>
-        <item>A recipe read from a link or a photo remembers where it came from.</item>
+        <item>Share screenshots of a recipe straight into the app, from the gallery or a social app.</item>
+        <item>Links from Instagram, TikTok and Facebook: the title and the description are kept, a bilingual caption gives one language, and a blog link in the caption is followed.</item>
+        <item>The shopping list is grouped by aisle and adds up the same ingredient across recipes. Move an item with its menu.</item>
+        <item>Show a recipe in metric or imperial units, oven temperatures included.</item>
+        <item>Headings inside ingredients and steps: end a line with a colon.</item>
+        <item>A link already in your cookbook says so and opens the saved recipe.</item>
+        <item>A guide in Settings on importing from each source.</item>
     </string-array>
     <!-- Home strip and getting started -->
     <string name="greeting_morning">Good morning</string>
@@ -280,4 +281,46 @@
     <string name="scale_by_ingredient">Scale by an ingredient</string>
     <string name="scale_have">I have</string>
     <string name="scale_apply">Scale</string>
+    <!-- Importing: duplicates, partial reads, screenshots -->
+    <string name="open">Open</string>
+    <string name="link_duplicate">Already in your cookbook: %1$s</string>
+    <string name="pasted_partial">Only part of the recipe was found. Check both lists and fill in the rest.</string>
+
+    <!-- Units -->
+    <string name="measure_original">As written</string>
+    <string name="measure_metric">Metric</string>
+    <string name="measure_imperial">Imperial</string>
+
+    <!-- Shopping aisles -->
+    <string name="move_to_aisle">Move to another aisle</string>
+    <string name="aisle_produce">Fruit and vegetables</string>
+    <string name="aisle_dairy_eggs">Dairy and eggs</string>
+    <string name="aisle_meat_fish">Meat and fish</string>
+    <string name="aisle_bakery">Bakery</string>
+    <string name="aisle_pasta_grains">Pasta, rice and pulses</string>
+    <string name="aisle_flour_sugar">Flour, sugar and baking</string>
+    <string name="aisle_oils_vinegars">Oils and vinegars</string>
+    <string name="aisle_sauces">Sauces</string>
+    <string name="aisle_herbs_spices">Herbs and spices</string>
+    <string name="aisle_pantry">Pantry</string>
+    <string name="aisle_freezer">Freezer</string>
+    <string name="aisle_other">Other</string>
+
+    <!-- Import guide -->
+    <string name="import_guide">How to import recipes</string>
+    <string name="guide_intro">Recipes come in from links, shared text, photos and screenshots. Whatever is found opens in the editor, so you can fix what was misread before saving.</string>
+    <string name="guide_instagram_title">Instagram</string>
+    <string name="guide_instagram">Tap the three dots on the post or reel, choose Copy link, then paste it into a new recipe. The caption gives the ingredients and steps; the picture or the video’s thumbnail becomes the photo. When the recipe is only spoken in the video, take screenshots of the frames that show text and share them to Cookbook Anything.</string>
+    <string name="guide_tiktok_title">TikTok</string>
+    <string name="guide_tiktok">Tap Share, then Copy link, and paste it into a new recipe. Only the caption is read; when the recipe sits in the comments or is spoken, copy that text or share screenshots.</string>
+    <string name="guide_facebook_title">Facebook</string>
+    <string name="guide_facebook">Open the post, tap Share, then Copy link. Posts in private groups cannot be read: copy their text and share it to Cookbook Anything instead.</string>
+    <string name="guide_youtube_title">YouTube</string>
+    <string name="guide_youtube">Share the video’s link. Its description is read; when the recipe is in a pinned comment, copy and paste that.</string>
+    <string name="guide_web_title">Recipe websites</string>
+    <string name="guide_web">Share the page from the browser to Cookbook Anything, or paste the link. Most recipe sites give the exact ingredients, steps, times and photo.</string>
+    <string name="guide_photo_title">Photos and screenshots</string>
+    <string name="guide_photo">Photograph a cookbook page or a handwritten card, or share screenshots from your gallery; several photos are read as one recipe. Keep the text sharp and the page straight.</string>
+    <string name="guide_text_title">Typing or pasting</string>
+    <string name="guide_text">Write one ingredient per line, starting with the amount, for example “200 g flour”. A line ending with a colon, such as “For the sauce:”, becomes a heading. The app then scales, converts and groups the shopping list on its own.</string>
 </resources>

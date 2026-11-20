@@ -1,11 +1,13 @@
 package com.cookbookanything.app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.IntentCompat
 import com.cookbookanything.app.navigation.CookbookApp
 import com.cookbookanything.app.ui.theme.CookbookTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -41,10 +43,17 @@ class MainActivity : AppCompatActivity() {
         if (intent.getBooleanExtra(EXTRA_OPEN_CALENDAR, false)) viewModel.openCalendar()
         when (intent.action) {
             Intent.ACTION_VIEW -> intent.data?.let(viewModel::importFile)
-            // Text shared from another app (a chat, a browser) becomes a new recipe.
-            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let(viewModel::newRecipeFromText)
+            // Text shared from another app (a chat, a browser) becomes a new recipe; shared screenshots are read like photos.
+            Intent.ACTION_SEND ->
+                if (intent.type?.startsWith("image/") == true) viewModel.newRecipeFromPhotos(sharedImages(intent))
+                else intent.getStringExtra(Intent.EXTRA_TEXT)?.let(viewModel::newRecipeFromText)
+            Intent.ACTION_SEND_MULTIPLE -> viewModel.newRecipeFromPhotos(sharedImages(intent))
         }
     }
+
+    private fun sharedImages(intent: Intent): List<Uri> =
+        IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+            ?: listOfNotNull(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java))
 
     companion object {
         const val EXTRA_RECIPE_ID = "recipeId"

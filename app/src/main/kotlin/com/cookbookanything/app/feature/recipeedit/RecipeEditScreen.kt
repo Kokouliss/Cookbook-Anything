@@ -87,6 +87,7 @@ import sh.calvin.reorderable.ReorderableColumn
 fun RecipeEditRoute(
     onClose: () -> Unit,
     onSaved: (String) -> Unit,
+    onOpenRecipe: (String) -> Unit,
     viewModel: RecipeEditViewModel,
 ) {
     LaunchedEffect(viewModel) {
@@ -95,6 +96,7 @@ fun RecipeEditRoute(
     RecipeEditScreen(
         uiState = viewModel.uiState,
         onClose = onClose,
+        onOpenRecipe = onOpenRecipe,
         onSave = viewModel::save,
         onTitleChange = viewModel::setTitle,
         onCategoryChange = viewModel::setCategory,
@@ -128,6 +130,8 @@ fun RecipeEditRoute(
 fun RecipeEditScreen(
     uiState: RecipeEditUiState,
     onClose: () -> Unit,
+    /** Opens a saved recipe instead, when the pasted link was imported before. */
+    onOpenRecipe: (String) -> Unit,
     onSave: () -> Unit,
     onTitleChange: (String) -> Unit,
     onCategoryChange: (String?) -> Unit,
@@ -173,23 +177,36 @@ fun RecipeEditScreen(
     val linkNothing = stringResource(R.string.link_nothing)
     val linkFailed = stringResource(R.string.link_failed)
     val sendDetails = stringResource(R.string.link_send_details)
+    val pastedPartial = stringResource(R.string.pasted_partial)
+    val open = stringResource(R.string.open)
     LaunchedEffect(readResults) {
         readResults.collect { result ->
             // A link that was not read offers the page the site answered with, so the reason can be found.
             val unreadLink = result == ReadResult.LinkNothing || result == ReadResult.LinkFailed
+            val duplicate = result as? ReadResult.Duplicate
             val pressed = snackbarHostState.showSnackbar(
-                actionLabel = sendDetails.takeIf { unreadLink },
-                duration = if (unreadLink) SnackbarDuration.Long else SnackbarDuration.Short,
+                actionLabel = when {
+                    unreadLink -> sendDetails
+                    duplicate != null -> open
+                    else -> null
+                },
+                duration = if (unreadLink || duplicate != null) SnackbarDuration.Long else SnackbarDuration.Short,
                 message = when (result) {
-                    is ReadResult.Added -> context.getString(R.string.pasted_summary, result.ingredients, result.steps)
+                    // Only one of the two lists came through: the editor is the place to finish it.
+                    is ReadResult.Added ->
+                        if ((result.ingredients == 0) != (result.steps == 0)) pastedPartial
+                        else context.getString(R.string.pasted_summary, result.ingredients, result.steps)
                     ReadResult.PhotoNothing -> photoNothing
                     ReadResult.PhotoFailed -> photoFailed
                     ReadResult.PhotoSavedForLater -> photoSavedOffline
                     ReadResult.LinkNothing -> linkNothing
                     ReadResult.LinkFailed -> linkFailed
+                    is ReadResult.Duplicate -> context.getString(R.string.link_duplicate, result.title)
                 },
             )
-            if (pressed == SnackbarResult.ActionPerformed) linkDetails()?.let { context.shareFile(it, "text/plain", sendDetails) }
+            if (pressed == SnackbarResult.ActionPerformed) {
+                if (duplicate != null) onOpenRecipe(duplicate.recipeId) else linkDetails()?.let { context.shareFile(it, "text/plain", sendDetails) }
+            }
         }
     }
     /** Removes a row and offers Undo for a moment. */

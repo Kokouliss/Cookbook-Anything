@@ -49,6 +49,7 @@ import com.cookbookanything.app.feature.recipedetail.RecipeDetailViewModel
 import com.cookbookanything.app.feature.recipeedit.RecipeEditRoute
 import com.cookbookanything.app.feature.recipeedit.RecipeEditViewModel
 import com.cookbookanything.app.feature.recipelist.RecipeListRoute
+import com.cookbookanything.app.feature.settings.ImportGuideScreen
 import com.cookbookanything.app.feature.settings.SettingsScreen
 import com.cookbookanything.app.feature.shopping.ShoppingListRoute
 import com.cookbookanything.app.feature.whatsnew.WhatsNew
@@ -86,6 +87,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                     backStack.add(CalendarKey)
                 }
                 is MainEvent.NewRecipeFromText -> backStack.add(RecipeEditKey(pastedText = event.text))
+                is MainEvent.NewRecipeFromPhotos -> backStack.add(RecipeEditKey(photoUris = event.uris))
                 MainEvent.ImportFailed -> snackbarHostState.showSnackbar(importFailedMessage)
                 MainEvent.LimitReached -> showPaywall = true
                 is MainEvent.BackupSaved ->
@@ -155,7 +157,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                     RecipeDetailRoute(
                         onBack = { backStack.removeLastOrNull() },
                         onEdit = { backStack.add(RecipeEditKey(key.recipeId)) },
-                        onStartCooking = { servings -> backStack.add(CookModeKey(key.recipeId, servings)) },
+                        onStartCooking = { servings, measurement -> backStack.add(CookModeKey(key.recipeId, servings, measurement)) },
                         viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
                             factory.create(key.recipeId)
                         },
@@ -169,14 +171,20 @@ fun CookbookApp(viewModel: MainViewModel) {
                             // A new recipe opens on its page; an edited one is already underneath.
                             if (key.recipeId == null) backStack.add(RecipeDetailKey(recipeId))
                         },
+                        // The link was already saved once: the editor closes and the saved recipe opens.
+                        onOpenRecipe = { recipeId ->
+                            backStack.removeLastOrNull()
+                            backStack.add(RecipeDetailKey(recipeId))
+                        },
                         viewModel = hiltViewModel<RecipeEditViewModel, RecipeEditViewModel.Factory> { factory ->
-                            factory.create(key.recipeId, key.pastedText)
+                            factory.create(key.recipeId, key.pastedText, key.photoUris)
                         },
                     )
                 }
                 entry<CookModeKey> { key ->
                     CookModeRoute(
                         servings = key.servings,
+                        measurement = key.measurement,
                         onClose = { backStack.removeLastOrNull() },
                         viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
                             factory.create(key.recipeId)
@@ -188,6 +196,9 @@ fun CookbookApp(viewModel: MainViewModel) {
                 }
                 entry<CategoriesKey> {
                     CategoriesRoute(onBack = { backStack.removeLastOrNull() })
+                }
+                entry<ImportGuideKey> {
+                    ImportGuideScreen(onBack = { backStack.removeLastOrNull() })
                 }
                 entry<AccountKey> {
                     AccountRoute(onBack = { backStack.removeLastOrNull() })
@@ -204,6 +215,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                         unlocked = uiState.unlocked,
                         onUnlock = { showPaywall = true },
                         onManageCategories = { backStack.add(CategoriesKey) },
+                        onOpenImportGuide = { backStack.add(ImportGuideKey) },
                         onSaveBackup = viewModel::saveBackup,
                         onRestoreBackup = viewModel::importFile,
                         backup = uiState.backup,

@@ -53,6 +53,7 @@ fun SettingsScreen(
     unlocked: Boolean,
     onUnlock: () -> Unit,
     onManageCategories: () -> Unit,
+    onOpenImportGuide: () -> Unit,
     onSaveBackup: (Uri) -> Unit,
     onRestoreBackup: (Uri) -> Unit,
     backup: BackupStatus,
@@ -151,6 +152,16 @@ fun SettingsScreen(
             ) {
                 AppIcon(R.drawable.ic_label, contentDescription = null, modifier = Modifier.padding(end = 16.dp))
                 Text(stringResource(R.string.categories), style = MaterialTheme.typography.bodyLarge)
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenImportGuide)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppIcon(R.drawable.ic_download, contentDescription = null, modifier = Modifier.padding(end = 16.dp))
+                Text(stringResource(R.string.import_guide), style = MaterialTheme.typography.bodyLarge)
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

@@ -20,6 +20,7 @@ import com.cookbookanything.core.domain.repository.RecipeRepository
 import com.cookbookanything.core.domain.text.ParsedRecipe
 import com.cookbookanything.core.domain.text.linkIn
 import com.cookbookanything.core.domain.text.parseRecipeText
+import com.cookbookanything.core.domain.text.sourceKey
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -27,6 +28,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.util.UUID
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -38,6 +40,8 @@ sealed interface ReadResult {
     data object PhotoSavedForLater : ReadResult
     data object LinkNothing : ReadResult
     data object LinkFailed : ReadResult
+    /** The link was saved before, as the recipe named here. */
+    data class Duplicate(val recipeId: String, val title: String) : ReadResult
 }
 
 data class RecipeEditUiState(
@@ -69,6 +73,7 @@ data class RecipeEditUiState(
 class RecipeEditViewModel @AssistedInject constructor(
     @Assisted("recipeId") private val recipeId: String?,
     @Assisted("pastedText") pastedText: String?,
+    @Assisted("photoUris") photoUris: List<String>?,
     private val recipeRepository: RecipeRepository,
     private val categoryRepository: CategoryRepository,
     private val photoStore: PhotoStore,
@@ -111,6 +116,11 @@ class RecipeEditViewModel @AssistedInject constructor(
                 steps = recipe?.steps.orEmpty().withTrailingBlankStep(),
             )
             if (pastedText != null) paste(pastedText)
+            if (photoUris != null) {
+                val uris = photoUris.map(Uri::parse)
+                // Without Cloud Vision the shared screenshots are at least kept as the recipe's photos.
+                if (canReadPhotos) readPhotos(uris) else addPhotos(null, uris)
+            }
         }
         viewModelScope.launch {
             categoryRepository.observeCategories().collect { uiState = uiState.copy(categories = it) }
@@ -188,6 +198,10 @@ class RecipeEditViewModel @AssistedInject constructor(
     fun linkDetails(): Uri? = linkRecipeReader.detailsFile()
 
     private fun readLink(url: String) = read(ReadResult.LinkFailed) {
+        val key = sourceKey(url)
+        recipeRepository.observeSummaries().first()
+            .firstOrNull { it.id != recipeId && it.source?.let(::sourceKey) == key }
+            ?.let { return@read ReadResult.Duplicate(it.id, it.title) }
         val (recipe, photo) = linkRecipeReader.read(url) ?: return@read ReadResult.LinkNothing
         edit { copy(photos = if (photo != null) photos + photo else photos, source = source ?: url) }
         applyParsed(recipe)
@@ -206,6 +220,7 @@ class RecipeEditViewModel @AssistedInject constructor(
                 servings = servings.ifBlank { parsed.servings?.toString() ?: servings },
                 prepMinutes = prepMinutes.ifBlank { parsed.prepMinutes?.toString() ?: prepMinutes },
                 cookMinutes = cookMinutes.ifBlank { parsed.cookMinutes?.toString() ?: cookMinutes },
+                description = description.ifBlank { parsed.description ?: description },
                 ingredients = (ingredients.filterNot { it.text.isBlank() } + parsed.ingredients.map { Ingredient(id = newId(), text = it) })
                     .withTrailingBlank(),
                 steps = (steps.filterNot { it.isBlank() } + parsed.steps.map { Step(id = newId(), text = it) }).withTrailingBlankStep(),
@@ -313,7 +328,11 @@ class RecipeEditViewModel @AssistedInject constructor(
 
     @AssistedFactory
     interface Factory {
-        fun create(@Assisted("recipeId") recipeId: String?, @Assisted("pastedText") pastedText: String?): RecipeEditViewModel
+        fun create(
+            @Assisted("recipeId") recipeId: String?,
+            @Assisted("pastedText") pastedText: String?,
+            @Assisted("photoUris") photoUris: List<String>?,
+        ): RecipeEditViewModel
     }
 }
 
