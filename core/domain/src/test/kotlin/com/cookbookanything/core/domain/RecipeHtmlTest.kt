@@ -3,6 +3,7 @@ package com.cookbookanything.core.domain
 import com.cookbookanything.core.domain.text.instagramEmbedUrl
 import com.cookbookanything.core.domain.text.linkIn
 import com.cookbookanything.core.domain.text.parseRecipeHtml
+import com.cookbookanything.core.domain.text.sourceKey
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -32,7 +33,8 @@ class RecipeHtmlTest {
         assertEquals(70, recipe.cookMinutes)
         assertEquals("https://example.com/dish.jpg", recipe.imageUrl)
         assertEquals(listOf("500 γρ. κιμάς", "1 κρεμμύδι"), recipe.ingredients)
-        assertEquals(listOf("Ζυμώνουμε τον κιμά.", "Ψήνουμε 20 min."), recipe.steps)
+        // The HowToSection's name heads its steps.
+        assertEquals(listOf("Κεφτέδες:", "Ζυμώνουμε τον κιμά.", "Ψήνουμε 20 min."), recipe.steps)
     }
 
     @Test
@@ -75,7 +77,7 @@ class RecipeHtmlTest {
             <div class="Footer">Υλικά<br/>Log in</div></body></html>
         """.trimIndent()
         val recipe = assertNotNull(parseRecipeHtml(html))
-        assertEquals("Κοτόπουλο λεμονάτο 🍋", recipe.title)
+        assertEquals("Κοτόπουλο λεμονάτο", recipe.title)
         assertEquals(listOf("1 κιλό κοτόπουλο", "2 λεμόνια"), recipe.ingredients)
         assertEquals(listOf("Ψήνουμε για 40 λεπτά στους 180 βαθμούς."), recipe.steps)
         assertEquals("https://scontent.example/reel.jpg?a=1&b=2", recipe.imageUrl)
@@ -121,7 +123,7 @@ class RecipeHtmlTest {
         assertEquals(5, recipe.prepMinutes)
         assertEquals(15, recipe.cookMinutes)
         assertEquals(listOf("250 γρ. λιγκουίνι", "50 γρ. βούτυρο", "Αλάτι"), recipe.ingredients)
-        assertEquals(listOf("Βράζουμε τα ζυμαρικά σε αλατισμένο νερό.", "Σουρώνουμε και κρατάμε λίγο νερό."), recipe.steps)
+        assertEquals(listOf("Βράσιμο:", "Βράζουμε τα ζυμαρικά σε αλατισμένο νερό.", "Σουρώνουμε και κρατάμε λίγο νερό."), recipe.steps)
         assertEquals("https://example.com/alfredo.jpg", recipe.imageUrl)
     }
 
@@ -146,5 +148,7 @@ class RecipeHtmlTest {
         assertEquals("https://www.instagram.com/reel/abc/", linkIn("Δες αυτό https://www.instagram.com/reel/abc/ "))
         assertNull(linkIn("Κοτόπουλο\n".repeat(20) + "Πηγή: https://example.com/recipe"))
         assertNull(linkIn("Κοτόπουλο λεμονάτο\n1 κιλό κοτόπουλο"))
+        assertEquals(sourceKey("https://www.instagram.com/reel/ABC123/?igsh=x"), sourceKey("https://instagram.com/p/ABC123"))
+        assertEquals(sourceKey("https://www.example.com/cake/?utm=1"), sourceKey("http://example.com/cake"))
     }
 }

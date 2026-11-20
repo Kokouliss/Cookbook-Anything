@@ -39,6 +39,8 @@ sealed interface MainEvent {
     data object OpenCalendar : MainEvent
     /** Opens the editor with a recipe read out of shared text. */
     data class NewRecipeFromText(val text: String) : MainEvent
+    /** Opens the editor with a recipe read off shared screenshots. */
+    data class NewRecipeFromPhotos(val uris: List<String>) : MainEvent
     data object ImportFailed : MainEvent
     data object LimitReached : MainEvent
     data class BackupRestored(val added: Int) : MainEvent
@@ -82,14 +84,20 @@ class MainViewModel @Inject constructor(
 
     fun newRecipeFromText(text: String) {
         if (text.isBlank()) return
+        viewModelScope.launch { eventChannel.send(if (canAddRecipe()) MainEvent.NewRecipeFromText(text) else MainEvent.LimitReached) }
+    }
+
+    fun newRecipeFromPhotos(uris: List<Uri>) {
+        if (uris.isEmpty()) return
         viewModelScope.launch {
-            val canAdd = FreeTier.canAddRecipe(
-                recipeCount = recipeRepository.observeCount().first(),
-                unlocked = entitlementRepository.isUnlocked.first(),
-            )
-            eventChannel.send(if (canAdd) MainEvent.NewRecipeFromText(text) else MainEvent.LimitReached)
+            eventChannel.send(if (canAddRecipe()) MainEvent.NewRecipeFromPhotos(uris.map(Uri::toString)) else MainEvent.LimitReached)
         }
     }
+
+    private suspend fun canAddRecipe() = FreeTier.canAddRecipe(
+        recipeCount = recipeRepository.observeCount().first(),
+        unlocked = entitlementRepository.isUnlocked.first(),
+    )
 
     fun setBackupFolder(folder: Uri) = backupPreferences.setFolder(folder)
 

@@ -61,13 +61,17 @@ import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.cooking.ingredientsForStep
 import com.cookbookanything.core.domain.cooking.timerMinutes
 import com.cookbookanything.core.domain.model.Recipe
+import com.cookbookanything.core.domain.ingredients.isHeading
 import com.cookbookanything.core.domain.scaling.scaleIngredient
+import com.cookbookanything.core.domain.units.MeasurementSystem
+import com.cookbookanything.core.domain.units.convertIngredient
+import com.cookbookanything.core.domain.units.convertTemperatures
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** One step per card in large text, for a phone propped up next to the stove. Swipe between cards. */
 @Composable
-fun CookModeRoute(servings: Int?, onClose: () -> Unit, viewModel: RecipeDetailViewModel) {
+fun CookModeRoute(servings: Int?, measurement: MeasurementSystem, onClose: () -> Unit, viewModel: RecipeDetailViewModel) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val timer by viewModel.timer.collectAsStateWithLifecycle()
 
@@ -79,10 +83,11 @@ fun CookModeRoute(servings: Int?, onClose: () -> Unit, viewModel: RecipeDetailVi
     }
 
     val recipe = (uiState as? RecipeDetailUiState.Success)?.recipe
-    if (recipe != null && recipe.steps.isNotEmpty()) {
+    if (recipe != null && recipe.steps.any { !isHeading(it.text) }) {
         CookModeScreen(
             recipe = recipe,
             servings = servings,
+            measurement = measurement,
             timer = timer,
             onClose = onClose,
             onStepDone = viewModel::setStepDone,
@@ -97,6 +102,7 @@ fun CookModeRoute(servings: Int?, onClose: () -> Unit, viewModel: RecipeDetailVi
 fun CookModeScreen(
     recipe: Recipe,
     servings: Int?,
+    measurement: MeasurementSystem,
     timer: StepTimer?,
     onClose: () -> Unit,
     onStepDone: (String, Boolean) -> Unit,
@@ -104,7 +110,8 @@ fun CookModeScreen(
     onStartTimer: (stepId: String, minutes: Int) -> Unit,
     onStopTimer: () -> Unit,
 ) {
-    val steps = recipe.steps
+    // Headings are shown on the recipe page only; at the stove each card is a thing to do.
+    val steps = recipe.steps.filterNot { isHeading(it.text) }
     // Starts where the cook left off: the first step that is not ticked yet.
     val pager = rememberPagerState(initialPage = steps.indexOfFirst { !it.done }.coerceAtLeast(0)) { steps.size }
     val scope = rememberCoroutineScope()
@@ -113,7 +120,9 @@ fun CookModeScreen(
     val isLast = position == steps.lastIndex
     val baseServings = recipe.servings
     val scale = if (servings != null && baseServings != null) servings.toDouble() / baseServings else 1.0
-    val ingredientTexts = remember(recipe, scale) { recipe.ingredients.map { scaleIngredient(it.text, scale) } }
+    val ingredientTexts = remember(recipe, scale, measurement) {
+        recipe.ingredients.filterNot { isHeading(it.text) }.map { convertIngredient(scaleIngredient(it.text, scale), measurement) }
+    }
 
     Scaffold(
         topBar = {
@@ -190,7 +199,7 @@ fun CookModeScreen(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    Text(step.text, style = MaterialTheme.typography.headlineMedium)
+                    Text(convertTemperatures(step.text, measurement), style = MaterialTheme.typography.headlineMedium)
                     if (minutes != null) {
                         TimerChip(
                             minutes = minutes,

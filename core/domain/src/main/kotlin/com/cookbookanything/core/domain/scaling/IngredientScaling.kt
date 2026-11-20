@@ -2,8 +2,9 @@ package com.cookbookanything.core.domain.scaling
 
 import kotlin.math.roundToLong
 
-private const val AMOUNT = """\d+\s*[½¼¾⅓⅔⅛]|[½¼¾⅓⅔⅛]|\d+\s+\d+/\d+|\d+/\d+|\d+(?:[.,]\d+)?"""
-private val vulgarFractions = mapOf('½' to 0.5, '¼' to 0.25, '¾' to 0.75, '⅓' to 1.0 / 3, '⅔' to 2.0 / 3, '⅛' to 0.125)
+/** How an amount is written: "2", "1.5", "1,5", "½", "1½", "1 1/2", "3/4". */
+const val AMOUNT = """\d+\s*[½¼¾⅓⅔⅛]|[½¼¾⅓⅔⅛]|\d+\s+\d+/\d+|\d+/\d+|\d+(?:[.,]\d+)?"""
+internal val vulgarFractions = mapOf('½' to 0.5, '¼' to 0.25, '¾' to 0.75, '⅓' to 1.0 / 3, '⅔' to 2.0 / 3, '⅛' to 0.125)
 private val leadingAmount = Regex("""^(\s*)($AMOUNT)""")
 private val rangeEnd = Regex("""^(\s*[-–]\s*)($AMOUNT)""")
 
@@ -33,7 +34,8 @@ fun scaleIngredient(text: String, factor: Double): String {
 /** The amount an ingredient line starts with, as a number: "1½ cups" is 1.5, "2-3 cloves" is 2. Null when it has none. */
 fun ingredientAmount(text: String): Double? = leadingAmount.find(text)?.let { parseAmount(it.groupValues[2]) }
 
-private fun parseAmount(amount: String): Double? {
+/** "1½" is 1.5, "1 1/2" is 1.5, "1,5" is 1.5; null for a fraction over zero. */
+fun parseAmount(amount: String): Double? {
     val fraction = amount.lastOrNull()?.let(vulgarFractions::get)
     return if (fraction != null) {
         amount.dropLast(1).trim().toDoubleOrNull().let { it ?: 0.0 } + fraction
@@ -50,13 +52,18 @@ private fun parseAmount(amount: String): Double? {
 private fun scaleAmount(amount: String, factor: Double): String? {
     val fraction = amount.lastOrNull()?.let(vulgarFractions::get)
     val value = parseAmount(amount) ?: return null
-    val rounded = (value * factor * 100).roundToLong() / 100.0
+    // Written with a fraction glyph, so the answer keeps that look when it has a neat fraction.
+    val text = formatAmount(value * factor, glyphs = fraction != null)
+    return if (',' in amount) text.replace('.', ',') else text
+}
+
+/** "5", "1.5", or with [glyphs] "1½" when the value is a neat quarter, third or eighth. */
+fun formatAmount(value: Double, glyphs: Boolean = true): String {
+    val rounded = (value * 100).roundToLong() / 100.0
     val whole = rounded.toLong()
-    if (fraction != null) {
-        // Written with a fraction glyph, so the answer keeps that look when it has a neat fraction.
+    if (glyphs) {
         val glyph = vulgarFractions.entries.firstOrNull { ((rounded - whole) * 100).roundToLong() == (it.value * 100).roundToLong() }?.key
         if (glyph != null) return (if (whole == 0L) "" else whole.toString()) + glyph
     }
-    val text = if (rounded == whole.toDouble()) whole.toString() else rounded.toString()
-    return if (',' in amount) text.replace('.', ',') else text
+    return if (rounded == whole.toDouble()) whole.toString() else rounded.toString()
 }

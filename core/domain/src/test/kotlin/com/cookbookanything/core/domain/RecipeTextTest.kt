@@ -90,9 +90,61 @@ class RecipeTextTest {
             """.trimIndent(),
         )
         assertEquals(listOf("1 μπαγκέτα", "150 γρ. κρέμα γάλακτος", "πατάτες κομμένες σε λεπτές φέτες", "αλάτι"), parsed.ingredients)
-        // The two intro sentences stay as steps, to be removed by hand.
-        assertEquals(4, parsed.steps.size)
-        assertEquals("Serve warm", parsed.steps.last())
+        // The two intro sentences are the description, not steps.
+        assertEquals(2, parsed.description?.lines()?.size)
+        assertEquals(listOf("Τηγανίζουμε τις πατάτες μέχρι να είναι έτοιμες.", "Serve warm"), parsed.steps)
+        assertNull(parsed.title)
+    }
+
+    @Test
+    fun `caption with a decorated title, a blog link and headings`() {
+        val parsed = parseRecipeText(
+            """
+            🍋 LEMON OLIVE OIL CAKE 🍋
+            The easiest cake you will ever bake, and it stays moist for days.
+            Full recipe on the blog: https://example.com/lemon-cake
+            For the cake:
+            200 g flour
+            3 eggs
+            For the glaze:
+            100 g icing sugar
+            Whisk the eggs with the sugar until pale, then fold in the flour.
+            Bake at 180°C for 40 minutes.
+            @somebaker #cake #lemon
+            """.trimIndent(),
+            language = "en",
+        )
+        assertEquals("LEMON OLIVE OIL CAKE", parsed.title)
+        assertEquals("The easiest cake you will ever bake, and it stays moist for days.", parsed.description)
+        assertEquals("https://example.com/lemon-cake", parsed.link)
+        assertEquals(listOf("For the cake:", "200 g flour", "3 eggs", "For the glaze:", "100 g icing sugar"), parsed.ingredients)
+        assertEquals(2, parsed.steps.size)
+    }
+
+    @Test
+    fun `bilingual caption keeps the reader's language`() {
+        val text = """
+            Υλικά:
+            200 γρ. αλεύρι
+            3 αυγά
+            Ingredients:
+            200 g flour
+            3 eggs
+            Εκτέλεση:
+            Ανακατεύουμε το αλεύρι με τα αυγά.
+            Ψήνουμε για 20 λεπτά.
+            Method:
+            Mix the flour with the eggs.
+            Bake for 20 minutes.
+        """.trimIndent()
+        val greek = parseRecipeText(text, language = "el")
+        assertEquals(listOf("200 γρ. αλεύρι", "3 αυγά"), greek.ingredients)
+        assertEquals(listOf("Ανακατεύουμε το αλεύρι με τα αυγά.", "Ψήνουμε για 20 λεπτά."), greek.steps)
+        val english = parseRecipeText(text, language = "en")
+        assertEquals(listOf("200 g flour", "3 eggs"), english.ingredients)
+        assertEquals(listOf("Mix the flour with the eggs.", "Bake for 20 minutes."), english.steps)
+        // One language only: nothing is dropped.
+        assertEquals(2, parseRecipeText("Υλικά\n200 γρ. αλεύρι\n3 αυγά", language = "en").ingredients.size)
     }
 
     @Test

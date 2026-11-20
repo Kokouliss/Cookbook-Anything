@@ -41,6 +41,16 @@ fun linkIn(text: String): String? {
     return url.takeIf { text.replace(it, "").trim().length <= LINK_SURROUNDING_TEXT }
 }
 
+private val addressNoise = Regex("""^https?://(?:www\.|m\.)?|[?#].*$""")
+
+/**
+ * What makes two links point at the same recipe: an Instagram post's code, or the address without
+ * scheme, "www.", query and trailing slash. Used to spot a recipe already saved from the same page.
+ */
+fun sourceKey(url: String): String =
+    instagramPost.find(url)?.groupValues?.get(1)?.let { "instagram/$it" }
+        ?: url.trim().replace(addressNoise, "").trimEnd('/').lowercase()
+
 /**
  * The address of an Instagram post's embed page, or null for any other link. Asked for the post
  * itself, Instagram hands a signed-out app an error page and pushes a browser into its own app; the
@@ -150,7 +160,9 @@ private fun strings(element: JsonElement?): List<String> = when (element) {
 private fun instructions(element: JsonElement?): List<String> = when (element) {
     is JsonPrimitive -> element.content.replace(htmlTag, "\n").split('\n').map { it.trim() }.filter { it.isNotEmpty() }
     is JsonArray -> element.flatMap(::instructions)
-    is JsonObject -> element["itemListElement"]?.let(::instructions) ?: strings(element)
+    // A HowToSection's name ("For the sauce") becomes a heading over its steps.
+    is JsonObject -> element["itemListElement"]?.let { listOfNotNull(element.string("name")?.clean()?.ifBlank { null }?.let { name -> name.trimEnd(':') + ":" }) + instructions(it) }
+        ?: strings(element)
     null -> emptyList()
 }
 
@@ -203,9 +215,9 @@ private fun parseMicrodata(html: String): ParsedRecipe? {
     if (ingredients.isEmpty()) return null
     val steps = itemprop(html, "recipeInstructions").flatMap(::textLines)
         .filterNot { it.removeSuffix(":").searchKey() in STEP_HEADERS || onlyNumber.matches(it) }
-        // A short line without a full stop between the steps is a section heading, not a step.
-        .filterNot { it.length <= HEADING_LENGTH && !it.endsWith(".") && !it.endsWith("!") }
         .map { it.replace(stepMarker, "") }
+        // A short line without a full stop between the steps is a section heading, kept as one.
+        .map { if (it.length <= HEADING_LENGTH && !it.endsWith(".") && !it.endsWith("!")) it.trimEnd(':') + ":" else it }
     val prep = minutes(itemprop(html, "prepTime").firstOrNull())
     val cook = minutes(itemprop(html, "cookTime").firstOrNull())
         ?: minutes(itemprop(html, "totalTime").firstOrNull())?.let { total -> (total - (prep ?: 0)).takeIf { it > 0 } }
