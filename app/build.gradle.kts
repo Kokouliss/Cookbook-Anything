@@ -98,4 +98,7 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    // On-device translation of imported recipes; the language packs download at first use.
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.language.id)
 }

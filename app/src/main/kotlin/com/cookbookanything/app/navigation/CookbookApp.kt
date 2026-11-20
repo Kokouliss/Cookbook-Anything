@@ -217,6 +217,8 @@ fun CookbookApp(viewModel: MainViewModel) {
                         onUnlock = { showPaywall = true },
                         onManageCategories = { backStack.add(CategoriesKey) },
                         onOpenImportGuide = { backStack.add(ImportGuideKey) },
+                        translateImports = uiState.translateImports,
+                        onTranslateImports = viewModel::setTranslateImports,
                         onSaveBackup = viewModel::saveBackup,
                         onRestoreBackup = viewModel::importFile,
                         backup = uiState.backup,
