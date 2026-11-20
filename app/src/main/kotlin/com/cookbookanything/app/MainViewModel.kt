@@ -7,6 +7,7 @@ import com.cookbookanything.app.data.account.AccountRepository
 import com.cookbookanything.app.data.account.AccountState
 import com.cookbookanything.app.data.share.BackupManager
 import com.cookbookanything.app.data.share.BackupPreferences
+import com.cookbookanything.app.data.text.ImportPreferences
 import com.cookbookanything.app.data.share.BackupStatus
 import com.cookbookanything.app.data.share.RecipeSharer
 import com.cookbookanything.app.data.share.RestoreResult
@@ -29,6 +30,7 @@ data class MainUiState(
     val unlocked: Boolean = false,
     val backup: BackupStatus = BackupStatus(),
     val account: AccountState = AccountState.Unavailable,
+    val translateImports: Boolean = false,
 ) {
     val canAddRecipe: Boolean get() = FreeTier.canAddRecipe(recipeCount, unlocked)
 }
@@ -56,6 +58,7 @@ class MainViewModel @Inject constructor(
     private val backupManager: BackupManager,
     private val backupPreferences: BackupPreferences,
     private val accountRepository: AccountRepository,
+    private val importPreferences: ImportPreferences,
 ) : ViewModel() {
 
     val uiState: StateFlow<MainUiState> = combine(
@@ -63,8 +66,9 @@ class MainViewModel @Inject constructor(
         entitlementRepository.isUnlocked,
         backupPreferences.status,
         accountRepository.state,
-    ) { count, unlocked, backup, account ->
-        MainUiState(recipeCount = count, unlocked = unlocked, backup = backup, account = account)
+        importPreferences.translate,
+    ) { count, unlocked, backup, account, translate ->
+        MainUiState(recipeCount = count, unlocked = unlocked, backup = backup, account = account, translateImports = translate)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
 
     private val eventChannel = Channel<MainEvent>(Channel.BUFFERED)
@@ -102,6 +106,8 @@ class MainViewModel @Inject constructor(
     fun setBackupFolder(folder: Uri) = backupPreferences.setFolder(folder)
 
     fun clearBackupFolder() = backupPreferences.clearFolder()
+
+    fun setTranslateImports(value: Boolean) = importPreferences.setTranslate(value)
 
     fun signOut() = accountRepository.signOut()
 

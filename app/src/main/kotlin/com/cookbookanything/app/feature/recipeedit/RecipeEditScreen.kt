@@ -181,6 +181,7 @@ fun RecipeEditScreen(
     val sendDetails = stringResource(R.string.link_send_details)
     val pastedPartial = stringResource(R.string.pasted_partial)
     val open = stringResource(R.string.open)
+    val notTranslated = stringResource(R.string.translate_failed)
     LaunchedEffect(readResults) {
         readResults.collect { result ->
             // A link that was not read offers the page the site answered with, so the reason can be found.
@@ -204,6 +205,7 @@ fun RecipeEditScreen(
                     ReadResult.LinkNothing -> linkNothing
                     ReadResult.LinkFailed -> linkFailed
                     is ReadResult.Duplicate -> context.getString(R.string.link_duplicate, result.title)
+                    ReadResult.NotTranslated -> notTranslated
                 },
             )
             if (pressed == SnackbarResult.ActionPerformed) {

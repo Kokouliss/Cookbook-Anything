@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -46,6 +47,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(
@@ -54,6 +56,8 @@ fun SettingsScreen(
     onUnlock: () -> Unit,
     onManageCategories: () -> Unit,
     onOpenImportGuide: () -> Unit,
+    translateImports: Boolean,
+    onTranslateImports: (Boolean) -> Unit,
     onSaveBackup: (Uri) -> Unit,
     onRestoreBackup: (Uri) -> Unit,
     backup: BackupStatus,
@@ -162,6 +166,24 @@ fun SettingsScreen(
             ) {
                 AppIcon(R.drawable.ic_download, contentDescription = null, modifier = Modifier.padding(end = 16.dp))
                 Text(stringResource(R.string.import_guide), style = MaterialTheme.typography.bodyLarge)
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onTranslateImports(!translateImports) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                val locale = Locale.getDefault()
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.translate_imports, locale.getDisplayLanguage(locale)), style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        text = stringResource(R.string.translate_imports_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = translateImports, onCheckedChange = onTranslateImports)
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

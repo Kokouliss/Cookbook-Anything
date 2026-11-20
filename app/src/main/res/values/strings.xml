@@ -254,6 +254,7 @@
     <string name="whats_new">What’s new</string>
     <string name="whats_new_title">What’s new in version %1$s</string>
     <string-array name="whats_new_items">
+        <item>Imported recipes can be translated into your language on the phone: switch it on in Settings.</item>
         <item>Tags on recipes, and filters: total time, cooked or not, rating, and “what’s in my pantry”.</item>
         <item>Pin a recipe to the top, duplicate it, or print it, from the menu on its page.</item>
         <item>After cooking, the app asks “Did you cook it?” and keeps a photo of the result with each entry in the cooked log.</item>
@@ -356,4 +357,9 @@
     <string name="day_note_hint">A note for this day</string>
     <string name="shopping_this_week">This week</string>
     <string name="shopping_all_planned">All planned</string>
+
+    <!-- Translate imports -->
+    <string name="translate_imports">Translate imported recipes into %1$s</string>
+    <string name="translate_imports_hint">On the phone, from pasted text, links and photos. A language pack is downloaded once per language.</string>
+    <string name="translate_failed">The recipe could not be translated and is kept in its own language. Check the connection: the language pack downloads the first time.</string>
 </resources>

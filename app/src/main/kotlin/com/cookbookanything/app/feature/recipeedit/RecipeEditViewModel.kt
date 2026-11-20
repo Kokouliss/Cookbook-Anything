@@ -10,6 +10,7 @@ import com.cookbookanything.app.data.photos.PhotoStore
 import com.cookbookanything.app.data.text.LinkRecipeReader
 import com.cookbookanything.app.data.text.PendingPhotoReads
 import com.cookbookanything.app.data.text.PhotoTextReader
+import com.cookbookanything.app.data.text.RecipeTranslator
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Recipe
@@ -42,6 +43,8 @@ sealed interface ReadResult {
     data object LinkFailed : ReadResult
     /** The link was saved before, as the recipe named here. */
     data class Duplicate(val recipeId: String, val title: String) : ReadResult
+    /** Translation was switched on but did not work; the recipe is kept in its own language. */
+    data object NotTranslated : ReadResult
 }
 
 data class RecipeEditUiState(
@@ -82,6 +85,7 @@ class RecipeEditViewModel @AssistedInject constructor(
     private val photoTextReader: PhotoTextReader,
     private val pendingPhotoReads: PendingPhotoReads,
     private val linkRecipeReader: LinkRecipeReader,
+    private val translator: RecipeTranslator,
 ) : ViewModel() {
 
     // Compose state rather than a StateFlow: text fields need their value updated synchronously,
@@ -196,7 +200,8 @@ class RecipeEditViewModel @AssistedInject constructor(
     /** Pasted or shared text: a link is fetched and read, anything else is split into the form. */
     fun paste(text: String) {
         val link = linkIn(text)
-        if (link != null) readLink(link) else viewModelScope.launch { readResults.send(applyParsed(parseRecipeText(text))) }
+        // Plain text goes through read() too, so the progress line shows while it is translated.
+        if (link != null) readLink(link) else read(ReadResult.Added(0, 0)) { applyParsed(parseRecipeText(text)) }
     }
 
     /** What the site answered to the link that was just not read, to send on. */
@@ -216,8 +221,11 @@ class RecipeEditViewModel @AssistedInject constructor(
      * Fills the form from a parsed recipe. The name, servings and times are only taken when the form
      * has none yet; ingredients and steps are added after the ones already typed.
      */
-    private fun applyParsed(parsed: ParsedRecipe): ReadResult {
-        if (parsed.isEmpty) return ReadResult.Added(0, 0)
+    private suspend fun applyParsed(read: ParsedRecipe): ReadResult {
+        if (read.isEmpty) return ReadResult.Added(0, 0)
+        val translated = translator.translate(read)
+        if (translated == null) readResults.send(ReadResult.NotTranslated)
+        val parsed = translated ?: read
         edit {
             copy(
                 title = title.ifBlank { parsed.title ?: title },
