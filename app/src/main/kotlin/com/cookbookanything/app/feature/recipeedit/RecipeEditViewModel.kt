@@ -60,6 +60,8 @@ data class RecipeEditUiState(
     val waitMinutes: String = "",
     val description: String = "",
     val notes: String = "",
+    /** Comma-separated, as typed. */
+    val tags: String = "",
     /** Set when the recipe was read from a link or a photo; not typed. */
     val source: String? = null,
     val photos: List<String> = emptyList(),
@@ -110,6 +112,7 @@ class RecipeEditViewModel @AssistedInject constructor(
                 waitMinutes = recipe?.waitMinutes?.toString().orEmpty(),
                 description = recipe?.description.orEmpty(),
                 notes = recipe?.notes.orEmpty(),
+                tags = recipe?.tags.orEmpty().joinToString(", "),
                 source = recipe?.source,
                 photos = recipe?.photos.orEmpty(),
                 ingredients = recipe?.ingredients.orEmpty().withTrailingBlank(),
@@ -142,6 +145,8 @@ class RecipeEditViewModel @AssistedInject constructor(
     fun setDescription(value: String) = edit { copy(description = value) }
 
     fun setNotes(value: String) = edit { copy(notes = value) }
+
+    fun setTags(value: String) = edit { copy(tags = value) }
 
     fun setIngredientOptional(id: String, optional: Boolean) = edit {
         copy(ingredients = ingredients.map { if (it.id == id) it.copy(optional = optional) else it })
@@ -308,9 +313,11 @@ class RecipeEditViewModel @AssistedInject constructor(
                 waitMinutes = state.waitMinutes.positiveIntOrNull(),
                 description = state.description.trim().ifEmpty { null },
                 notes = state.notes.trim().ifEmpty { null },
+                tags = state.tags.split(',').map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }.distinct(),
                 source = state.source,
                 rating = original?.rating,
                 favorite = original?.favorite ?: false,
+                pinned = original?.pinned ?: false,
                 photos = state.photos,
                 ingredients = state.ingredients.filter { it.text.isNotBlank() }.map { it.copy(text = it.text.trim()) },
                 steps = state.steps.filterNot { it.isBlank() }.map { it.copy(text = it.text.trim()) },

@@ -44,6 +44,9 @@ data class RecipeEntity(
     val source: String? = null,
     val rating: Int? = null,
     @ColumnInfo(defaultValue = "0") val favorite: Boolean = false,
+    // Version 5. Tags are one per line.
+    val tags: String? = null,
+    @ColumnInfo(defaultValue = "0") val pinned: Boolean = false,
 )
 
 @Entity(
@@ -142,6 +145,15 @@ data class ScheduleEntity(
     @PrimaryKey val id: String,
     val recipeId: String,
     val scheduledAt: Long,
+    /** A [com.cookbookanything.core.domain.model.MealSlot] name. Version 5. */
+    val slot: String? = null,
+)
+
+/** The cook's note for one day of the calendar, by epoch day. Added in database version 5. */
+@Entity(tableName = "day_notes")
+data class DayNoteEntity(
+    @PrimaryKey val day: Long,
+    val note: String,
 )
 
 /** One finished run of cooking mode. Added in database version 3. */
@@ -161,6 +173,8 @@ data class CookedEntity(
     @PrimaryKey val id: String,
     val recipeId: String,
     val cookedAt: Long,
+    /** A photo of the result, taken after cooking. Version 5. */
+    val photo: String? = null,
 )
 
 data class RecipeWithDetails(
@@ -190,6 +204,8 @@ data class RecipeSummaryRow(
     val source: String?,
     val timesCooked: Int,
     val lastCookedAt: Long?,
+    val tags: String?,
+    val pinned: Boolean,
 )
 
 data class ScheduledRecipeRow(
@@ -197,6 +213,7 @@ data class ScheduledRecipeRow(
     val recipeId: String,
     val recipeTitle: String,
     val scheduledAt: Long,
+    val slot: String?,
 )
 
 data class ShoppingItemRow(

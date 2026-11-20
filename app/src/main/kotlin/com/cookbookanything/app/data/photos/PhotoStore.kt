@@ -73,6 +73,13 @@ class PhotoStore @Inject constructor(
         }
     }
 
+    /** A second file with the same picture, for a duplicated recipe. Null when the original is gone. */
+    suspend fun copy(name: String): String? = withContext(io) {
+        val source = file(name)
+        if (!source.exists()) return@withContext null
+        newName().also { source.copyTo(file(it)) }
+    }
+
     /** A temporary file the camera app can write a new picture into. */
     fun newCameraTarget(): Uri {
         val file = File(File(context.cacheDir, "camera").apply { mkdirs() }, "${UUID.randomUUID()}.jpg")

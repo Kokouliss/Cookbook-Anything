@@ -12,6 +12,7 @@ data class Backup(
     val categories: List<Category> = emptyList(),
     val recipes: List<Recipe> = emptyList(),
     val schedules: List<BackupSchedule> = emptyList(),
+    val dayNotes: List<BackupDayNote> = emptyList(),
 )
 
 @Serializable
@@ -19,7 +20,12 @@ data class BackupSchedule(
     val id: String,
     val recipeId: String,
     val scheduledAt: Long,
+    /** A [com.cookbookanything.core.domain.model.MealSlot] name, or null. */
+    val slot: String? = null,
 )
+
+@Serializable
+data class BackupDayNote(val day: Long, val note: String)
 
 object BackupCodec {
     const val FORMAT_VERSION = 1
@@ -52,6 +58,7 @@ fun Backup.prepareForRestore(photoNames: Map<String, String>, knownCategoryIds: 
                 categoryId = recipe.categoryId?.takeIf { it in categoryIds },
                 photos = recipe.photos.mapNotNull(photoNames::get),
                 steps = recipe.steps.map { it.copy(photos = it.photos.mapNotNull(photoNames::get)) },
+                cookedPhotos = recipe.cookedPhotos.mapNotNull { (at, name) -> photoNames[name]?.let { at to it } }.toMap(),
             )
         },
         schedules = schedules.filter { it.recipeId in recipeIds },

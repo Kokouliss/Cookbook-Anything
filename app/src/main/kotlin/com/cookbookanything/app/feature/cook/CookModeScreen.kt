@@ -91,7 +91,7 @@ fun CookModeRoute(servings: Int?, measurement: MeasurementSystem, onClose: () ->
             timer = timer,
             onClose = onClose,
             onStepDone = viewModel::setStepDone,
-            onFinished = viewModel::markCooked,
+            onFinished = { viewModel.markCooked() },
             onStartTimer = viewModel::startTimer,
             onStopTimer = viewModel::stopTimer,
         )

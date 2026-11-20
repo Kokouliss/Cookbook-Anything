@@ -55,12 +55,18 @@ data class Recipe(
     /** 1 to 5 stars, null when not rated. */
     val rating: Int? = null,
     val favorite: Boolean = false,
+    /** Free words the cook filters by: "quick", "vegan", "Sunday". */
+    val tags: List<String> = emptyList(),
+    /** Pinned recipes stay at the top of the list whatever the sort. */
+    val pinned: Boolean = false,
     val photos: List<String> = emptyList(),
     val ingredients: List<Ingredient> = emptyList(),
     val steps: List<Step> = emptyList(),
     val comments: List<Comment> = emptyList(),
     /** When cooking mode was finished for this recipe, newest last. */
     val cookedAt: List<Long> = emptyList(),
+    /** A photo taken after cooking, by the time in [cookedAt] it belongs to. */
+    val cookedPhotos: Map<Long, String> = emptyMap(),
     val createdAt: Long = 0,
     val updatedAt: Long = 0,
 )
@@ -84,13 +90,21 @@ data class RecipeSummary(
     val source: String? = null,
     val timesCooked: Int = 0,
     val lastCookedAt: Long? = null,
-)
+    val tags: List<String> = emptyList(),
+    val pinned: Boolean = false,
+) {
+    val totalMinutes: Int get() = (prepMinutes ?: 0) + (cookMinutes ?: 0) + (waitMinutes ?: 0)
+}
+
+/** The meal a planned recipe is for; [hour] is the time it is planned at unless the cook picks another. */
+enum class MealSlot(val hour: Int) { BREAKFAST(8), LUNCH(13), SNACK(17), DINNER(20) }
 
 data class ScheduledRecipe(
     val id: String,
     val recipeId: String,
     val recipeTitle: String,
     val scheduledAt: Long,
+    val slot: MealSlot? = null,
 )
 
 /** An ingredient of a recipe that is planned in the calendar. */

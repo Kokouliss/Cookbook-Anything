@@ -111,7 +111,7 @@
 
     <!-- Shopping list -->
     <string name="shopping_list">Λίστα για ψώνια</string>
-    <string name="shopping_hint">Τα υλικά των συνταγών που έχεις προγραμματίσει από σήμερα και μετά. Τσέκαρε ό,τι έχεις ήδη.</string>
+    <string name="shopping_hint">Τα υλικά των συνταγών που έχεις προγραμματίσει. Τσέκαρε ό,τι έχεις ήδη.</string>
     <string name="shopping_empty">Βάλε συνταγές στο ημερολόγιο και τα υλικά τους θα εμφανιστούν εδώ.</string>
 
     <!-- Servings and times -->
@@ -249,13 +249,11 @@
     <string name="whats_new">Τι νέο υπάρχει</string>
     <string name="whats_new_title">Τι νέο υπάρχει στην έκδοση %1$s</string>
     <string-array name="whats_new_items">
-        <item>Μοιράσου στιγμιότυπα οθόνης μιας συνταγής απευθείας στην εφαρμογή, από τη συλλογή ή ένα κοινωνικό δίκτυο.</item>
-        <item>Σύνδεσμοι από Instagram, TikTok και Facebook: κρατιούνται ο τίτλος και η περιγραφή, μια δίγλωσση λεζάντα δίνει μία γλώσσα, και ένας σύνδεσμος blog στη λεζάντα ακολουθείται.</item>
-        <item>Η λίστα αγορών ομαδοποιείται ανά διάδρομο και προσθέτει το ίδιο υλικό από πολλές συνταγές. Μετακίνησε ένα είδος από το μενού του.</item>
-        <item>Δες μια συνταγή σε μετρικές ή αγγλοσαξονικές μονάδες, μαζί με τις θερμοκρασίες φούρνου.</item>
-        <item>Επικεφαλίδες μέσα στα υλικά και τα βήματα: τελείωσε μια γραμμή με άνω κάτω τελεία.</item>
-        <item>Ένας σύνδεσμος που υπάρχει ήδη στο βιβλίο σου το λέει και ανοίγει την αποθηκευμένη συνταγή.</item>
-        <item>Οδηγός στις Ρυθμίσεις για την εισαγωγή από κάθε πηγή.</item>
+        <item>Ετικέτες στις συνταγές, και φίλτρα: συνολικός χρόνος, μαγειρεμένες ή όχι, βαθμολογία, και «τι έχω στο ντουλάπι».</item>
+        <item>Καρφίτσωσε μια συνταγή στην κορυφή, αντίγραψέ την ή τύπωσέ την, από το μενού της σελίδας της.</item>
+        <item>Μετά το μαγείρεμα η εφαρμογή ρωτά «Το μαγείρεψες;» και κρατά μια φωτογραφία του αποτελέσματος σε κάθε καταχώριση.</item>
+        <item>Προγραμμάτισε μια συνταγή ως πρωινό, μεσημεριανό, σνακ ή βραδινό, και γράψε μια σημείωση για κάθε μέρα του ημερολογίου.</item>
+        <item>Η λίστα αγορών μπορεί να δείχνει μόνο αυτή την εβδομάδα.</item>
     </string-array>
     <!-- Home strip and getting started -->
     <string name="greeting_morning">Καλημέρα</string>
@@ -318,4 +316,39 @@
     <string name="guide_photo">Φωτογράφισε μια σελίδα βιβλίου ή μια χειρόγραφη κάρτα, ή μοιράσου στιγμιότυπα από τη συλλογή σου· πολλές φωτογραφίες διαβάζονται ως μία συνταγή. Κράτα το κείμενο καθαρό και τη σελίδα ίσια.</string>
     <string name="guide_text_title">Πληκτρολόγηση ή επικόλληση</string>
     <string name="guide_text">Γράψε ένα υλικό ανά γραμμή, ξεκινώντας με την ποσότητα, π.χ. «200 γρ. αλεύρι». Μια γραμμή που τελειώνει σε άνω κάτω τελεία, όπως «Για τη σάλτσα:», γίνεται επικεφαλίδα. Η εφαρμογή μετά κλιμακώνει, μετατρέπει και ομαδοποιεί τη λίστα αγορών μόνη της.</string>
+
+    <!-- Tags, filters, pin, duplicate, print, cooked log, meal slots, day notes -->
+    <string name="more">Περισσότερα</string>
+    <string name="done">Έγινε</string>
+    <string name="tags">Ετικέτες</string>
+    <string name="tags_hint">γρήγορο, vegan, Κυριακή (χωρισμένες με κόμμα)</string>
+    <string name="filters">Φίλτρα</string>
+    <string name="filter_time">Συνολικός χρόνος</string>
+    <string name="filter_under_minutes">Κάτω από %1$d λεπτά</string>
+    <string name="filter_cooked">Μαγειρεμένη</string>
+    <string name="filter_cooked_yes">Έχει μαγειρευτεί</string>
+    <string name="filter_cooked_no">Όχι ακόμα</string>
+    <string name="filter_rating">Βαθμολογία</string>
+    <string name="filter_pantry">Τι έχω στο ντουλάπι</string>
+    <string name="filter_pantry_hint">αυγά, σπανάκι, φέτα</string>
+    <string name="clear_filters">Καθαρισμός</string>
+    <string name="no_filter_results">Καμία συνταγή δεν ταιριάζει με αυτά τα φίλτρα.</string>
+    <string name="pin">Καρφίτσωμα στην κορυφή</string>
+    <string name="unpin">Ξεκαρφίτσωμα</string>
+    <string name="duplicate">Αντίγραφο</string>
+    <string name="copy_suffix">" (αντίγραφο)"</string>
+    <string name="print">Εκτύπωση</string>
+    <string name="cooked_photos">Πώς βγήκε</string>
+    <string name="cook_prompt_title">Το μαγείρεψες;</string>
+    <string name="cook_prompt_text">Καταγράφεται στο ιστορικό της συνταγής, μαζί με μια φωτογραφία του αποτελέσματος.</string>
+    <string name="cooked_yes">Ναι</string>
+    <string name="cooked_with_photo">Ναι, με φωτογραφία</string>
+    <string name="cooked_no">Όχι αυτή τη φορά</string>
+    <string name="slot_breakfast">Πρωινό</string>
+    <string name="slot_lunch">Μεσημεριανό</string>
+    <string name="slot_snack">Σνακ</string>
+    <string name="slot_dinner">Βραδινό</string>
+    <string name="day_note_hint">Μια σημείωση για τη μέρα</string>
+    <string name="shopping_this_week">Αυτή την εβδομάδα</string>
+    <string name="shopping_all_planned">Όλα τα προγραμματισμένα</string>
 </resources>

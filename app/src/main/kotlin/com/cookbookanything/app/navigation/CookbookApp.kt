@@ -158,6 +158,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                         onBack = { backStack.removeLastOrNull() },
                         onEdit = { backStack.add(RecipeEditKey(key.recipeId)) },
                         onStartCooking = { servings, measurement -> backStack.add(CookModeKey(key.recipeId, servings, measurement)) },
+                        onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
                         viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
                             factory.create(key.recipeId)
                         },

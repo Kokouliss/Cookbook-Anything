@@ -32,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -70,6 +71,7 @@ import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.model.ScheduledRecipe
+import com.cookbookanything.core.domain.search.RecipeFilter
 import com.cookbookanything.core.domain.sort.RecipeSort
 import com.cookbookanything.app.widget.whenLabel
 import java.time.LocalTime
@@ -99,6 +101,7 @@ fun RecipeListRoute(
         onSearch = viewModel::search,
         onSort = viewModel::setSort,
         onOnlyFavorites = viewModel::setOnlyFavorites,
+        onFilter = viewModel::setFilter,
         backupOverdue = backupOverdue,
         onOpenSettings = onOpenSettings,
     )
@@ -117,6 +120,7 @@ fun RecipeListScreen(
     onSearch: (String) -> Unit,
     onSort: (RecipeSort) -> Unit,
     onOnlyFavorites: (Boolean) -> Unit,
+    onFilter: (RecipeFilter) -> Unit,
     backupOverdue: Boolean,
     onOpenSettings: () -> Unit,
 ) {
@@ -172,6 +176,7 @@ fun RecipeListScreen(
                 onSelectCategory = onSelectCategory,
                 onSearch = onSearch,
                 onOnlyFavorites = onOnlyFavorites,
+                onFilter = onFilter,
                 onOpenCalendar = onOpenCalendar,
                 onOpenShoppingList = onOpenShoppingList,
                 backupOverdue = backupOverdue,
@@ -216,6 +221,7 @@ private fun RecipeList(
     onSelectCategory: (String?) -> Unit,
     onSearch: (String) -> Unit,
     onOnlyFavorites: (Boolean) -> Unit,
+    onFilter: (RecipeFilter) -> Unit,
     onOpenCalendar: () -> Unit,
     onOpenShoppingList: () -> Unit,
     backupOverdue: Boolean,
@@ -223,6 +229,7 @@ private fun RecipeList(
 ) {
     // The typed text lives here so the field never lags behind fast typing; the view model only filters.
     var query by rememberSaveable { mutableStateOf("") }
+    var editingFilter by rememberSaveable { mutableStateOf(false) }
     // After the screen is restored the view model may be new, so it is told the saved text again.
     LaunchedEffect(query) { onSearch(query) }
 
@@ -275,6 +282,10 @@ private fun RecipeList(
                 onSelectCategory = onSelectCategory,
                 onlyFavorites = uiState.onlyFavorites,
                 onOnlyFavorites = onOnlyFavorites,
+                tags = uiState.allTags,
+                filter = uiState.filter,
+                onFilter = onFilter,
+                onEditFilter = { editingFilter = true },
             )
         }
         when {
@@ -292,6 +303,7 @@ private fun RecipeList(
                     text = stringResource(
                     when {
                         query.isNotBlank() -> R.string.no_search_results
+                        !uiState.filter.isEmpty -> R.string.no_filter_results
                         uiState.onlyFavorites -> R.string.no_favorites
                         else -> R.string.no_recipes_in_category
                     },
@@ -324,6 +336,10 @@ private fun RecipeList(
                 }
             }
         }
+    }
+
+    if (editingFilter) {
+        FilterDialog(filter = uiState.filter, onFilter = onFilter, onDismiss = { editingFilter = false })
     }
 }
 
@@ -403,11 +419,24 @@ private fun CategoryFilter(
     onSelectCategory: (String?) -> Unit,
     onlyFavorites: Boolean,
     onOnlyFavorites: (Boolean) -> Unit,
+    tags: List<String>,
+    filter: RecipeFilter,
+    onFilter: (RecipeFilter) -> Unit,
+    onEditFilter: () -> Unit,
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        item {
+            // Time, cooked, rating and pantry live in a dialog; the chip says how many of them are set.
+            val set = listOf(filter.maxMinutes != null, filter.cooked != null, filter.minRating != null, filter.pantry.isNotBlank()).count { it }
+            FilterChip(
+                selected = set > 0,
+                onClick = onEditFilter,
+                label = { Text(if (set > 0) stringResource(R.string.filters) + " ($set)" else stringResource(R.string.filters)) },
+            )
+        }
         // Favourites narrow whatever category is chosen, so the chip sits apart from the category chips.
         item {
             FilterChip(
@@ -431,7 +460,69 @@ private fun CategoryFilter(
                 label = { Text(category.name) },
             )
         }
+        items(tags, key = { "tag-$it" }) { tag ->
+            val selected = tag in filter.tags
+            FilterChip(
+                selected = selected,
+                onClick = { onFilter(filter.copy(tags = if (selected) filter.tags - tag else filter.tags + tag)) },
+                label = { Text("#$tag") },
+            )
+        }
     }
+}
+
+/** Total time, cooked or not, rating and "what's in my pantry"; applied as each chip is tapped. */
+@Composable
+private fun FilterDialog(filter: RecipeFilter, onFilter: (RecipeFilter) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.filters)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.filter_time), style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(15, 30, 60).forEach { minutes ->
+                        FilterChip(
+                            selected = filter.maxMinutes == minutes,
+                            onClick = { onFilter(filter.copy(maxMinutes = minutes.takeIf { it != filter.maxMinutes })) },
+                            label = { Text(stringResource(R.string.filter_under_minutes, minutes)) },
+                        )
+                    }
+                }
+                Text(stringResource(R.string.filter_cooked), style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(true to R.string.filter_cooked_yes, false to R.string.filter_cooked_no).forEach { (cooked, label) ->
+                        FilterChip(
+                            selected = filter.cooked == cooked,
+                            onClick = { onFilter(filter.copy(cooked = cooked.takeIf { it != filter.cooked })) },
+                            label = { Text(stringResource(label)) },
+                        )
+                    }
+                }
+                Text(stringResource(R.string.filter_rating), style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(3, 4, 5).forEach { stars ->
+                        FilterChip(
+                            selected = filter.minRating == stars,
+                            onClick = { onFilter(filter.copy(minRating = stars.takeIf { it != filter.minRating })) },
+                            label = { Text("$stars+ ★") },
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = filter.pantry,
+                    onValueChange = { onFilter(filter.copy(pantry = it)) },
+                    label = { Text(stringResource(R.string.filter_pantry)) },
+                    placeholder = { Text(stringResource(R.string.filter_pantry_hint)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.done)) } },
+        dismissButton = { TextButton(onClick = { onFilter(RecipeFilter()) }) { Text(stringResource(R.string.clear_filters)) } },
+    )
 }
 
 /** One recipe: the photo (or an ink doodle) with the name in the book serif and a line of facts under it. */

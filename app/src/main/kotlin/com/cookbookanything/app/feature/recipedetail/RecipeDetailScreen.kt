@@ -73,6 +73,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cookbookanything.app.R
 import com.cookbookanything.app.data.share.PdfLabels
+import com.cookbookanything.app.data.share.printPdf
+import com.cookbookanything.app.ui.components.AddPhotoButton
+import com.cookbookanything.app.ui.components.rememberPhotoPicker
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.CheckRow
@@ -86,6 +89,7 @@ import com.cookbookanything.core.domain.ingredients.isHeading
 import com.cookbookanything.core.domain.ingredients.stepNumbers
 import com.cookbookanything.core.domain.model.Comment
 import com.cookbookanything.core.domain.model.Ingredient
+import com.cookbookanything.core.domain.model.MealSlot
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.model.Step
@@ -107,10 +111,13 @@ fun RecipeDetailRoute(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onStartCooking: (servings: Int?, measurement: MeasurementSystem) -> Unit,
+    onOpenRecipe: (String) -> Unit,
     viewModel: RecipeDetailViewModel,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val cookPrompt by viewModel.cookPrompt.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val copySuffix = stringResource(R.string.copy_suffix)
     val snackbarHostState = remember { SnackbarHostState() }
     val shareTitle = stringResource(R.string.share)
     val shareFailedMessage = stringResource(R.string.share_failed)
@@ -129,6 +136,8 @@ fun RecipeDetailRoute(
                 RecipeDetailEvent.Deleted -> onBack()
                 is RecipeDetailEvent.Share -> context.shareFile(event.uri, event.mimeType, shareTitle)
                 RecipeDetailEvent.ShareFailed -> snackbarHostState.showSnackbar(shareFailedMessage)
+                is RecipeDetailEvent.Print -> context.printPdf(event.uri, (uiState as? RecipeDetailUiState.Success)?.recipe?.title ?: shareTitle)
+                is RecipeDetailEvent.Duplicated -> onOpenRecipe(event.recipeId)
             }
         }
     }
@@ -142,6 +151,13 @@ fun RecipeDetailRoute(
         onDelete = viewModel::delete,
         onShareAsPdf = { viewModel.shareAsPdf(pdfLabels) },
         onShareAsRecipeFile = viewModel::shareAsRecipeFile,
+        onPrint = { viewModel.print(pdfLabels) },
+        onPin = viewModel::setPinned,
+        onDuplicate = { viewModel.duplicate(copySuffix) },
+        cookPrompt = cookPrompt,
+        onCooked = viewModel::markCooked,
+        newCameraTarget = viewModel::newCameraTarget,
+        onDismissCookPrompt = viewModel::dismissCookPrompt,
         onIngredientChecked = viewModel::setIngredientChecked,
         onStepDone = viewModel::setStepDone,
         onResetProgress = viewModel::resetProgress,
@@ -174,6 +190,13 @@ fun RecipeDetailScreen(
     onDelete: () -> Unit,
     onShareAsPdf: () -> Unit,
     onShareAsRecipeFile: () -> Unit,
+    onPrint: () -> Unit,
+    onPin: (Boolean) -> Unit,
+    onDuplicate: () -> Unit,
+    cookPrompt: Boolean,
+    onCooked: (photo: Uri?) -> Unit,
+    newCameraTarget: () -> Uri,
+    onDismissCookPrompt: () -> Unit,
     onIngredientChecked: (String, Boolean) -> Unit,
     onStepDone: (String, Boolean) -> Unit,
     onResetProgress: () -> Unit,
@@ -181,10 +204,11 @@ fun RecipeDetailScreen(
     onRate: (Int) -> Unit,
     onAddComment: (String) -> Unit,
     onDeleteComment: (String) -> Unit,
-    onSchedule: (Long) -> Unit,
+    onSchedule: (Long, MealSlot?) -> Unit,
     onRemoveSchedule: (String) -> Unit,
 ) {
     var shareMenuOpen by remember { mutableStateOf(false) }
+    var moreMenuOpen by remember { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     val loaded = uiState is RecipeDetailUiState.Success
 
@@ -228,11 +252,27 @@ fun RecipeDetailScreen(
                             }
                         }
                         AppIconButton(R.drawable.ic_edit, stringResource(R.string.edit), onClick = onEdit)
-                        AppIconButton(
-                            icon = R.drawable.ic_delete,
-                            contentDescription = stringResource(R.string.delete),
-                            onClick = { confirmDelete = true },
-                        )
+                        Box {
+                            AppIconButton(R.drawable.ic_more_vert, stringResource(R.string.more), onClick = { moreMenuOpen = true })
+                            DropdownMenu(expanded = moreMenuOpen, onDismissRequest = { moreMenuOpen = false }) {
+                                val pinned = uiState.recipe.pinned
+                                val actions = listOf<Pair<Int, () -> Unit>>(
+                                    (if (pinned) R.string.unpin else R.string.pin) to { onPin(!pinned) },
+                                    R.string.duplicate to onDuplicate,
+                                    R.string.print to onPrint,
+                                    R.string.delete to { confirmDelete = true },
+                                )
+                                actions.forEach { (label, action) ->
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(label)) },
+                                        onClick = {
+                                            moreMenuOpen = false
+                                            action()
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
             )
@@ -260,6 +300,10 @@ fun RecipeDetailScreen(
                 onRemoveSchedule = onRemoveSchedule,
             )
         }
+    }
+
+    if (cookPrompt) {
+        CookPromptDialog(onCooked = onCooked, newCameraTarget = newCameraTarget, onDismiss = onDismissCookPrompt)
     }
 
     if (confirmDelete) {
@@ -300,7 +344,7 @@ private fun RecipeContent(
     onRate: (Int) -> Unit,
     onAddComment: (String) -> Unit,
     onDeleteComment: (String) -> Unit,
-    onSchedule: (Long) -> Unit,
+    onSchedule: (Long, MealSlot?) -> Unit,
     onRemoveSchedule: (String) -> Unit,
 ) {
     val recipe = uiState.recipe
@@ -360,6 +404,14 @@ private fun RecipeContent(
                         text = times + ", " + stringResource(R.string.cooked_last, formatDate(recipe.cookedAt.last(), locale)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (recipe.tags.isNotEmpty()) {
+                    Text(
+                        text = recipe.tags.joinToString("  ") { "#$it" },
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
                 Rating(stars = recipe.rating, onRate = onRate)
@@ -460,6 +512,12 @@ private fun RecipeContent(
             }
         }
 
+        if (recipe.cookedPhotos.isNotEmpty()) {
+            // The cook's own results, newest first: what it really looked like.
+            item { SectionHeader(title = stringResource(R.string.cooked_photos)) }
+            item { PhotoRow(photos = recipe.cookedPhotos.toSortedMap(reverseOrder()).values.toList(), height = 120) }
+        }
+
         recipe.notes?.let { notes ->
             item { SectionHeader(title = stringResource(R.string.notes)) }
             item { Text(notes, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
@@ -498,14 +556,33 @@ private fun RecipeContent(
 
     if (pickingDateTime) {
         DateTimePickerDialog(
-            onConfirm = { dateTime ->
+            onConfirm = { dateTime, slot ->
                 pickingDateTime = false
                 requestNotificationPermission()
-                onSchedule(dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                onSchedule(dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(), slot)
             },
             onDismiss = { pickingDateTime = false },
         )
     }
+
+}
+
+/** "Did you cook it?": yes, yes with a photo of the result, or not this time. */
+@Composable
+private fun CookPromptDialog(onCooked: (Uri?) -> Unit, newCameraTarget: () -> Uri, onDismiss: () -> Unit) {
+    val picker = rememberPhotoPicker(newCameraTarget = newCameraTarget, onPicked = { onCooked(it.first()) })
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.cook_prompt_title)) },
+        text = { Text(stringResource(R.string.cook_prompt_text)) },
+        confirmButton = {
+            Row {
+                TextButton(onClick = { onCooked(null) }) { Text(stringResource(R.string.cooked_yes)) }
+                AddPhotoButton(picker = picker, label = stringResource(R.string.cooked_with_photo))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cooked_no)) } },
+    )
 }
 
 @Composable
