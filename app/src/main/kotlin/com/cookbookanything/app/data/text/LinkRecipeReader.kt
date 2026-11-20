@@ -9,10 +9,14 @@ import com.cookbookanything.app.data.photos.PhotoStore
 import com.cookbookanything.core.domain.text.ParsedRecipe
 import com.cookbookanything.core.domain.text.instagramEmbedUrl
 import com.cookbookanything.core.domain.text.parseRecipeHtml
+import com.cookbookanything.core.domain.text.parseRecipeText
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.net.CookieHandler
+import java.net.CookieManager
+import java.net.CookiePolicy
 import java.net.HttpURLConnection
 import java.net.URL
 import javax.inject.Inject
@@ -30,20 +34,48 @@ class LinkRecipeReader @Inject constructor(
     @ApplicationContext private val context: Context,
     private val photoStore: PhotoStore,
     private val browser: BrowserPageLoader,
+    private val spokenReader: SpokenRecipeReader,
 ) {
     // In the folder the file provider already shares from.
     private val details get() = File(context.cacheDir, "shared/link-details.txt")
+
+    init {
+        // TikTok hands out its video file only with the cookies the page set; the cookie jar carries them over.
+        if (CookieHandler.getDefault() == null) CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
+    }
 
     /** The recipe and the name of its downloaded picture, or null when the page has none. Throws [IOException] when it cannot load. */
     suspend fun read(url: String): Pair<ParsedRecipe, String?>? = withContext(Dispatchers.IO) {
         val page = load(url) ?: return@withContext null
         // A caption that only points at a blog ("full recipe at …") is read from the blog itself.
         val blog = page.link?.takeIf { page.ingredients.isEmpty() }?.let { runCatching { load(it) }.getOrNull() }?.takeIf { it.ingredients.isNotEmpty() }
-        val recipe = blog?.let { it.copy(title = it.title ?: page.title, description = it.description ?: page.description, imageUrl = it.imageUrl ?: page.imageUrl) } ?: page
+        val written = blog?.let { it.copy(title = it.title ?: page.title, description = it.description ?: page.description, imageUrl = it.imageUrl ?: page.imageUrl) } ?: page
+        // A reel whose caption gives no ingredients is listened to; the model writes the recipe down.
+        val spoken = written.videoUrl?.takeIf { written.ingredients.isEmpty() && spokenReader.available }?.let { video -> listen(url, video) }
+        val recipe = spoken?.copy(title = written.title ?: spoken.title, description = written.description ?: spoken.description, imageUrl = written.imageUrl) ?: written
+        if (recipe.isEmpty) return@withContext null
         val photo = recipe.imageUrl?.let { image ->
             runCatching { open(image).let { c -> try { c.inputStream.use { photoStore.importStream(it, MAX_IMAGE_BYTES) } } finally { c.disconnect() } } }.getOrNull()
         }
         recipe to photo
+    }
+
+    /** The recipe said in the video at [video], or null when it holds none or is too big to send. */
+    private suspend fun listen(url: String, video: String): ParsedRecipe? {
+        val connection = runCatching { open(video) }.getOrNull() ?: return null
+        val (bytes, mimeType) = try {
+            connection.inputStream.use { it.readUpTo(MAX_VIDEO_BYTES + 1) } to (connection.contentType?.substringBefore(';')?.trim() ?: "video/mp4")
+        } finally {
+            connection.disconnect()
+        }
+        if (bytes.size > MAX_VIDEO_BYTES) return null
+        val text = try {
+            spokenReader.read(bytes, mimeType)
+        } catch (e: IOException) {
+            writeDetails("$url, video $video", Result.failure(e), null)
+            throw e
+        }
+        return text?.let(::parseRecipeText)?.takeIf { it.ingredients.isNotEmpty() || it.steps.isNotEmpty() }
     }
 
     /** The recipe on the page, or null when it holds none. */
@@ -138,6 +170,8 @@ class LinkRecipeReader @Inject constructor(
         const val MAX_REDIRECTS = 6
         const val MAX_PAGE_BYTES = 4 * 1024 * 1024
         const val MAX_IMAGE_BYTES = 6L * 1024 * 1024
+        /** The model takes a request of 20 MB; a reel is a few. */
+        const val MAX_VIDEO_BYTES = 15 * 1024 * 1024
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
     }
 }

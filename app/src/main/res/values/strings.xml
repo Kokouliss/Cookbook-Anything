@@ -254,6 +254,7 @@
     <string name="whats_new">What’s new</string>
     <string name="whats_new_title">What’s new in version %1$s</string>
     <string-array name="whats_new_items">
+        <item>A reel whose caption has no recipe is listened to: the spoken recipe is written down for you.</item>
         <item>Imported recipes can be translated into your language on the phone: switch it on in Settings.</item>
         <item>Tags on recipes, and filters: total time, cooked or not, rating, and “what’s in my pantry”.</item>
         <item>Pin a recipe to the top, duplicate it, or print it, from the menu on its page.</item>
@@ -309,9 +310,9 @@
     <string name="import_guide">How to import recipes</string>
     <string name="guide_intro">Recipes come in from links, shared text, photos and screenshots. Whatever is found opens in the editor, so you can fix what was misread before saving.</string>
     <string name="guide_instagram_title">Instagram</string>
-    <string name="guide_instagram">Tap the three dots on the post or reel, choose Copy link, then paste it into a new recipe. The caption gives the ingredients and steps; the picture or the video’s thumbnail becomes the photo. When the recipe is only spoken in the video, take screenshots of the frames that show text and share them to Cookbook Anything.</string>
+    <string name="guide_instagram">Tap the three dots on the post or reel, choose Copy link, then paste it into a new recipe. The caption gives the ingredients and steps; the picture or the video’s thumbnail becomes the photo. When the caption holds no recipe, the app listens to the video and writes the recipe down; that takes a minute and needs internet.</string>
     <string name="guide_tiktok_title">TikTok</string>
-    <string name="guide_tiktok">Tap Share, then Copy link, and paste it into a new recipe. Only the caption is read; when the recipe sits in the comments or is spoken, copy that text or share screenshots.</string>
+    <string name="guide_tiktok">Tap Share, then Copy link, and paste it into a new recipe. The caption is read, and when it holds no recipe the video is listened to. When the recipe sits in the comments, copy that text.</string>
     <string name="guide_facebook_title">Facebook</string>
     <string name="guide_facebook">Open the post, tap Share, then Copy link. Posts in private groups cannot be read: copy their text and share it to Cookbook Anything instead.</string>
     <string name="guide_youtube_title">YouTube</string>

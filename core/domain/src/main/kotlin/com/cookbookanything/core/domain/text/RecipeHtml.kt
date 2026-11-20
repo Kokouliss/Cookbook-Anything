@@ -74,33 +74,47 @@ fun parseRecipeHtml(html: String): ParsedRecipe? {
     val meta = metaTags(html)
     val title = meta["og:title"] ?: pageTitle.find(html)?.groupValues?.get(1)?.clean()?.ifBlank { null }
     val image = meta["og:image"]
-
-    val record = ldJsonScript.findAll(html)
+    val records = ldJsonScript.findAll(html)
         .mapNotNull { match -> runCatching { lenientJson.parseToJsonElement(match.groupValues[1].trim()) }.getOrNull() }
-        .firstNotNullOfOrNull(::findRecipe)
+        .toList()
+    val video = videoUrl(html, meta, records)
+
+    val record = records.firstNotNullOfOrNull { findObject(it, "Recipe") }
     if (record != null) {
         val parsed = record.toParsedRecipe()
-        return parsed.copy(title = parsed.title ?: title, imageUrl = parsed.imageUrl ?: image)
+        return parsed.copy(title = parsed.title ?: title, imageUrl = parsed.imageUrl ?: image, videoUrl = video)
     }
 
     val microdata = parseMicrodata(html)
-    if (microdata != null) return microdata.copy(title = title, imageUrl = microdata.imageUrl ?: image)
+    if (microdata != null) return microdata.copy(title = title, imageUrl = microdata.imageUrl ?: image, videoUrl = video)
 
     val caption = instagramCaption(html)?.let(::parseRecipeText)
-    if (caption != null && !caption.isEmpty) return caption.copy(imageUrl = instagramImage(html) ?: image)
+    if (caption != null && !caption.isEmpty) return caption.copy(imageUrl = instagramImage(html) ?: image, videoUrl = video)
 
     val lines = textLines(html)
     val from = lines.indexOfFirst { it.removeSuffix(":").searchKey() in INGREDIENT_HEADERS }
     if (from >= 0) {
         val parsed = parseRecipeText(lines.drop(from).joinToString("\n"))
-        if (parsed.ingredients.isNotEmpty()) return parsed.copy(title = title ?: parsed.title, imageUrl = image)
+        if (parsed.ingredients.isNotEmpty()) return parsed.copy(title = title ?: parsed.title, imageUrl = image, videoUrl = video)
     }
 
-    val description = meta["og:description"] ?: meta["description"] ?: return null
+    // A reel whose caption says nothing still has its video to listen to; its page title ("Instagram") is no recipe name.
+    val description = meta["og:description"] ?: meta["description"] ?: return video?.let { ParsedRecipe(imageUrl = image, videoUrl = it) }
     val quoted = quotedCaption.find(description)?.groupValues?.get(1)
     val parsed = parseRecipeText(quoted ?: listOfNotNull(title, description).joinToString("\n"))
-    return if (parsed.isEmpty) null else parsed.copy(imageUrl = image)
+    return if (parsed.isEmpty && video == null) null else parsed.copy(imageUrl = image, videoUrl = video)
 }
+
+/**
+ * The post's video file: Open Graph video tags, a schema.org VideoObject, or the file in the page's
+ * data as Instagram ("video_url"), TikTok ("playAddr") and Facebook ("playable_url") ship it.
+ */
+private fun videoUrl(html: String, meta: Map<String, String>, records: List<JsonElement>): String? =
+    listOf(
+        meta["og:video:secure_url"], meta["og:video:url"], meta["og:video"],
+        records.firstNotNullOfOrNull { findObject(it, "VideoObject") }?.string("contentUrl"),
+        jsonString(html, "video_url", "video_url"), jsonString(html, "playAddr", "playAddr"), jsonString(html, "playable_url", "playable_url"),
+    ).firstOrNull { it != null && it.startsWith("http") }
 
 private fun metaTags(html: String): Map<String, String> {
     val tags = HashMap<String, String>()
@@ -118,11 +132,11 @@ private fun attributes(tag: String): Map<String, String> =
 
 // ---- JSON-LD ----
 
-private fun findRecipe(element: JsonElement): JsonObject? = when (element) {
-    is JsonArray -> element.firstNotNullOfOrNull(::findRecipe)
+private fun findObject(element: JsonElement, type: String): JsonObject? = when (element) {
+    is JsonArray -> element.firstNotNullOfOrNull { findObject(it, type) }
     is JsonObject -> when {
-        element.types().any { it.equals("Recipe", ignoreCase = true) } -> element
-        else -> element["@graph"]?.let(::findRecipe) ?: element["mainEntity"]?.let(::findRecipe)
+        element.types().any { it.equals(type, ignoreCase = true) } -> element
+        else -> element["@graph"]?.let { findObject(it, type) } ?: element["mainEntity"]?.let { findObject(it, type) }
     }
     else -> null
 }
