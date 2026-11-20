@@ -151,4 +151,20 @@ class RecipeHtmlTest {
         assertEquals(sourceKey("https://www.instagram.com/reel/ABC123/?igsh=x"), sourceKey("https://instagram.com/p/ABC123"))
         assertEquals(sourceKey("https://www.example.com/cake/?utm=1"), sourceKey("http://example.com/cake"))
     }
+
+    @Test
+    fun `finds the post's video so a spoken recipe can be listened to`() {
+        val reel = """<html><head><title>Instagram</title><meta property="og:video" content="https://scontent.example/reel.mp4?x=1" />
+            <meta property="og:image" content="https://scontent.example/reel.jpg" /></head><body></body></html>"""
+        val recipe = assertNotNull(parseRecipeHtml(reel))
+        assertEquals("https://scontent.example/reel.mp4?x=1", recipe.videoUrl)
+        assertEquals("https://scontent.example/reel.jpg", recipe.imageUrl)
+        assertEquals(true, recipe.isEmpty)
+
+        val tiktok = """<html><head><title>Cook on TikTok</title></head><body><script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application/json">
+            {"video":{"playAddr":"https:\/\/v16.example\/video.mp4?a=1\u0026b=2","cover":"x"}}</script></body></html>"""
+        assertEquals("https://v16.example/video.mp4?a=1&b=2", assertNotNull(parseRecipeHtml(tiktok)).videoUrl)
+
+        assertNull(parseRecipeHtml("<html><head><title>Nothing</title></head><body><p>Hello</p></body></html>")?.videoUrl)
+    }
 }

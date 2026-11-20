@@ -18,6 +18,8 @@ data class ParsedRecipe(
     val description: String? = null,
     /** A web page the text points to for the full recipe, when it names one that is not a social network. */
     val link: String? = null,
+    /** The post's video file, to listen to when the caption holds no recipe. */
+    val videoUrl: String? = null,
 ) {
     val isEmpty: Boolean get() = title == null && ingredients.isEmpty() && steps.isEmpty()
 }
