@@ -3,9 +3,13 @@ package com.cookbookanything.app.feature.recipedetail
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cookbookanything.app.data.cook.CookingPrompts
+import com.cookbookanything.app.data.photos.PhotoStore
 import com.cookbookanything.app.data.share.PdfLabels
 import com.cookbookanything.app.data.share.RecipeSharer
 import com.cookbookanything.app.reminders.CookingTimer
+import com.cookbookanything.core.domain.ingredients.isHeading
+import com.cookbookanything.core.domain.model.MealSlot
 import com.cookbookanything.core.domain.model.Recipe
 import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.repository.CategoryRepository
@@ -42,6 +46,8 @@ sealed interface RecipeDetailEvent {
     data object Deleted : RecipeDetailEvent
     data class Share(val uri: Uri, val mimeType: String) : RecipeDetailEvent
     data object ShareFailed : RecipeDetailEvent
+    data class Print(val uri: Uri) : RecipeDetailEvent
+    data class Duplicated(val recipeId: String) : RecipeDetailEvent
 }
 
 @HiltViewModel(assistedFactory = RecipeDetailViewModel.Factory::class)
@@ -52,10 +58,17 @@ class RecipeDetailViewModel @AssistedInject constructor(
     private val scheduleRepository: ScheduleRepository,
     private val recipeSharer: RecipeSharer,
     private val cookingTimer: CookingTimer,
+    private val cookingPrompts: CookingPrompts,
+    private val photoStore: PhotoStore,
 ) : ViewModel() {
 
     private val _timer = MutableStateFlow<StepTimer?>(null)
     val timer: StateFlow<StepTimer?> = _timer
+
+    private val openedAt = System.currentTimeMillis()
+
+    /** True while the page should ask "Did you cook it?". */
+    val cookPrompt = MutableStateFlow(cookingPrompts.isPending(recipeId))
 
     val uiState: StateFlow<RecipeDetailUiState> = combine(
         recipeRepository.observeRecipe(recipeId),
@@ -82,7 +95,24 @@ class RecipeDetailViewModel @AssistedInject constructor(
     }
 
     fun setStepDone(stepId: String, done: Boolean) {
+        val steps = (uiState.value as? RecipeDetailUiState.Success)?.recipe?.steps.orEmpty().filterNot { isHeading(it.text) }
+        // Ticking the last step on the page is as good as finishing cooking mode, so ask.
+        if (done && steps.all { it.id == stepId || it.done }) cookPrompt.value = true
         viewModelScope.launch { recipeRepository.setStepDone(stepId, done) }
+    }
+
+    fun newCameraTarget(): Uri = photoStore.newCameraTarget()
+
+    fun dismissCookPrompt() {
+        cookPrompt.value = false
+        cookingPrompts.set(recipeId, false)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        val recipe = (uiState.value as? RecipeDetailUiState.Success)?.recipe ?: return
+        val cookedSinceOpened = (recipe.cookedAt.lastOrNull() ?: 0) >= openedAt
+        if (System.currentTimeMillis() - openedAt >= LIKELY_COOKED_MS && !cookedSinceOpened) cookingPrompts.set(recipeId, true)
     }
 
     fun resetProgress() {
@@ -93,15 +123,28 @@ class RecipeDetailViewModel @AssistedInject constructor(
         viewModelScope.launch { recipeRepository.setFavorite(recipeId, favorite) }
     }
 
+    fun setPinned(pinned: Boolean) {
+        viewModelScope.launch { recipeRepository.setPinned(recipeId, pinned) }
+    }
+
+    /** [copySuffix] is the translated " (copy)" appended to the title. */
+    fun duplicate(copySuffix: String) {
+        viewModelScope.launch {
+            val title = (uiState.value as? RecipeDetailUiState.Success)?.recipe?.title.orEmpty() + copySuffix
+            recipeRepository.duplicate(recipeId, title)?.let { eventChannel.send(RecipeDetailEvent.Duplicated(it)) }
+        }
+    }
+
     /** Tapping the star that is already the rating clears it. */
     fun rate(stars: Int) {
         val current = (uiState.value as? RecipeDetailUiState.Success)?.recipe?.rating
         viewModelScope.launch { recipeRepository.setRating(recipeId, stars.takeIf { it != current }) }
     }
 
-    /** Finishing cooking mode adds a line to the recipe's cooked log. */
-    fun markCooked() {
-        viewModelScope.launch { recipeRepository.markCooked(recipeId) }
+    /** Finishing cooking mode, or answering "Did you cook it?", adds a line to the recipe's cooked log, with a photo of the result when given. */
+    fun markCooked(photo: Uri? = null) {
+        dismissCookPrompt()
+        viewModelScope.launch { recipeRepository.markCooked(recipeId, photo = photo?.let { photoStore.import(it) }) }
     }
 
     /** One timer at a time: starting another replaces it. It rings through a notification, so leaving the screen is fine. */
@@ -126,8 +169,8 @@ class RecipeDetailViewModel @AssistedInject constructor(
         viewModelScope.launch { recipeRepository.deleteComment(commentId) }
     }
 
-    fun schedule(at: Long) {
-        viewModelScope.launch { scheduleRepository.schedule(recipeId, at) }
+    fun schedule(at: Long, slot: MealSlot?) {
+        viewModelScope.launch { scheduleRepository.schedule(recipeId, at, slot) }
     }
 
     fun removeSchedule(scheduleId: String) {
@@ -145,6 +188,13 @@ class RecipeDetailViewModel @AssistedInject constructor(
 
     fun shareAsRecipeFile() = share(RecipeSharer.RECIPE_FILE_MIME_TYPE) { recipeSharer.exportRecipeFile(it) }
 
+    fun print(labels: PdfLabels) {
+        viewModelScope.launch {
+            val uri = runCatching { recipeRepository.getRecipe(recipeId)?.let { recipeSharer.exportPdf(it, labels) } }.getOrNull()
+            eventChannel.send(if (uri == null) RecipeDetailEvent.ShareFailed else RecipeDetailEvent.Print(uri))
+        }
+    }
+
     private fun share(mimeType: String, export: suspend (Recipe) -> Uri) {
         viewModelScope.launch {
             val uri = runCatching { recipeRepository.getRecipe(recipeId)?.let { export(it) } }.getOrNull()
@@ -157,5 +207,10 @@ class RecipeDetailViewModel @AssistedInject constructor(
     @AssistedFactory
     interface Factory {
         fun create(recipeId: String): RecipeDetailViewModel
+    }
+
+    private companion object {
+        /** A recipe page kept open this long was probably cooked from. */
+        const val LIKELY_COOKED_MS = 20 * 60_000L
     }
 }

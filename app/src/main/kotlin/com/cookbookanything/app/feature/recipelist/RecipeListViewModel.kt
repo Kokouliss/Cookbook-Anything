@@ -8,7 +8,9 @@ import com.cookbookanything.core.domain.model.ScheduledRecipe
 import com.cookbookanything.core.domain.repository.CategoryRepository
 import com.cookbookanything.core.domain.repository.RecipeRepository
 import com.cookbookanything.core.domain.repository.ScheduleRepository
+import com.cookbookanything.core.domain.search.RecipeFilter
 import com.cookbookanything.core.domain.search.matches
+import com.cookbookanything.core.domain.search.searchKey
 import com.cookbookanything.core.domain.sort.RecipeSort
 import com.cookbookanything.core.domain.sort.sortedBy
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -29,6 +31,9 @@ sealed interface RecipeListUiState {
         val cookbookIsEmpty: Boolean,
         val sort: RecipeSort,
         val onlyFavorites: Boolean,
+        val filter: RecipeFilter,
+        /** Every tag in the cookbook, for the chips. */
+        val allTags: List<String>,
         /** The next planned recipe, for the strip at the top. */
         val next: ScheduledRecipe?,
         val gettingStarted: GettingStarted,
@@ -53,24 +58,31 @@ class RecipeListViewModel @Inject constructor(
     // shortcut: the sort is forgotten when the app restarts, store it in preferences if that annoys
     private val sort = MutableStateFlow(RecipeSort.RECENT)
     private val onlyFavorites = MutableStateFlow(false)
+    private val filter = MutableStateFlow(RecipeFilter())
+
+    private data class Options(val sort: RecipeSort, val favorites: Boolean, val filter: RecipeFilter, val schedule: List<ScheduledRecipe>)
 
     val uiState: StateFlow<RecipeListUiState> = combine(
         recipeRepository.observeSummaries(),
         categoryRepository.observeCategories(),
         selectedCategoryId,
         query,
-        combine(sort, onlyFavorites, scheduleRepository.observeSchedule(), ::Triple),
-    ) { recipes, categories, selected, searchText, (order, favorites, schedule) ->
+        combine(sort, onlyFavorites, filter, scheduleRepository.observeSchedule(), ::Options),
+    ) { recipes, categories, selected, searchText, (order, favorites, narrowing, schedule) ->
         // A deleted category must not keep filtering the list.
         val active = selected?.takeIf { id -> categories.any { it.id == id } }
         val now = System.currentTimeMillis()
         RecipeListUiState.Success(
-            recipes = recipes.filter { (active == null || it.categoryId == active) && (!favorites || it.favorite) && it.matches(searchText) }.sortedBy(order),
+            recipes = recipes.filter {
+                (active == null || it.categoryId == active) && (!favorites || it.favorite) && it.matches(searchText) && it.matches(narrowing)
+            }.sortedBy(order),
             categories = categories,
             selectedCategoryId = active,
             cookbookIsEmpty = recipes.isEmpty(),
             sort = order,
             onlyFavorites = favorites,
+            filter = narrowing,
+            allTags = recipes.flatMap { it.tags }.distinctBy { it.searchKey() }.sortedBy { it.searchKey() },
             next = schedule.firstOrNull { it.scheduledAt >= now },
             gettingStarted = GettingStarted(
                 added = recipes.isNotEmpty(),
@@ -96,5 +108,9 @@ class RecipeListViewModel @Inject constructor(
 
     fun setOnlyFavorites(value: Boolean) {
         onlyFavorites.value = value
+    }
+
+    fun setFilter(value: RecipeFilter) {
+        filter.value = value
     }
 }

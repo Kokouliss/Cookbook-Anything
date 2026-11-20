@@ -10,6 +10,7 @@ import com.cookbookanything.app.data.database.toIngredientEntities
 import com.cookbookanything.app.data.database.toModel
 import com.cookbookanything.app.data.database.toPhotoEntities
 import com.cookbookanything.app.data.database.toStepEntities
+import com.cookbookanything.app.data.photos.PhotoStore
 import com.cookbookanything.app.reminders.ReminderScheduler
 import com.cookbookanything.app.widget.TonightWidgetUpdater
 import com.cookbookanything.core.domain.model.Recipe
@@ -28,6 +29,7 @@ class OfflineFirstRecipeRepository @Inject constructor(
     private val scheduleDao: ScheduleDao,
     private val reminders: ReminderScheduler,
     private val widget: TonightWidgetUpdater,
+    private val photoStore: PhotoStore,
 ) : RecipeRepository {
 
     override fun observeSummaries(): Flow<List<RecipeSummary>> =
@@ -67,12 +69,35 @@ class OfflineFirstRecipeRepository @Inject constructor(
 
     override suspend fun setFavorite(recipeId: String, favorite: Boolean) = recipeDao.setFavorite(recipeId, favorite)
 
+    override suspend fun setPinned(recipeId: String, pinned: Boolean) = recipeDao.setPinned(recipeId, pinned)
+
     override suspend fun setRating(recipeId: String, rating: Int?) = recipeDao.setRating(recipeId, rating?.coerceIn(1, 5))
 
-    override suspend fun markCooked(recipeId: String) {
+    override suspend fun markCooked(recipeId: String, at: Long, photo: String?) {
         recipeDao.insertCooked(
-            listOf(CookedEntity(id = UUID.randomUUID().toString(), recipeId = recipeId, cookedAt = System.currentTimeMillis())),
+            listOf(CookedEntity(id = UUID.randomUUID().toString(), recipeId = recipeId, cookedAt = at, photo = photo)),
         )
+    }
+
+    override suspend fun duplicate(recipeId: String, title: String): String? {
+        val original = recipeDao.getRecipe(recipeId)?.toModel() ?: return null
+        val now = System.currentTimeMillis()
+        val copy = original.copy(
+            id = UUID.randomUUID().toString(),
+            title = title,
+            photos = original.photos.mapNotNull { photoStore.copy(it) },
+            ingredients = original.ingredients.map { it.copy(id = UUID.randomUUID().toString(), checked = false) },
+            steps = original.steps.map { step ->
+                step.copy(id = UUID.randomUUID().toString(), done = false, photos = step.photos.mapNotNull { photoStore.copy(it) })
+            },
+            comments = emptyList(),
+            cookedAt = emptyList(),
+            cookedPhotos = emptyMap(),
+            createdAt = now,
+            updatedAt = now,
+        )
+        saveRecipe(copy)
+        return copy.id
     }
 
     override suspend fun addComment(recipeId: String, text: String) {

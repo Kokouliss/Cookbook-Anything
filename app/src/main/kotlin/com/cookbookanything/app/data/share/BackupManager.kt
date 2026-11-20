@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import com.cookbookanything.app.data.database.CategoryDao
 import com.cookbookanything.app.data.database.CategoryEntity
+import com.cookbookanything.app.data.database.DayNoteEntity
 import com.cookbookanything.app.data.database.RecipeDao
 import com.cookbookanything.app.data.database.ScheduleDao
 import com.cookbookanything.app.data.database.ScheduleEntity
@@ -22,6 +23,7 @@ import com.cookbookanything.app.widget.TonightWidgetUpdater
 import com.cookbookanything.core.domain.FreeTier
 import com.cookbookanything.core.domain.backup.Backup
 import com.cookbookanything.core.domain.backup.BackupCodec
+import com.cookbookanything.core.domain.backup.BackupDayNote
 import com.cookbookanything.core.domain.backup.BackupSchedule
 import com.cookbookanything.core.domain.backup.prepareForRestore
 import com.cookbookanything.core.domain.model.Recipe
@@ -65,7 +67,8 @@ class BackupManager @Inject constructor(
             val backup = Backup(
                 categories = categoryDao.getAll().map { it.toModel() },
                 recipes = recipes,
-                schedules = scheduleDao.getAll().map { BackupSchedule(it.id, it.recipeId, it.scheduledAt) },
+                schedules = scheduleDao.getAll().map { BackupSchedule(it.id, it.recipeId, it.scheduledAt, it.slot) },
+                dayNotes = scheduleDao.getAllDayNotes().map { BackupDayNote(it.day, it.note) },
             )
             val output = checkNotNull(context.contentResolver.openOutputStream(target, "wt"))
             ZipOutputStream(output.buffered()).use { zip ->
@@ -177,7 +180,7 @@ class BackupManager @Inject constructor(
         val byId = ready.recipes.associateBy { it.id }
         ready.schedules.forEach { schedule ->
             val inserted = scheduleDao.insertMissing(
-                ScheduleEntity(id = schedule.id, recipeId = schedule.recipeId, scheduledAt = schedule.scheduledAt),
+                ScheduleEntity(id = schedule.id, recipeId = schedule.recipeId, scheduledAt = schedule.scheduledAt, slot = schedule.slot),
             )
             if (inserted != -1L) {
                 val recipe = byId.getValue(schedule.recipeId)
@@ -191,6 +194,7 @@ class BackupManager @Inject constructor(
             }
         }
         if (ready.schedules.isNotEmpty()) widget.refresh()
+        scheduleDao.insertMissingDayNotes(ready.dayNotes.map { DayNoteEntity(it.day, it.note) })
         return RestoreResult.Restored(added = ready.recipes.size)
     }
 
@@ -203,4 +207,4 @@ class BackupManager @Inject constructor(
     }
 }
 
-private fun Recipe.allPhotos(): List<String> = photos + steps.flatMap { it.photos }
+private fun Recipe.allPhotos(): List<String> = photos + steps.flatMap { it.photos } + cookedPhotos.values

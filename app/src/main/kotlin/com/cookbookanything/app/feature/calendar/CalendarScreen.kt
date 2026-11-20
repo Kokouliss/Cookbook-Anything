@@ -23,11 +23,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -50,9 +52,11 @@ import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.Doodle
 import com.cookbookanything.app.ui.components.EmptyState
 import com.cookbookanything.app.ui.components.currentLocale
+import com.cookbookanything.app.ui.components.label
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.calendar.monthGrid
+import com.cookbookanything.core.domain.model.MealSlot
 import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.model.ScheduledRecipe
 import java.time.DayOfWeek
@@ -64,6 +68,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 fun CalendarRoute(
@@ -78,6 +83,7 @@ fun CalendarRoute(
         onOpenShoppingList = onOpenShoppingList,
         onSchedule = viewModel::schedule,
         onRemove = viewModel::remove,
+        onSetDayNote = viewModel::setDayNote,
     )
 }
 
@@ -86,8 +92,9 @@ fun CalendarScreen(
     uiState: CalendarUiState,
     onOpenRecipe: (String) -> Unit,
     onOpenShoppingList: () -> Unit,
-    onSchedule: (String, Long) -> Unit,
+    onSchedule: (String, Long, MealSlot?) -> Unit,
     onRemove: (String) -> Unit,
+    onSetDayNote: (Long, String) -> Unit,
 ) {
     val locale = currentLocale()
     val zone = remember { ZoneId.systemDefault() }
@@ -155,6 +162,14 @@ fun CalendarScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
+            item {
+                DayNoteField(
+                    note = uiState.dayNotes[selectedEpochDay].orEmpty(),
+                    onSave = { onSetDayNote(selectedEpochDay, it) },
+                    // A new field per day, so a note typed for Monday is not carried over to Tuesday.
+                    key = selectedEpochDay,
+                )
+            }
             val entries = byDate[selectedDate].orEmpty()
             if (entries.isEmpty()) {
                 item { EmptyState(Doodle.Calendar, stringResource(R.string.nothing_scheduled), modifier = Modifier.fillMaxWidth()) }
@@ -185,15 +200,38 @@ fun CalendarScreen(
     pickedRecipeId?.let { recipeId ->
         DateTimePickerDialog(
             date = selectedDate,
-            onConfirm = { dateTime ->
+            onConfirm = { dateTime, slot ->
                 pickedRecipeId = null
                 requestNotificationPermission()
-                onSchedule(recipeId, dateTime.atZone(zone).toInstant().toEpochMilli())
+                onSchedule(recipeId, dateTime.atZone(zone).toInstant().toEpochMilli(), slot)
             },
             onDismiss = { pickedRecipeId = null },
         )
     }
 }
+
+/** "Pick up bread", "Guests at 8": one note per day, saved a moment after typing stops. */
+@Composable
+private fun DayNoteField(note: String, onSave: (String) -> Unit, key: Long) {
+    var text by rememberSaveable(key) { mutableStateOf(note) }
+    LaunchedEffect(text) {
+        if (text != note) {
+            delay(SAVE_DELAY_MS)
+            onSave(text)
+        }
+    }
+    OutlinedTextField(
+        value = text,
+        onValueChange = { text = it },
+        placeholder = { Text(stringResource(R.string.day_note_hint)) },
+        singleLine = true,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+    )
+}
+
+private const val SAVE_DELAY_MS = 600L
 
 @Composable
 private fun MonthHeader(month: YearMonth, locale: Locale, onPrevious: () -> Unit, onNext: () -> Unit) {
@@ -319,7 +357,8 @@ private fun ScheduledRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
+            // The meal when one was chosen, otherwise the time.
+            text = entry.slot?.let { stringResource(it.label()) } ?: DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
                 .format(Instant.ofEpochMilli(entry.scheduledAt).atZone(zone)),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,

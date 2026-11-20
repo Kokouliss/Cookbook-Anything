@@ -20,6 +20,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -50,12 +53,22 @@ private const val LIST_ANYTHING_PACKAGE = "com.kokouliss.listanything"
 @Composable
 fun ShoppingListRoute(onBack: () -> Unit, viewModel: ShoppingListViewModel = hiltViewModel()) {
     val items by viewModel.items.collectAsStateWithLifecycle()
-    ShoppingListScreen(entries = items, onBack = onBack, onCheckedChange = viewModel::setChecked, onMoveToAisle = viewModel::moveToAisle)
+    val thisWeek by viewModel.thisWeek.collectAsStateWithLifecycle()
+    ShoppingListScreen(
+        entries = items,
+        thisWeek = thisWeek,
+        onThisWeek = viewModel::setThisWeek,
+        onBack = onBack,
+        onCheckedChange = viewModel::setChecked,
+        onMoveToAisle = viewModel::moveToAisle,
+    )
 }
 
 @Composable
 fun ShoppingListScreen(
     entries: List<MergedShoppingItem>?,
+    thisWeek: Boolean,
+    onThisWeek: (Boolean) -> Unit,
     onBack: () -> Unit,
     onCheckedChange: (List<String>, Boolean) -> Unit,
     onMoveToAisle: (productKey: String, Aisle) -> Unit,
@@ -94,84 +107,111 @@ fun ShoppingListScreen(
             )
         },
     ) { padding ->
-        when {
-            entries == null -> Unit
-
-            entries.isEmpty() -> Box(
+        Column(modifier = Modifier.padding(padding)) {
+            SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
-                EmptyState(Doodle.Basket, stringResource(R.string.shopping_empty))
-            }
-
-            else -> LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentPadding = PaddingValues(bottom = 24.dp),
-            ) {
-                item {
-                    Text(
-                        text = stringResource(R.string.shopping_hint),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                listOf(true to R.string.shopping_this_week, false to R.string.shopping_all_planned).forEachIndexed { index, (week, label) ->
+                    SegmentedButton(
+                        selected = thisWeek == week,
+                        onClick = { onThisWeek(week) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                        label = { Text(stringResource(label)) },
                     )
                 }
-                entries.byAisle().forEach { (aisle, aisleItems) ->
-                    item(key = "aisle-${aisle.name}") {
-                        Text(
-                            text = stringResource(aisle.label()),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
-                        )
-                    }
-                    items(aisleItems, key = { it.ingredientIds.first() }) { item ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CheckRow(
-                                text = item.label,
-                                checked = item.checked,
-                                onCheckedChange = { onCheckedChange(item.ingredientIds, it) },
-                                modifier = Modifier.weight(1f),
-                                // Which recipes want it, only when more than one does.
-                                detail = item.recipeTitles.takeIf { it.size > 1 }?.let { stringResource(R.string.shopping_from, it.joinToString(", ")) },
-                            )
-                            AppIconButton(R.drawable.ic_more_vert, stringResource(R.string.move_to_aisle), onClick = { moving = item })
-                        }
-                    }
+            }
+            when {
+                entries == null -> Unit
+
+                entries.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    EmptyState(Doodle.Basket, stringResource(R.string.shopping_empty))
                 }
+
+                else -> ShoppingItems(entries, onCheckedChange, onMoveToAisle = { moving = it })
             }
         }
     }
 
     moving?.let { item ->
-        AlertDialog(
-            onDismissRequest = { moving = null },
-            title = { Text(item.name) },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Aisle.entries.forEach { aisle ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onMoveToAisle(item.productKey, aisle)
-                                    moving = null
-                                },
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(selected = aisle == item.aisle, onClick = null)
-                            Text(stringResource(aisle.label()), style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                }
+        MoveToAisleDialog(
+            item = item,
+            onMove = { aisle ->
+                onMoveToAisle(item.productKey, aisle)
+                moving = null
             },
-            confirmButton = { TextButton(onClick = { moving = null }) { Text(stringResource(R.string.cancel)) } },
+            onDismiss = { moving = null },
         )
     }
+}
+
+@Composable
+private fun ShoppingItems(
+    entries: List<MergedShoppingItem>,
+    onCheckedChange: (List<String>, Boolean) -> Unit,
+    onMoveToAisle: (MergedShoppingItem) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+    ) {
+        item {
+            Text(
+                text = stringResource(R.string.shopping_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+        }
+        entries.byAisle().forEach { (aisle, aisleItems) ->
+            item(key = "aisle-${aisle.name}") {
+                Text(
+                    text = stringResource(aisle.label()),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                )
+            }
+            items(aisleItems, key = { it.ingredientIds.first() }) { item ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CheckRow(
+                        text = item.label,
+                        checked = item.checked,
+                        onCheckedChange = { onCheckedChange(item.ingredientIds, it) },
+                        modifier = Modifier.weight(1f),
+                        // Which recipes want it, only when more than one does.
+                        detail = item.recipeTitles.takeIf { it.size > 1 }?.let { stringResource(R.string.shopping_from, it.joinToString(", ")) },
+                    )
+                    AppIconButton(R.drawable.ic_more_vert, stringResource(R.string.move_to_aisle), onClick = { onMoveToAisle(item) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoveToAisleDialog(item: MergedShoppingItem, onMove: (Aisle) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(item.name) },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Aisle.entries.forEach { aisle ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onMove(aisle) },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = aisle == item.aisle, onClick = null)
+                        Text(stringResource(aisle.label()), style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 /** The list in shop order: the aisles as they come walking in, each with its items in list order. */

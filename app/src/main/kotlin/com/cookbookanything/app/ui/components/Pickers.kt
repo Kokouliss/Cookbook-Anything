@@ -11,13 +11,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.DrawableRes
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -33,8 +40,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.cookbookanything.app.R
+import com.cookbookanything.core.domain.model.MealSlot
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -128,15 +137,17 @@ fun rememberNotificationPermissionRequest(): () -> Unit {
 }
 
 /**
- * Picks a date and then a time. When [date] is given, only the time is asked.
+ * Picks a date and then a time. When [date] is given, only the time is asked. A meal (breakfast, lunch,
+ * snack, dinner) can be chosen with the time; it sets the usual hour, which can still be changed.
  */
 @Composable
 fun DateTimePickerDialog(
-    onConfirm: (LocalDateTime) -> Unit,
+    onConfirm: (LocalDateTime, MealSlot?) -> Unit,
     onDismiss: () -> Unit,
     date: LocalDate? = null,
 ) {
     var pickedEpochDay by rememberSaveable { mutableStateOf(date?.toEpochDay()) }
+    var slot by rememberSaveable { mutableStateOf<MealSlot?>(null) }
     val pickedDay = pickedEpochDay
 
     if (pickedDay == null) {
@@ -171,11 +182,33 @@ fun DateTimePickerDialog(
         )
         AlertDialog(
             onDismissRequest = onDismiss,
-            text = { TimePicker(state = timeState) },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .horizontalScroll(rememberScrollState())
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        MealSlot.entries.forEach { meal ->
+                            FilterChip(
+                                selected = slot == meal,
+                                onClick = {
+                                    slot = meal.takeIf { it != slot }
+                                    timeState.hour = meal.hour
+                                    timeState.minute = 0
+                                },
+                                label = { Text(stringResource(meal.label())) },
+                            )
+                        }
+                    }
+                    TimePicker(state = timeState)
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onConfirm(LocalDate.ofEpochDay(pickedDay).atTime(timeState.hour, timeState.minute))
+                        onConfirm(LocalDate.ofEpochDay(pickedDay).atTime(timeState.hour, timeState.minute), slot)
                     },
                 ) {
                     Text(stringResource(R.string.save))
@@ -184,4 +217,11 @@ fun DateTimePickerDialog(
             dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
         )
     }
+}
+
+fun MealSlot.label(): Int = when (this) {
+    MealSlot.BREAKFAST -> R.string.slot_breakfast
+    MealSlot.LUNCH -> R.string.slot_lunch
+    MealSlot.SNACK -> R.string.slot_snack
+    MealSlot.DINNER -> R.string.slot_dinner
 }

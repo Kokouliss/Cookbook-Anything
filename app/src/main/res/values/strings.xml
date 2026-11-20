@@ -113,7 +113,7 @@
 
     <!-- Shopping list -->
     <string name="shopping_list">Shopping list</string>
-    <string name="shopping_hint">Ingredients of the recipes you planned from today on. Tick what you already have.</string>
+    <string name="shopping_hint">Ingredients of the recipes you planned. Tick what you already have.</string>
     <string name="shopping_empty">Plan recipes in the calendar and their ingredients will show up here.</string>
 
     <!-- Servings and times -->
@@ -254,13 +254,11 @@
     <string name="whats_new">What’s new</string>
     <string name="whats_new_title">What’s new in version %1$s</string>
     <string-array name="whats_new_items">
-        <item>Share screenshots of a recipe straight into the app, from the gallery or a social app.</item>
-        <item>Links from Instagram, TikTok and Facebook: the title and the description are kept, a bilingual caption gives one language, and a blog link in the caption is followed.</item>
-        <item>The shopping list is grouped by aisle and adds up the same ingredient across recipes. Move an item with its menu.</item>
-        <item>Show a recipe in metric or imperial units, oven temperatures included.</item>
-        <item>Headings inside ingredients and steps: end a line with a colon.</item>
-        <item>A link already in your cookbook says so and opens the saved recipe.</item>
-        <item>A guide in Settings on importing from each source.</item>
+        <item>Tags on recipes, and filters: total time, cooked or not, rating, and “what’s in my pantry”.</item>
+        <item>Pin a recipe to the top, duplicate it, or print it, from the menu on its page.</item>
+        <item>After cooking, the app asks “Did you cook it?” and keeps a photo of the result with each entry in the cooked log.</item>
+        <item>Plan a recipe as breakfast, lunch, snack or dinner, and write a note for each day of the calendar.</item>
+        <item>The shopping list can show this week only.</item>
     </string-array>
     <!-- Home strip and getting started -->
     <string name="greeting_morning">Good morning</string>
@@ -323,4 +321,39 @@
     <string name="guide_photo">Photograph a cookbook page or a handwritten card, or share screenshots from your gallery; several photos are read as one recipe. Keep the text sharp and the page straight.</string>
     <string name="guide_text_title">Typing or pasting</string>
     <string name="guide_text">Write one ingredient per line, starting with the amount, for example “200 g flour”. A line ending with a colon, such as “For the sauce:”, becomes a heading. The app then scales, converts and groups the shopping list on its own.</string>
+
+    <!-- Tags, filters, pin, duplicate, print, cooked log, meal slots, day notes -->
+    <string name="more">More</string>
+    <string name="done">Done</string>
+    <string name="tags">Tags</string>
+    <string name="tags_hint">quick, vegan, Sunday (separated by commas)</string>
+    <string name="filters">Filters</string>
+    <string name="filter_time">Total time</string>
+    <string name="filter_under_minutes">Under %1$d min</string>
+    <string name="filter_cooked">Cooked</string>
+    <string name="filter_cooked_yes">Cooked before</string>
+    <string name="filter_cooked_no">Not yet</string>
+    <string name="filter_rating">Rating</string>
+    <string name="filter_pantry">What’s in my pantry</string>
+    <string name="filter_pantry_hint">eggs, spinach, feta</string>
+    <string name="clear_filters">Clear</string>
+    <string name="no_filter_results">No recipe matches these filters.</string>
+    <string name="pin">Pin to the top</string>
+    <string name="unpin">Unpin</string>
+    <string name="duplicate">Duplicate</string>
+    <string name="copy_suffix">" (copy)"</string>
+    <string name="print">Print</string>
+    <string name="cooked_photos">How it turned out</string>
+    <string name="cook_prompt_title">Did you cook it?</string>
+    <string name="cook_prompt_text">It goes in the recipe’s cooked log; a photo of the result is kept with it.</string>
+    <string name="cooked_yes">Yes</string>
+    <string name="cooked_with_photo">Yes, with a photo</string>
+    <string name="cooked_no">Not this time</string>
+    <string name="slot_breakfast">Breakfast</string>
+    <string name="slot_lunch">Lunch</string>
+    <string name="slot_snack">Snack</string>
+    <string name="slot_dinner">Dinner</string>
+    <string name="day_note_hint">A note for this day</string>
+    <string name="shopping_this_week">This week</string>
+    <string name="shopping_all_planned">All planned</string>
 </resources>

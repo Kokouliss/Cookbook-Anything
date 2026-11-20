@@ -107,6 +107,7 @@ fun RecipeEditRoute(
         onWaitMinutesChange = viewModel::setWaitMinutes,
         onDescriptionChange = viewModel::setDescription,
         onNotesChange = viewModel::setNotes,
+        onTagsChange = viewModel::setTags,
         onIngredientChange = viewModel::setIngredientText,
         onIngredientOptionalChange = viewModel::setIngredientOptional,
         onRemoveIngredient = viewModel::removeIngredient,
@@ -142,6 +143,7 @@ fun RecipeEditScreen(
     onWaitMinutesChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
+    onTagsChange: (String) -> Unit,
     onIngredientChange: (String, String) -> Unit,
     onIngredientOptionalChange: (String, Boolean) -> Unit,
     onRemoveIngredient: (String) -> Unit,
@@ -456,6 +458,15 @@ fun RecipeEditScreen(
                 placeholder = { Text(stringResource(R.string.notes_hint)) },
                 minLines = 2,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            SectionTitle(stringResource(R.string.tags))
+            OutlinedTextField(
+                value = uiState.tags,
+                onValueChange = onTagsChange,
+                placeholder = { Text(stringResource(R.string.tags_hint)) },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

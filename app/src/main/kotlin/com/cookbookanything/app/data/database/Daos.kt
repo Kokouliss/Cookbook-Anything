@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 abstract class RecipeDao {
     @Query(
         """
-        SELECT r.id, r.title, r.categoryId, r.servings, r.prepMinutes, r.cookMinutes, r.waitMinutes, r.rating, r.favorite, r.source,
+        SELECT r.id, r.title, r.categoryId, r.servings, r.prepMinutes, r.cookMinutes, r.waitMinutes, r.rating, r.favorite, r.source, r.tags, r.pinned,
             (SELECT p.fileName FROM photos p
              WHERE p.recipeId = r.id AND p.stepId IS NULL
              ORDER BY p.position LIMIT 1) AS coverPhoto,
@@ -43,7 +43,7 @@ abstract class RecipeDao {
     @Query("SELECT id FROM recipes")
     abstract suspend fun allRecipeIds(): List<String>
 
-    @Query("SELECT fileName FROM photos")
+    @Query("SELECT fileName FROM photos UNION SELECT photo FROM cooked WHERE photo IS NOT NULL")
     abstract suspend fun allPhotoNames(): List<String>
 
     // Upsert, not REPLACE: replacing the row would cascade-delete its comments and calendar entries.
@@ -95,6 +95,9 @@ abstract class RecipeDao {
 
     @Query("UPDATE recipes SET favorite = :favorite WHERE id = :id")
     abstract suspend fun setFavorite(id: String, favorite: Boolean)
+
+    @Query("UPDATE recipes SET pinned = :pinned WHERE id = :id")
+    abstract suspend fun setPinned(id: String, pinned: Boolean)
 
     @Query("UPDATE recipes SET rating = :rating WHERE id = :id")
     abstract suspend fun setRating(id: String, rating: Int?)
@@ -161,7 +164,7 @@ interface CategoryDao {
 interface ScheduleDao {
     @Query(
         """
-        SELECT s.id, s.recipeId, r.title AS recipeTitle, s.scheduledAt
+        SELECT s.id, s.recipeId, r.title AS recipeTitle, s.scheduledAt, s.slot
         FROM schedules s JOIN recipes r ON r.id = s.recipeId
         ORDER BY s.scheduledAt
         """,
@@ -176,18 +179,18 @@ interface ScheduleDao {
         JOIN recipes r ON r.id = i.recipeId
         JOIN (
             SELECT recipeId, MIN(scheduledAt) AS firstAt FROM schedules
-            WHERE scheduledAt >= :from GROUP BY recipeId
+            WHERE scheduledAt >= :from AND scheduledAt < :to GROUP BY recipeId
         ) s ON s.recipeId = r.id
         WHERE i.optional = 0
         ORDER BY s.firstAt, r.id, i.position
         """,
     )
-    fun observeShoppingList(from: Long): Flow<List<ShoppingItemRow>>
+    fun observeShoppingList(from: Long, to: Long): Flow<List<ShoppingItemRow>>
 
     /** The next planned recipe at or after [from]; what the home-screen widget shows. */
     @Query(
         """
-        SELECT s.id, s.recipeId, r.title AS recipeTitle, s.scheduledAt
+        SELECT s.id, s.recipeId, r.title AS recipeTitle, s.scheduledAt, s.slot
         FROM schedules s JOIN recipes r ON r.id = s.recipeId
         WHERE s.scheduledAt >= :from ORDER BY s.scheduledAt LIMIT 1
         """,
@@ -220,4 +223,19 @@ interface ScheduleDao {
 
     @Query("DELETE FROM schedules WHERE id = :id")
     suspend fun delete(id: String)
+
+    @Query("SELECT * FROM day_notes")
+    fun observeDayNotes(): Flow<List<DayNoteEntity>>
+
+    @Query("SELECT * FROM day_notes")
+    suspend fun getAllDayNotes(): List<DayNoteEntity>
+
+    @Upsert
+    suspend fun upsertDayNote(note: DayNoteEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMissingDayNotes(notes: List<DayNoteEntity>)
+
+    @Query("DELETE FROM day_notes WHERE day = :day")
+    suspend fun deleteDayNote(day: Long)
 }
