@@ -413,7 +413,7 @@ private fun RecipeContent(
                     Text(
                         text = recipe.tags.joinToString("  ") { "#$it" },
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
@@ -618,7 +618,7 @@ private fun SectionHeader(title: String, progress: String? = null) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
             if (progress != null) {
                 // The count rolls up like a counter wheel when a line is ticked.
                 AnimatedContent(
@@ -745,13 +745,13 @@ private fun SourceRow(source: String, onOpen: () -> Unit) {
     }
 }
 
-/** "For the sauce:" between the rows, set small in the book's red. */
+/** "For the sauce:" between the rows, set small in grey. */
 @Composable
 private fun ListHeading(text: String) {
     Text(
         text = text.trimEnd(':'),
         style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
     )
 }

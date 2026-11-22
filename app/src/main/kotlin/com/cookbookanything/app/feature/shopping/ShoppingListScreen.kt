@@ -170,7 +170,7 @@ private fun ShoppingItems(
                 Text(
                     text = stringResource(aisle.label()),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
                 )
             }

@@ -500,7 +500,7 @@ fun RecipeEditScreen(
 private fun SectionTitle(title: String) {
     Column {
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+        Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

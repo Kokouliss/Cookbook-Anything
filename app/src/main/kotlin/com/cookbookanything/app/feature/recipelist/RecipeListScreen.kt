@@ -359,7 +359,7 @@ private fun HomeStrip(next: ScheduledRecipe?, onOpenRecipe: (String) -> Unit, on
         Text(
             text = if (next == null) stringResource(R.string.nothing_planned_next) else whenLabel(context, next.scheduledAt) + ": " + next.recipeTitle,
             style = MaterialTheme.typography.bodyLarge,
-            color = if (next == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+            color = if (next == null) MaterialTheme.colorScheme.onSurfaceVariant MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier

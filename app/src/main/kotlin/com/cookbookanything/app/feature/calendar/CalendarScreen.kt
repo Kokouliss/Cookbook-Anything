@@ -366,7 +366,7 @@ private fun ScheduledRow(
             text = entry.slot?.let { stringResource(it.label()) } ?: DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
                 .format(Instant.ofEpochMilli(entry.scheduledAt).atZone(zone)),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(end = 16.dp),
         )
         Text(
