@@ -19,7 +19,7 @@ A personal cookbook app for Android. Keep your own recipes with ingredients, ste
 - Automatic weekly backups into a folder you pick (phone storage or a cloud drive), with "Last backup" in Settings and a line on the recipe list when one is overdue
 - Paste a whole recipe: the text is split into name, servings, ingredients and steps. Text shared from another app opens as a new recipe the same way
 - Paste or share a link: a recipe site's page gives the exact recipe (name, servings, times, ingredients, steps, picture) from its schema.org record, microdata or visible "Ingredients"/"Υλικά" section; an Instagram, TikTok or Facebook post or reel gives its caption and picture or video thumbnail, split like pasted text. A site that refuses plain requests from apps is loaded again, unseen, in the phone's own browser engine
-- Read a recipe from a photo of a page, in Greek or English (Google Cloud Vision, see below); offline, the photo waits and is read when the phone is back online
+- Read a recipe from photos of a page, a handwritten card or a screenshot, in Greek or English (Gemini, see below); offline, the photo waits and is read when the phone is back online
 - Ingredients and steps are dragged into order by their handle, and swiped away with Undo
 - Cooking mode shows one step per card: the ingredients that step uses, a timer button when the step says "20 min", swipe between cards
 - "Cooked 3 times, last on 12 Nov" on each recipe, and sorting by last edited, A to Z, cooked recently or not for a while
@@ -34,7 +34,7 @@ A personal cookbook app for Android. Keep your own recipes with ingredients, ste
 
 Everything is stored on the phone and works offline. Still to come: cloud sync of the recipes to the account, and the one-time lifetime purchase through Google Play.
 
-Reading a recipe from a photo uses Google Cloud Vision, because the on-device text recognition (ML Kit) has no Greek model. See "Recipe from a photo" below for the one switch it needs.
+Reading a recipe from a photo, and listening to a reel whose caption holds no recipe, use Gemini, because the on-device text recognition (ML Kit) has no Greek model. See "Recipe from a photo or a reel" below for the switch it needs.
 
 ## Trying it on a phone
 
@@ -70,12 +70,12 @@ To get sign-in into the builds:
 
 Deleting the account from Settings deletes the Firebase user. Nothing else is stored in the cloud yet.
 
-### Recipe from a photo (Cloud Vision)
+### Recipe from a photo or a reel (Gemini)
 
-The "Read a recipe from a photo" button in the editor sends the photo to Google Cloud Vision, which reads Greek and English, printed and handwritten, and fills the form like pasted text. It uses the same Firebase config as sign-in, so it only appears in builds that have `google-services.json`. Offline, the photo is kept and read as soon as the phone is back online; it then becomes a new recipe with the photo attached, announced by a notification.
+The "Read a recipe from a photo" button in the editor sends the photos to Gemini (`gemini-2.5-flash`), which reads Greek and English, printed and handwritten, and answers with the name, ingredients and steps; the form is filled like pasted text. A link to a reel whose caption holds no recipe sends the video the same way. It uses the same Firebase config as sign-in, so it only appears in builds that have `google-services.json`. Offline, the photo is kept and read as soon as the phone is back online; it then becomes a new recipe with the photo attached, announced by a notification. When Google refuses, the message in the editor shows its answer.
 
-1. Open the [Cloud Vision API page](https://console.cloud.google.com/apis/library/vision.googleapis.com), pick the Firebase project at the top, and press **Enable**. The project is on the Blaze plan, so billing is already in place: the first 1,000 photos a month are free, then about 1.50 USD per 1,000.
-2. Recommended, so nobody else can run up the bill with the key from the app: in [Credentials](https://console.cloud.google.com/apis/credentials), open the **Android key (auto created by Firebase)**, set **Application restrictions** to Android apps with the package `com.cookbookanything.app` and the SHA-1 of each signing key (the debug key from `app/debug.keystore` and later the release keys), and under **API restrictions** allow Cloud Vision API together with the Firebase APIs already listed. The app sends the package name and certificate with every call, so the restriction works.
+1. Open the [Generative Language API page](https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com), pick the Firebase project at the top, and press **Enable**.
+2. In [Credentials](https://console.cloud.google.com/apis/credentials), open the **Android key (auto created by Firebase)**. Firebase usually limits that key to its own APIs, so under **API restrictions** add **Generative Language API** to the list and save; without it Google answers "403: Permission denied on the service". Recommended, so nobody else can run up the bill with the key: set **Application restrictions** to Android apps with the package `com.cookbookanything.app` and the SHA-1 of each signing key (the debug key from `app/debug.keystore` and later the release keys). The app sends the package name and certificate with every call, so the restriction works.
 
 ### Known limits
 
@@ -97,7 +97,7 @@ The "Read a recipe from a photo" button in the editor sends the photo to Google 
 | `app/.../reminders` | Calendar notifications, the morning reminder and the cooking timer |
 | `app/.../widget` | The "Tonight" home-screen widget (Glance) |
 | `app/.../data/account` | Email and password accounts (Firebase Auth) |
-| `app/.../data/text` | Reading a recipe off a photo (Cloud Vision) or a web page |
+| `app/.../data/text` | Reading a recipe off photos or a reel (Gemini) or a web page |
 | `app/src/main/res/values` and `values-el` | English and Greek texts |
 
 Stack: Kotlin, Jetpack Compose with Material 3, Hilt, Room 3, Navigation 3, WorkManager, Coil, Glance, Firebase Auth.

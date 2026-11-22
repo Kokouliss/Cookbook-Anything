@@ -37,7 +37,8 @@ import kotlinx.coroutines.launch
 sealed interface ReadResult {
     data class Added(val ingredients: Int, val steps: Int) : ReadResult
     data object PhotoNothing : ReadResult
-    data object PhotoFailed : ReadResult
+    /** [reason] is what Google answered, shown so a missing setting can be found. */
+    data class PhotoFailed(val reason: String? = null) : ReadResult
     data object PhotoSavedForLater : ReadResult
     data object LinkNothing : ReadResult
     data object LinkFailed : ReadResult
@@ -125,7 +126,7 @@ class RecipeEditViewModel @AssistedInject constructor(
             if (pastedText != null) paste(pastedText)
             if (photoUris != null) {
                 val uris = photoUris.map(Uri::parse)
-                // Without Cloud Vision the shared screenshots are at least kept as the recipe's photos.
+                // Without the Firebase config the shared screenshots are at least kept as the recipe's photos.
                 if (canReadPhotos) readPhotos(uris) else addPhotos(null, uris)
             }
         }
@@ -249,7 +250,7 @@ class RecipeEditViewModel @AssistedInject constructor(
             val result = try {
                 block()
             } catch (e: IOException) {
-                failure
+                if (failure is ReadResult.PhotoFailed) ReadResult.PhotoFailed(e.message) else failure
             }
             edit { copy(reading = false) }
             readResults.send(result)
@@ -291,13 +292,12 @@ class RecipeEditViewModel @AssistedInject constructor(
      * Reads the recipe off photos of a page (several photos for a long recipe) and fills the form
      * like pasted text. Offline, the photos are kept and read later as a new recipe.
      */
-    fun readPhotos(uris: List<Uri>) = read(ReadResult.PhotoFailed) {
+    fun readPhotos(uris: List<Uri>) = read(ReadResult.PhotoFailed()) {
         if (!pendingPhotoReads.isOnline()) {
             pendingPhotoReads.add(uris)
             return@read ReadResult.PhotoSavedForLater
         }
-        val text = uris.mapNotNull { photoTextReader.read(it) }.joinToString("\n")
-        if (text.isBlank()) return@read ReadResult.PhotoNothing
+        val text = photoTextReader.read(uris) ?: return@read ReadResult.PhotoNothing
         edit { copy(source = source ?: SOURCE_PHOTO) }
         applyParsed(parseRecipeText(text))
     }

@@ -34,7 +34,7 @@ class LinkRecipeReader @Inject constructor(
     @ApplicationContext private val context: Context,
     private val photoStore: PhotoStore,
     private val browser: BrowserPageLoader,
-    private val spokenReader: SpokenRecipeReader,
+    private val gemini: GeminiRecipeReader,
 ) {
     // In the folder the file provider already shares from.
     private val details get() = File(context.cacheDir, "shared/link-details.txt")
@@ -51,7 +51,7 @@ class LinkRecipeReader @Inject constructor(
         val blog = page.link?.takeIf { page.ingredients.isEmpty() }?.let { runCatching { load(it) }.getOrNull() }?.takeIf { it.ingredients.isNotEmpty() }
         val written = blog?.let { it.copy(title = it.title ?: page.title, description = it.description ?: page.description, imageUrl = it.imageUrl ?: page.imageUrl) } ?: page
         // A reel whose caption gives no ingredients is listened to; the model writes the recipe down.
-        val spoken = written.videoUrl?.takeIf { written.ingredients.isEmpty() && spokenReader.available }?.let { video -> listen(url, video) }
+        val spoken = written.videoUrl?.takeIf { written.ingredients.isEmpty() && gemini.available }?.let { video -> listen(url, video) }
         val recipe = spoken?.copy(title = written.title ?: spoken.title, description = written.description ?: spoken.description, imageUrl = written.imageUrl) ?: written
         if (recipe.isEmpty) return@withContext null
         val photo = recipe.imageUrl?.let { image ->
@@ -70,7 +70,7 @@ class LinkRecipeReader @Inject constructor(
         }
         if (bytes.size > MAX_VIDEO_BYTES) return null
         val text = try {
-            spokenReader.read(bytes, mimeType)
+            gemini.read(listOf(bytes to mimeType), GeminiRecipeReader.VIDEO)
         } catch (e: IOException) {
             writeDetails("$url, video $video", Result.failure(e), null)
             throw e
