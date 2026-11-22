@@ -254,6 +254,7 @@
     <string name="whats_new">What’s new</string>
     <string name="whats_new_title">What’s new in version %1$s</string>
     <string-array name="whats_new_items">
+        <item>A calmer look: white and black pages with red only on the main buttons, and a word under every action icon.</item>
         <item>Reading a recipe from photos now writes the name, ingredients and steps for you, handwriting and Greek included.</item>
         <item>A reel whose caption has no recipe is listened to: the spoken recipe is written down for you.</item>
         <item>Imported recipes can be translated into your language on the phone: switch it on in Settings.</item>
@@ -364,4 +365,20 @@
     <string name="translate_imports">Translate imported recipes into %1$s</string>
     <string name="translate_imports_hint">On the phone, from pasted text, links and photos. A language pack is downloaded once per language.</string>
     <string name="translate_failed">The recipe could not be translated and is kept in its own language. Check the connection: the language pack downloads the first time.</string>
+    <!-- Short words under icon buttons, so each button says what it does. -->
+    <string name="label_favorite">Favourite</string>
+    <string name="label_share">Share</string>
+    <string name="label_edit">Edit</string>
+    <string name="label_more">More</string>
+    <string name="label_import">Import</string>
+    <string name="label_categories">Categories</string>
+    <string name="label_sort">Sort</string>
+    <string name="label_paste">Paste</string>
+    <string name="label_photo">Photo</string>
+    <string name="label_shopping">Shopping</string>
+    <string name="label_send">Send</string>
+    <string name="label_rename">Rename</string>
+    <string name="label_delete">Delete</string>
+    <string name="label_move">Aisle</string>
+    <string name="label_optional">Optional</string>
 </resources>

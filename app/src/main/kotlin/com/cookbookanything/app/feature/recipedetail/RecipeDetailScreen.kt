@@ -84,6 +84,7 @@ import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
+import com.cookbookanything.app.ui.theme.RecipeNameFont
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.ingredients.isHeading
 import com.cookbookanything.core.domain.ingredients.stepNumbers
@@ -227,12 +228,14 @@ fun RecipeDetailScreen(
                             icon = if (favorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
                             contentDescription = stringResource(if (favorite) R.string.unfavorite else R.string.favorite),
                             onClick = { onFavorite(!favorite) },
+                            label = stringResource(R.string.label_favorite),
                         )
                         Box {
                             AppIconButton(
                                 icon = R.drawable.ic_share,
                                 contentDescription = stringResource(R.string.share),
                                 onClick = { shareMenuOpen = true },
+                                label = stringResource(R.string.label_share),
                             )
                             DropdownMenu(expanded = shareMenuOpen, onDismissRequest = { shareMenuOpen = false }) {
                                 DropdownMenuItem(
@@ -251,9 +254,9 @@ fun RecipeDetailScreen(
                                 )
                             }
                         }
-                        AppIconButton(R.drawable.ic_edit, stringResource(R.string.edit), onClick = onEdit)
+                        AppIconButton(R.drawable.ic_edit, stringResource(R.string.edit), onClick = onEdit, label = stringResource(R.string.label_edit))
                         Box {
-                            AppIconButton(R.drawable.ic_more_vert, stringResource(R.string.more), onClick = { moreMenuOpen = true })
+                            AppIconButton(R.drawable.ic_more_vert, stringResource(R.string.more), onClick = { moreMenuOpen = true }, label = stringResource(R.string.label_more))
                             DropdownMenu(expanded = moreMenuOpen, onDismissRequest = { moreMenuOpen = false }) {
                                 val pinned = uiState.recipe.pinned
                                 val actions = listOf<Pair<Int, () -> Unit>>(
@@ -379,7 +382,7 @@ private fun RecipeContent(
         }
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Text(recipe.title, style = MaterialTheme.typography.headlineLarge)
+                Text(recipe.title, style = MaterialTheme.typography.headlineLarge.copy(fontFamily = RecipeNameFont))
                 recipe.description?.let {
                     Text(
                         text = it,

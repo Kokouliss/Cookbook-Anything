@@ -30,7 +30,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -67,6 +67,7 @@ import com.cookbookanything.app.ui.components.PageCard
 import com.cookbookanything.app.ui.components.StruckText
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.pressScale
+import com.cookbookanything.app.ui.theme.RecipeNameFont
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
@@ -133,30 +134,32 @@ fun RecipeListScreen(
         topBar = {
             TopAppBar(
                 colors = appBarColors(),
-                title = { Text(stringResource(R.string.app_name)) },
+                title = { Text(stringResource(R.string.tab_recipes)) },
                 actions = {
                     (uiState as? RecipeListUiState.Success)?.let { SortMenu(current = it.sort, onSort = onSort) }
                     AppIconButton(
                         icon = R.drawable.ic_download,
                         contentDescription = stringResource(R.string.import_recipe),
                         onClick = { importLauncher.launch(arrayOf("*/*")) },
+                        label = stringResource(R.string.label_import),
                     )
                     AppIconButton(
                         icon = R.drawable.ic_label,
                         contentDescription = stringResource(R.string.categories),
                         onClick = onManageCategories,
+                        label = stringResource(R.string.label_categories),
                     )
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = onAddRecipe,
+                icon = { AppIcon(R.drawable.ic_add, contentDescription = null) },
+                text = { Text(stringResource(R.string.add_recipe)) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) {
-                AppIcon(R.drawable.ic_add, contentDescription = stringResource(R.string.add_recipe))
-            }
+            )
         },
     ) { padding ->
         when (uiState) {
@@ -190,7 +193,7 @@ fun RecipeListScreen(
 private fun SortMenu(current: RecipeSort, onSort: (RecipeSort) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        AppIconButton(R.drawable.ic_sort, stringResource(R.string.sort), onClick = { open = true })
+        AppIconButton(R.drawable.ic_sort, stringResource(R.string.sort), onClick = { open = true }, label = stringResource(R.string.label_sort))
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             RecipeSort.entries.forEach { sort ->
                 DropdownMenuItem(
@@ -550,7 +553,7 @@ private fun RecipeCard(recipe: RecipeSummary, categoryName: String?, onClick: ()
         Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
             Text(
                 text = recipe.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(fontFamily = RecipeNameFont),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )

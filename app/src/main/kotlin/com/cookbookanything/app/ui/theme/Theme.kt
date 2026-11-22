@@ -9,7 +9,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -24,23 +23,23 @@ import com.cookbookanything.app.R
 import com.cookbookanything.core.domain.design.Palette.Dark
 import com.cookbookanything.core.domain.design.Palette.Light
 
-// A printed cookbook: paper, ink, and the family red as the one lead colour for buttons, links and
-// selections (secondaryContainer carries selected chips and tonal buttons, so it is red too). Fixed
-// colours on purpose, so the app keeps its own look instead of following the wallpaper. The values
-// and their contrast test live in core/domain.
+// White and black with red accents: neutral pages and greys, and the family red only where
+// Material draws the primary colour (the main button, ticks, switches, focused fields). Containers
+// (selected chips, tonal buttons) are grey. Fixed colours on purpose, so the app keeps its own look
+// instead of following the wallpaper. The values and their contrast test live in core/domain.
 private val LightColors = lightColorScheme(
     primary = Color(Light.RED),
     onPrimary = Color(Light.ON_RED),
-    primaryContainer = Color(Light.RED_CONTAINER),
-    onPrimaryContainer = Color(Light.ON_RED_CONTAINER),
-    secondary = Color(Light.TEAL),
-    onSecondary = Color(Light.ON_TEAL),
-    secondaryContainer = Color(Light.RED_CONTAINER),
-    onSecondaryContainer = Color(Light.ON_RED_CONTAINER),
-    tertiary = Color(Light.OCHRE),
-    onTertiary = Color(Light.ON_OCHRE),
-    tertiaryContainer = Color(Light.OCHRE_CONTAINER),
-    onTertiaryContainer = Color(Light.ON_OCHRE_CONTAINER),
+    primaryContainer = Color(Light.CONTAINER),
+    onPrimaryContainer = Color(Light.ON_CONTAINER),
+    secondary = Color(Light.MUTED),
+    onSecondary = Color(Light.BACKGROUND),
+    secondaryContainer = Color(Light.CONTAINER),
+    onSecondaryContainer = Color(Light.ON_CONTAINER),
+    tertiary = Color(Light.MUTED),
+    onTertiary = Color(Light.BACKGROUND),
+    tertiaryContainer = Color(Light.CONTAINER),
+    onTertiaryContainer = Color(Light.ON_CONTAINER),
     background = Color(Light.BACKGROUND),
     onBackground = Color(Light.INK),
     surface = Color(Light.BACKGROUND),
@@ -62,16 +61,16 @@ private val LightColors = lightColorScheme(
 private val DarkColors = darkColorScheme(
     primary = Color(Dark.RED),
     onPrimary = Color(Dark.ON_RED),
-    primaryContainer = Color(Dark.RED_CONTAINER),
-    onPrimaryContainer = Color(Dark.ON_RED_CONTAINER),
-    secondary = Color(Dark.TEAL),
-    onSecondary = Color(Dark.ON_TEAL),
-    secondaryContainer = Color(Dark.RED_CONTAINER),
-    onSecondaryContainer = Color(Dark.ON_RED_CONTAINER),
-    tertiary = Color(Dark.OCHRE),
-    onTertiary = Color(Dark.ON_OCHRE),
-    tertiaryContainer = Color(Dark.OCHRE_CONTAINER),
-    onTertiaryContainer = Color(Dark.ON_OCHRE_CONTAINER),
+    primaryContainer = Color(Dark.CONTAINER),
+    onPrimaryContainer = Color(Dark.ON_CONTAINER),
+    secondary = Color(Dark.MUTED),
+    onSecondary = Color(Dark.BACKGROUND),
+    secondaryContainer = Color(Dark.CONTAINER),
+    onSecondaryContainer = Color(Dark.ON_CONTAINER),
+    tertiary = Color(Dark.MUTED),
+    onTertiary = Color(Dark.BACKGROUND),
+    tertiaryContainer = Color(Dark.CONTAINER),
+    onTertiaryContainer = Color(Dark.ON_CONTAINER),
     background = Color(Dark.BACKGROUND),
     onBackground = Color(Dark.INK),
     surface = Color(Dark.BACKGROUND),
@@ -90,9 +89,9 @@ private val DarkColors = darkColorScheme(
     error = Color(Dark.ERROR),
 )
 
-// Literata, the book serif Google made for Play Books (SIL Open Font License, Greek included), for
-// every heading and title, cut at the optical size of a title. Body text stays in the phone's sans.
-private val Literata = FontFamily(
+// Literata, the book serif Google made for Play Books (SIL Open Font License, Greek included), only
+// for recipe names, cut at the optical size of a title. Everything else is the phone's sans.
+val RecipeNameFont = FontFamily(
     listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold).map { weight ->
         Font(
             resId = R.font.literata,
@@ -101,19 +100,6 @@ private val Literata = FontFamily(
         )
     },
 )
-
-private val CookbookTypography = Typography().let { base ->
-    base.copy(
-        displayLarge = base.displayLarge.copy(fontFamily = Literata),
-        displayMedium = base.displayMedium.copy(fontFamily = Literata),
-        displaySmall = base.displaySmall.copy(fontFamily = Literata),
-        headlineLarge = base.headlineLarge.copy(fontFamily = Literata),
-        headlineMedium = base.headlineMedium.copy(fontFamily = Literata),
-        headlineSmall = base.headlineSmall.copy(fontFamily = Literata),
-        titleLarge = base.titleLarge.copy(fontFamily = Literata),
-        titleMedium = base.titleMedium.copy(fontFamily = Literata),
-    )
-}
 
 // Corners nearer to square than Material's, like a printed page and its photos.
 private val CookbookShapes = Shapes(
@@ -128,7 +114,6 @@ private val CookbookShapes = Shapes(
 fun CookbookTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
-        typography = CookbookTypography,
         shapes = CookbookShapes,
         content = content,
     )

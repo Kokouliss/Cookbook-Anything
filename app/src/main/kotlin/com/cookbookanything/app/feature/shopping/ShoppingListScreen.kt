@@ -92,6 +92,7 @@ fun ShoppingListScreen(
                         AppIconButton(
                             icon = R.drawable.ic_send,
                             contentDescription = stringResource(if (listAnythingInstalled) R.string.shopping_send else R.string.shopping_share),
+                            label = stringResource(R.string.label_send),
                             onClick = {
                                 // List Anything takes each line as an item, so it gets the flat list; anyone else gets the aisles.
                                 val text = if (listAnythingInstalled) entries.toBuyText() else entries.byAisle().joinToString("\n\n") { (aisle, items) ->
@@ -183,7 +184,7 @@ private fun ShoppingItems(
                         // Which recipes want it, only when more than one does.
                         detail = item.recipeTitles.takeIf { it.size > 1 }?.let { stringResource(R.string.shopping_from, it.joinToString(", ")) },
                     )
-                    AppIconButton(R.drawable.ic_more_vert, stringResource(R.string.move_to_aisle), onClick = { onMoveToAisle(item) })
+                    AppIconButton(R.drawable.ic_more_vert, stringResource(R.string.move_to_aisle), onClick = { onMoveToAisle(item) }, label = stringResource(R.string.label_move))
                 }
             }
         }

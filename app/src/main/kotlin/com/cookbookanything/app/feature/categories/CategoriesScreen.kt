@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -72,9 +72,13 @@ fun CategoriesScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { adding = true }, containerColor = MaterialTheme.colorScheme.secondary) {
-                AppIcon(R.drawable.ic_add, contentDescription = stringResource(R.string.new_category))
-            }
+            ExtendedFloatingActionButton(
+                onClick = { adding = true },
+                icon = { AppIcon(R.drawable.ic_add, contentDescription = null) },
+                text = { Text(stringResource(R.string.new_category)) },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
         },
     ) { padding ->
         if (categories.isEmpty()) {
@@ -115,11 +119,13 @@ fun CategoriesScreen(
                             icon = R.drawable.ic_edit,
                             contentDescription = stringResource(R.string.rename),
                             onClick = { renamingId = category.id },
+                            label = stringResource(R.string.label_rename),
                         )
                         AppIconButton(
                             icon = R.drawable.ic_delete,
                             contentDescription = stringResource(R.string.delete),
                             onClick = { deletingId = category.id },
+                            label = stringResource(R.string.label_delete),
                         )
                     }
                 }
