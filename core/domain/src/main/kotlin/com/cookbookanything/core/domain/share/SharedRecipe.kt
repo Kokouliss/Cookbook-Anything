@@ -20,6 +20,7 @@ data class SharedRecipe(
     val waitMinutes: Int? = null,
     val description: String? = null,
     val source: String? = null,
+    val video: String? = null,
     val photos: List<String> = emptyList(),
     // shortcut: the optional mark on an ingredient is not shared, add it when the format gets its next version
     val ingredients: List<String> = emptyList(),
@@ -58,6 +59,7 @@ fun Recipe.toShared(): SharedRecipe = SharedRecipe(
     waitMinutes = waitMinutes,
     description = description,
     source = source,
+    video = video,
     photos = photos,
     ingredients = ingredients.map { it.text },
     steps = steps.map { SharedStep(text = it.text, photos = it.photos) },
@@ -80,6 +82,7 @@ fun SharedRecipe.toRecipe(
     waitMinutes = waitMinutes,
     description = description,
     source = source,
+    video = video,
     photos = photos.mapNotNull(photoNames::get),
     ingredients = ingredients.map { Ingredient(id = newId(), text = it) },
     steps = steps.map { Step(id = newId(), text = it.text, photos = it.photos.mapNotNull(photoNames::get)) },

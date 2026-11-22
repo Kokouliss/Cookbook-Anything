@@ -1,6 +1,8 @@
 package com.cookbookanything.core.domain.text
 
 import com.cookbookanything.core.domain.search.searchKey
+import com.cookbookanything.core.domain.video.isVideoPost
+import com.cookbookanything.core.domain.video.videoPlayer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -31,6 +33,7 @@ private val instagramPost = Regex("""instagram\.com/(?!share/)(?:[\w.]+/)?(?:p|r
 private val captionBox = Regex("""<div[^>]*\bclass\s*=\s*["']Caption["'][^>]*>""")
 private val captionExtras = Regex("""(?is)<a[^>]*\bCaptionUsername\b[^>]*>.*?</a>|<div[^>]*\bCaptionComments\b.*""")
 private val embeddedImage = Regex("""<img[^>]*\bEmbeddedMediaImage\b[^>]*>""")
+private val iframeSource = Regex("""<iframe[^>]*?\s(?:data-(?:lazy-)?)?src\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
 
 private const val LINK_SURROUNDING_TEXT = 120
 private const val HEADING_LENGTH = 40
@@ -78,31 +81,32 @@ fun parseRecipeHtml(html: String): ParsedRecipe? {
         .mapNotNull { match -> runCatching { lenientJson.parseToJsonElement(match.groupValues[1].trim()) }.getOrNull() }
         .toList()
     val video = videoUrl(html, meta, records)
+    val embedded = videoLink(html, meta, records)
 
     val record = records.firstNotNullOfOrNull { findObject(it, "Recipe") }
     if (record != null) {
         val parsed = record.toParsedRecipe()
-        return parsed.copy(title = parsed.title ?: title, imageUrl = parsed.imageUrl ?: image, videoUrl = video)
+        return parsed.copy(title = parsed.title ?: title, imageUrl = parsed.imageUrl ?: image, videoUrl = video, videoLink = embedded)
     }
 
     val microdata = parseMicrodata(html)
-    if (microdata != null) return microdata.copy(title = title, imageUrl = microdata.imageUrl ?: image, videoUrl = video)
+    if (microdata != null) return microdata.copy(title = title, imageUrl = microdata.imageUrl ?: image, videoUrl = video, videoLink = embedded)
 
     val caption = instagramCaption(html)?.let(::parseRecipeText)
-    if (caption != null && !caption.isEmpty) return caption.copy(imageUrl = instagramImage(html) ?: image, videoUrl = video)
+    if (caption != null && !caption.isEmpty) return caption.copy(imageUrl = instagramImage(html) ?: image, videoUrl = video, videoLink = embedded)
 
     val lines = textLines(html)
     val from = lines.indexOfFirst { it.removeSuffix(":").searchKey() in INGREDIENT_HEADERS }
     if (from >= 0) {
         val parsed = parseRecipeText(lines.drop(from).joinToString("\n"))
-        if (parsed.ingredients.isNotEmpty()) return parsed.copy(title = title ?: parsed.title, imageUrl = image, videoUrl = video)
+        if (parsed.ingredients.isNotEmpty()) return parsed.copy(title = title ?: parsed.title, imageUrl = image, videoUrl = video, videoLink = embedded)
     }
 
     // A reel whose caption says nothing still has its video to listen to; its page title ("Instagram") is no recipe name.
-    val description = meta["og:description"] ?: meta["description"] ?: return video?.let { ParsedRecipe(imageUrl = image, videoUrl = it) }
+    val description = meta["og:description"] ?: meta["description"] ?: return video?.let { ParsedRecipe(imageUrl = image, videoUrl = it, videoLink = embedded) }
     val quoted = quotedCaption.find(description)?.groupValues?.get(1)
     val parsed = parseRecipeText(quoted ?: listOfNotNull(title, description).joinToString("\n"))
-    return if (parsed.isEmpty && video == null) null else parsed.copy(imageUrl = image, videoUrl = video)
+    return if (parsed.isEmpty && video == null) null else parsed.copy(imageUrl = image, videoUrl = video, videoLink = embedded)
 }
 
 /**
@@ -114,7 +118,20 @@ private fun videoUrl(html: String, meta: Map<String, String>, records: List<Json
         meta["og:video:secure_url"], meta["og:video:url"], meta["og:video"],
         records.firstNotNullOfOrNull { findObject(it, "VideoObject") }?.string("contentUrl"),
         jsonString(html, "video_url", "video_url"), jsonString(html, "playAddr", "playAddr"), jsonString(html, "playable_url", "playable_url"),
-    ).firstOrNull { it != null && it.startsWith("http") }
+    // A player page (YouTube's og:video) is no file to listen to; it is the video link instead.
+    ).firstOrNull { it != null && it.startsWith("http") && videoPlayer(it)?.file != false }
+
+/**
+ * A video to watch with the recipe: the player a recipe page embeds (schema.org VideoObject, og:video,
+ * a YouTube or Vimeo iframe), or the page itself when it is a video post (its og:url).
+ */
+private fun videoLink(html: String, meta: Map<String, String>, records: List<JsonElement>): String? {
+    // Recipe sites put the VideoObject inside the Recipe record, under "video".
+    val record = records.firstNotNullOfOrNull { findObject(it, "VideoObject") ?: findObject(it, "Recipe")?.get("video")?.let { video -> findObject(video, "VideoObject") } }
+    val frames = iframeSource.findAll(html).map { it.groupValues[1].decodeEntities().let { src -> if (src.startsWith("//")) "https:$src" else src } }
+    val players = sequenceOf(record?.string("embedUrl"), record?.string("contentUrl"), meta["og:video:secure_url"], meta["og:video:url"], meta["og:video"]) + frames
+    return players.firstOrNull { it != null && videoPlayer(it)?.file == false } ?: meta["og:url"]?.takeIf(::isVideoPost)
+}
 
 private fun metaTags(html: String): Map<String, String> {
     val tags = HashMap<String, String>()

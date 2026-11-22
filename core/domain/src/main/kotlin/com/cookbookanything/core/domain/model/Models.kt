@@ -52,6 +52,8 @@ data class Recipe(
     val notes: String? = null,
     /** Where the recipe came from: the link it was read from, or [SOURCE_PHOTO]. */
     val source: String? = null,
+    /** A link to a video of the dish (YouTube, Instagram, TikTok, Facebook, Vimeo or a video file), played on the recipe page. */
+    val video: String? = null,
     /** 1 to 5 stars, null when not rated. */
     val rating: Int? = null,
     val favorite: Boolean = false,

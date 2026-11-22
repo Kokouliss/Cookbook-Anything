@@ -10,6 +10,8 @@ import com.cookbookanything.core.domain.text.ParsedRecipe
 import com.cookbookanything.core.domain.text.instagramEmbedUrl
 import com.cookbookanything.core.domain.text.parseRecipeHtml
 import com.cookbookanything.core.domain.text.parseRecipeText
+import com.cookbookanything.core.domain.video.isVideoPost
+import com.cookbookanything.core.domain.video.videoPlayer
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -52,8 +54,11 @@ class LinkRecipeReader @Inject constructor(
         val written = blog?.let { it.copy(title = it.title ?: page.title, description = it.description ?: page.description, imageUrl = it.imageUrl ?: page.imageUrl) } ?: page
         // A reel whose caption gives no ingredients is listened to; the model writes the recipe down.
         val spoken = written.videoUrl?.takeIf { written.ingredients.isEmpty() && gemini.available }?.let { video -> listen(url, video) }
-        val recipe = spoken?.copy(title = written.title ?: spoken.title, description = written.description ?: spoken.description, imageUrl = written.imageUrl) ?: written
-        if (recipe.isEmpty) return@withContext null
+        val text = spoken?.copy(title = written.title ?: spoken.title, description = written.description ?: spoken.description, imageUrl = written.imageUrl) ?: written
+        if (text.isEmpty) return@withContext null
+        // The video to watch: the post itself when it is one, else the player the page embeds, else an Instagram post that carried a video.
+        // shortcut: a short link (vm.tiktok.com) only counts when its page names the full address in og:url, pass the address after redirects if they turn up without a video.
+        val recipe = text.copy(videoLink = url.takeIf(::isVideoPost) ?: text.videoLink ?: url.takeIf { text.videoUrl != null && videoPlayer(it) != null })
         val photo = recipe.imageUrl?.let { image ->
             runCatching { open(image).let { c -> try { c.inputStream.use { photoStore.importStream(it, MAX_IMAGE_BYTES) } } finally { c.disconnect() } } }.getOrNull()
         }

@@ -167,4 +167,24 @@ class RecipeHtmlTest {
 
         assertNull(parseRecipeHtml("<html><head><title>Nothing</title></head><body><p>Hello</p></body></html>")?.videoUrl)
     }
+
+    @Test
+    fun `keeps the video a recipe page embeds, and a player page is no file to listen to`() {
+        val blog = """<html><head><title>Μουσακάς</title><script type="application/ld+json">
+            {"@type":"Recipe","name":"Μουσακάς","recipeIngredient":["3 μελιτζάνες"],"recipeInstructions":["Ψήνουμε."],
+             "video":{"@type":"VideoObject","embedUrl":"https://www.youtube.com/embed/dQw4w9WgXcQ"}}</script></head><body></body></html>"""
+        assertEquals("https://www.youtube.com/embed/dQw4w9WgXcQ", assertNotNull(parseRecipeHtml(blog)).videoLink)
+
+        val framed = """<html><head><title>Cake</title></head><body><h1>Cake</h1><h2>Ingredients</h2><ul><li>2 eggs</li></ul>
+            <iframe width="560" data-lazy-src="//player.vimeo.com/video/76979871?h=1&amp;x=2"></iframe></body></html>"""
+        assertEquals("https://player.vimeo.com/video/76979871?h=1&x=2", assertNotNull(parseRecipeHtml(framed)).videoLink)
+
+        val youtube = """<html><head><meta property="og:title" content="Easy moussaka" />
+            <meta property="og:description" content="Moussaka in 30 minutes" />
+            <meta property="og:url" content="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
+            <meta property="og:video:url" content="https://www.youtube.com/embed/dQw4w9WgXcQ" /></head><body></body></html>"""
+        val video = assertNotNull(parseRecipeHtml(youtube))
+        assertNull(video.videoUrl)
+        assertEquals("https://www.youtube.com/embed/dQw4w9WgXcQ", video.videoLink)
+    }
 }

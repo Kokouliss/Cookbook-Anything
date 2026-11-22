@@ -254,6 +254,7 @@
     <string name="whats_new">What’s new</string>
     <string name="whats_new_title">What’s new in version %1$s</string>
     <string-array name="whats_new_items">
+        <item>A video on a recipe: paste a YouTube, Instagram, TikTok or Facebook link and watch it on the recipe page. A recipe copied from a video post keeps its video.</item>
         <item>A calmer look: white and black pages with red only on the main buttons, and a word under every action icon.</item>
         <item>Reading a recipe from photos now writes the name, ingredients and steps for you, handwriting and Greek included.</item>
         <item>A reel whose caption has no recipe is listened to: the spoken recipe is written down for you.</item>
@@ -331,6 +332,12 @@
     <string name="done">Done</string>
     <string name="tags">Tags</string>
     <string name="tags_hint">quick, vegan, Sunday (separated by commas)</string>
+    <string name="video">Video</string>
+    <string name="video_hint">A YouTube, Instagram, TikTok or Facebook link</string>
+    <string name="video_help">It plays on the recipe page.</string>
+    <string name="video_invalid">This is not a web link.</string>
+    <string name="watch_video">Watch the video</string>
+    <string name="video_open">Open in another app</string>
     <string name="filters">Filters</string>
     <string name="filter_time">Total time</string>
     <string name="filter_under_minutes">Under %1$d min</string>
