@@ -73,10 +73,15 @@ Deleting the account from Settings deletes the Firebase user. Nothing else is st
 
 ### Recipe from a photo or a reel (Gemini)
 
-The "Read a recipe from a photo" button in the editor sends the photos to Gemini (`gemini-2.5-flash`), which reads Greek and English, printed and handwritten, and answers with the name, ingredients and steps; the form is filled like pasted text. A link to a reel whose caption holds no recipe sends the video the same way. It uses the same Firebase config as sign-in, so it only appears in builds that have `google-services.json`. Offline, the photo is kept and read as soon as the phone is back online; it then becomes a new recipe with the photo attached, announced by a notification. When Google refuses, the message in the editor shows its answer.
+The "Read a recipe from a photo" button in the editor sends the photos to Gemini (`gemini-2.5-flash`), which reads Greek and English, printed and handwritten, and answers with the name, ingredients and steps; the form is filled like pasted text. A link to a reel whose caption holds no recipe sends the video the same way. Offline, the photo is kept and read as soon as the phone is back online; it then becomes a new recipe with the photo attached, announced by a notification. When Google refuses, the message in the editor shows its answer.
 
-1. Open the [Generative Language API page](https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com), pick the Firebase project at the top, and press **Enable**.
-2. In [Credentials](https://console.cloud.google.com/apis/credentials), open the **Android key (auto created by Firebase)**. Firebase usually limits that key to its own APIs, so under **API restrictions** add **Generative Language API** to the list and save; without it Google answers "403: Permission denied on the service". Recommended, so nobody else can run up the bill with the key: set **Application restrictions** to Android apps with the package `com.cookbookanything.app` and the SHA-1 of each signing key (the debug key from `app/debug.keystore` and later the release keys). The app sends the package name and certificate with every call, so the restriction works.
+It needs a Gemini API key. Google refuses the Firebase project's own key for Gemini ("403: Permission denied on the service"), so the key comes from Google AI Studio:
+
+1. On [AI Studio API keys](https://aistudio.google.com/apikey), press **Create API key**, in a new project.
+2. For the GitHub builds, add it as a repository secret named `GEMINI_API_KEY` (Settings, Secrets and variables, Actions). For builds on your own computer, pass `-PgeminiApiKey=...` to Gradle.
+3. Recommended: in [Credentials](https://console.cloud.google.com/apis/credentials) of that project, restrict the key to Android apps with the package `com.cookbookanything.app` and the SHA-1 of each signing key, and to the Generative Language API. The key ends up inside the app, which anyone can download from the Releases page, so keep that project on the free tier (no billing account) and nobody can run up a bill with it.
+
+Without the secret, the app falls back to the Firebase key from `google-services.json`.
 
 ### Known limits
 
