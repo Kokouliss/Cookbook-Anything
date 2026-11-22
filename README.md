@@ -29,6 +29,7 @@ A personal cookbook app for Android. Keep your own recipes with ingredients, ste
 - Categories ignore accents and case: "Σούπες" and "σουπες" are one category, sorted A to Z
 - Scaling understands Greek abbreviations (κ.σ., κ.γ., φλ.) and fractions (½, ¼)
 - An account with email and password (register, sign in, reset password, delete the account), kept for the coming cloud sync. Recipes stay on the phone for now
+- A video on a recipe: a YouTube, Instagram, TikTok, Facebook or Vimeo link (or a video file), played on the recipe page. A recipe read from a video post, or from a recipe page with an embedded YouTube or Vimeo video, keeps that video
 - Light and dark, chosen in Settings
 - The free version holds 5 recipes at a time
 
@@ -84,6 +85,7 @@ The "Read a recipe from a photo" button in the editor sends the photos to Gemini
 - The widget shows the next planned recipe from today on; it updates when recipes or the calendar change.
 - The sort order on the recipe list is not remembered when the app restarts.
 - Reading a photo needs the internet and takes a few seconds; a blurry or dark photo comes back as "No text was found".
+- Videos play in each site's own embed player. Instagram and Facebook sometimes show a sign-in box or refuse to play there; "Open in another app" then opens the video in their app. The player's own full-screen button does nothing, the video already fills the screen.
 - Links: a site whose bot check never lets the page through comes back as "Check the link" after about 25 seconds. Instagram, TikTok and Facebook sometimes answer with a login page instead of the post, which comes back as "No recipe was found"; copy the caption and paste it then. The caption is read as text, so a recipe written in prose rather than lines may land in the wrong place and need a tidy.
 
 ## How the code is laid out

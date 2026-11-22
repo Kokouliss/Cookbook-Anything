@@ -22,6 +22,7 @@ import com.cookbookanything.core.domain.text.ParsedRecipe
 import com.cookbookanything.core.domain.text.linkIn
 import com.cookbookanything.core.domain.text.parseRecipeText
 import com.cookbookanything.core.domain.text.sourceKey
+import com.cookbookanything.core.domain.video.videoLinkOrNull
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -68,6 +69,8 @@ data class RecipeEditUiState(
     val tags: String = "",
     /** Set when the recipe was read from a link or a photo; not typed. */
     val source: String? = null,
+    /** The video link as typed; empty means none. */
+    val video: String = "",
     val photos: List<String> = emptyList(),
     // Both lists always end with one empty row, so there is always a place to type the next item.
     val ingredients: List<Ingredient> = emptyList(),
@@ -119,6 +122,7 @@ class RecipeEditViewModel @AssistedInject constructor(
                 notes = recipe?.notes.orEmpty(),
                 tags = recipe?.tags.orEmpty().joinToString(", "),
                 source = recipe?.source,
+                video = recipe?.video.orEmpty(),
                 photos = recipe?.photos.orEmpty(),
                 ingredients = recipe?.ingredients.orEmpty().withTrailingBlank(),
                 steps = recipe?.steps.orEmpty().withTrailingBlankStep(),
@@ -152,6 +156,8 @@ class RecipeEditViewModel @AssistedInject constructor(
     fun setNotes(value: String) = edit { copy(notes = value) }
 
     fun setTags(value: String) = edit { copy(tags = value) }
+
+    fun setVideo(value: String) = edit { copy(video = value) }
 
     fun setIngredientOptional(id: String, optional: Boolean) = edit {
         copy(ingredients = ingredients.map { if (it.id == id) it.copy(optional = optional) else it })
@@ -235,6 +241,7 @@ class RecipeEditViewModel @AssistedInject constructor(
                 prepMinutes = prepMinutes.ifBlank { parsed.prepMinutes?.toString() ?: prepMinutes },
                 cookMinutes = cookMinutes.ifBlank { parsed.cookMinutes?.toString() ?: cookMinutes },
                 description = description.ifBlank { parsed.description ?: description },
+                video = video.ifBlank { read.videoLink ?: video },
                 ingredients = (ingredients.filterNot { it.text.isBlank() } + parsed.ingredients.map { Ingredient(id = newId(), text = it) })
                     .withTrailingBlank(),
                 steps = (steps.filterNot { it.isBlank() } + parsed.steps.map { Step(id = newId(), text = it) }).withTrailingBlankStep(),
@@ -323,6 +330,8 @@ class RecipeEditViewModel @AssistedInject constructor(
                 notes = state.notes.trim().ifEmpty { null },
                 tags = state.tags.split(',').map { it.trim().removePrefix("#") }.filter { it.isNotEmpty() }.distinct(),
                 source = state.source,
+                // The field shows an error for anything that is not a web link; such text is not kept.
+                video = videoLinkOrNull(state.video),
                 rating = original?.rating,
                 favorite = original?.favorite ?: false,
                 pinned = original?.pinned ?: false,

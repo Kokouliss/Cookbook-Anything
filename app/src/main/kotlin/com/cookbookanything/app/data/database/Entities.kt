@@ -47,6 +47,8 @@ data class RecipeEntity(
     // Version 5. Tags are one per line.
     val tags: String? = null,
     @ColumnInfo(defaultValue = "0") val pinned: Boolean = false,
+    // Version 6.
+    val video: String? = null,
 )
 
 @Entity(

@@ -20,6 +20,8 @@ data class ParsedRecipe(
     val link: String? = null,
     /** The post's video file, to listen to when the caption holds no recipe. */
     val videoUrl: String? = null,
+    /** A video player the page embeds (YouTube, Vimeo), kept on the recipe to watch. */
+    val videoLink: String? = null,
 ) {
     val isEmpty: Boolean get() = title == null && ingredients.isEmpty() && steps.isEmpty()
 }

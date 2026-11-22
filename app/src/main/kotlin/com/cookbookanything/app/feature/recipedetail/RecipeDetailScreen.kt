@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +42,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -354,6 +356,7 @@ private fun RecipeContent(
     val locale = currentLocale()
     val context = LocalContext.current
     var pickingDateTime by rememberSaveable { mutableStateOf(false) }
+    var watching by rememberSaveable { mutableStateOf(false) }
     val requestNotificationPermission = rememberNotificationPermissionRequest()
     // The cook can view the recipe for more or fewer people, or for the amount of one ingredient they
     // have; one factor scales every amount and the stored recipe does not change.
@@ -427,13 +430,21 @@ private fun RecipeContent(
                 if (uiState.categoryName != null) {
                     AssistChip(onClick = {}, label = { Text(uiState.categoryName) })
                 }
-                if (recipe.steps.isNotEmpty()) {
-                    Button(
-                        // shortcut: cooking mode scales by whole servings, so an ingredient-based factor is rounded to the nearest serving
-                        onClick = { onStartCooking(shownServings, measurement) },
-                        modifier = Modifier.padding(top = 8.dp),
-                    ) {
-                        Text(stringResource(R.string.start_cooking))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                    if (recipe.steps.isNotEmpty()) {
+                        Button(
+                            // shortcut: cooking mode scales by whole servings, so an ingredient-based factor is rounded to the nearest serving
+                            onClick = { onStartCooking(shownServings, measurement) },
+                        ) {
+                            Text(stringResource(R.string.start_cooking))
+                        }
+                    }
+                    if (recipe.video != null) {
+                        OutlinedButton(onClick = { watching = true }) {
+                            AppIcon(R.drawable.ic_play, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
+                            Text(stringResource(R.string.watch_video))
+                        }
                     }
                 }
             }
@@ -568,6 +579,7 @@ private fun RecipeContent(
         )
     }
 
+    if (watching) recipe.video?.let { VideoPlayerDialog(link = it, onDismiss = { watching = false }) }
 }
 
 /** "Did you cook it?": yes, yes with a photo of the result, or not this time. */

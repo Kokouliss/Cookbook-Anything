@@ -16,12 +16,13 @@ import androidx.room3.RoomDatabase
         CookedEntity::class,
         DayNoteEntity::class,
     ],
-    version = 5,
+    version = 6,
     // Version 2 added servings and times to recipes. Version 3 added the cooked table.
     // Version 4 added description, notes, source, waiting time, rating and favourite to recipes, and optional to ingredients.
     // Version 5 added tags and pinned to recipes, a photo to cooked, a meal slot to schedules, and the day_notes table.
+    // Version 6 added a video link to recipes.
     autoMigrations = [
-        AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5),
+        AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6),
     ],
 )
 abstract class CookbookDatabase : RoomDatabase() {

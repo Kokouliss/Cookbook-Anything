@@ -83,6 +83,7 @@ import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.Ingredient
 import com.cookbookanything.core.domain.model.Step
+import com.cookbookanything.core.domain.video.videoLinkOrNull
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableColumn
@@ -112,6 +113,7 @@ fun RecipeEditRoute(
         onDescriptionChange = viewModel::setDescription,
         onNotesChange = viewModel::setNotes,
         onTagsChange = viewModel::setTags,
+        onVideoChange = viewModel::setVideo,
         onIngredientChange = viewModel::setIngredientText,
         onIngredientOptionalChange = viewModel::setIngredientOptional,
         onRemoveIngredient = viewModel::removeIngredient,
@@ -148,6 +150,7 @@ fun RecipeEditScreen(
     onDescriptionChange: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onTagsChange: (String) -> Unit,
+    onVideoChange: (String) -> Unit,
     onIngredientChange: (String, String) -> Unit,
     onIngredientOptionalChange: (String, Boolean) -> Unit,
     onRemoveIngredient: (String) -> Unit,
@@ -477,6 +480,19 @@ fun RecipeEditScreen(
                 onValueChange = onTagsChange,
                 placeholder = { Text(stringResource(R.string.tags_hint)) },
                 singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            SectionTitle(stringResource(R.string.video))
+            val videoInvalid = uiState.video.isNotBlank() && videoLinkOrNull(uiState.video) == null
+            OutlinedTextField(
+                value = uiState.video,
+                onValueChange = onVideoChange,
+                placeholder = { Text(stringResource(R.string.video_hint)) },
+                supportingText = { Text(stringResource(if (videoInvalid) R.string.video_invalid else R.string.video_help)) },
+                isError = videoInvalid,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
             )
         }

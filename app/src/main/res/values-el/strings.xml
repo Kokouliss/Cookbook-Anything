@@ -249,6 +249,7 @@
     <string name="whats_new">Τι νέο υπάρχει</string>
     <string name="whats_new_title">Τι νέο υπάρχει στην έκδοση %1$s</string>
     <string-array name="whats_new_items">
+        <item>Βίντεο σε συνταγή: επικόλλησε σύνδεσμο YouTube, Instagram, TikTok ή Facebook και δες το στη σελίδα της συνταγής. Μια συνταγή που αντιγράφεται από ανάρτηση με βίντεο κρατά το βίντεό της.</item>
         <item>Πιο ήρεμη εμφάνιση: λευκές και μαύρες σελίδες με κόκκινο μόνο στα κύρια κουμπιά, και μια λέξη κάτω από κάθε εικονίδιο ενέργειας.</item>
         <item>Η ανάγνωση συνταγής από φωτογραφίες γράφει πια για σένα το όνομα, τα υλικά και τα βήματα, ακόμη και χειρόγραφα και ελληνικά.</item>
         <item>Ένα reel χωρίς συνταγή στη λεζάντα ακούγεται: η συνταγή που λέγεται γράφεται για σένα.</item>
@@ -326,6 +327,12 @@
     <string name="done">Έγινε</string>
     <string name="tags">Ετικέτες</string>
     <string name="tags_hint">γρήγορο, vegan, Κυριακή (χωρισμένες με κόμμα)</string>
+    <string name="video">Βίντεο</string>
+    <string name="video_hint">Σύνδεσμος YouTube, Instagram, TikTok ή Facebook</string>
+    <string name="video_help">Παίζει στη σελίδα της συνταγής.</string>
+    <string name="video_invalid">Αυτό δεν είναι σύνδεσμος ιστού.</string>
+    <string name="watch_video">Δες το βίντεο</string>
+    <string name="video_open">Άνοιγμα σε άλλη εφαρμογή</string>
     <string name="filters">Φίλτρα</string>
     <string name="filter_time">Συνολικός χρόνος</string>
     <string name="filter_under_minutes">Κάτω από %1$d λεπτά</string>
