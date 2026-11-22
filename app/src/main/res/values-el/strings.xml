@@ -249,6 +249,7 @@
     <string name="whats_new">Τι νέο υπάρχει</string>
     <string name="whats_new_title">Τι νέο υπάρχει στην έκδοση %1$s</string>
     <string-array name="whats_new_items">
+        <item>Πιο ήρεμη εμφάνιση: λευκές και μαύρες σελίδες με κόκκινο μόνο στα κύρια κουμπιά, και μια λέξη κάτω από κάθε εικονίδιο ενέργειας.</item>
         <item>Η ανάγνωση συνταγής από φωτογραφίες γράφει πια για σένα το όνομα, τα υλικά και τα βήματα, ακόμη και χειρόγραφα και ελληνικά.</item>
         <item>Ένα reel χωρίς συνταγή στη λεζάντα ακούγεται: η συνταγή που λέγεται γράφεται για σένα.</item>
         <item>Οι εισαγόμενες συνταγές μπορούν να μεταφράζονται στη γλώσσα σου στο τηλέφωνο: ενεργοποίησέ το στις Ρυθμίσεις.</item>
@@ -359,4 +360,20 @@
     <string name="translate_imports">Μετάφραση εισαγόμενων συνταγών στα %1$s</string>
     <string name="translate_imports_hint">Στο τηλέφωνο, από επικολλημένο κείμενο, συνδέσμους και φωτογραφίες. Το πακέτο γλώσσας κατεβαίνει μία φορά ανά γλώσσα.</string>
     <string name="translate_failed">Η συνταγή δεν μεταφράστηκε και κρατήθηκε στη γλώσσα της. Έλεγξε τη σύνδεση: το πακέτο γλώσσας κατεβαίνει την πρώτη φορά.</string>
+    <!-- Short words under icon buttons, so each button says what it does. -->
+    <string name="label_favorite">Αγαπημένο</string>
+    <string name="label_share">Αποστολή</string>
+    <string name="label_edit">Αλλαγή</string>
+    <string name="label_more">Άλλα</string>
+    <string name="label_import">Εισαγωγή</string>
+    <string name="label_categories">Κατηγορίες</string>
+    <string name="label_sort">Σειρά</string>
+    <string name="label_paste">Επικόλληση</string>
+    <string name="label_photo">Φωτογραφία</string>
+    <string name="label_shopping">Ψώνια</string>
+    <string name="label_send">Αποστολή</string>
+    <string name="label_rename">Μετονομασία</string>
+    <string name="label_delete">Διαγραφή</string>
+    <string name="label_move">Διάδρομος</string>
+    <string name="label_optional">Προαιρετικό</string>
 </resources>

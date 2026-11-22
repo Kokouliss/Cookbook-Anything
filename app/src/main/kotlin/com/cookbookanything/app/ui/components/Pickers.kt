@@ -90,11 +90,13 @@ fun AddPhotoButton(
     iconOnly: Boolean = false,
     @DrawableRes icon: Int = R.drawable.ic_add_photo,
     label: String = stringResource(R.string.add_photo),
+    /** With [iconOnly], a short word shown under the icon. */
+    shortLabel: String? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
         if (iconOnly) {
-            AppIconButton(icon, label, onClick = { expanded = true })
+            AppIconButton(icon, label, onClick = { expanded = true }, label = shortLabel)
         } else {
             OutlinedButton(onClick = { expanded = true }) {
                 Text(label)

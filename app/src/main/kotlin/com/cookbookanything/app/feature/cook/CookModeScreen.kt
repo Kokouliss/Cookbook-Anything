@@ -197,7 +197,7 @@ fun CookModeScreen(
                     Text(
                         text = stringResource(R.string.step_of, page + 1, steps.size),
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(convertTemperatures(step.text, measurement), style = MaterialTheme.typography.headlineMedium)
                     if (minutes != null) {
@@ -301,7 +301,7 @@ private fun StepDots(count: Int, current: Int) {
                     .size(8.dp)
                     .clip(CircleShape)
                     .background(
-                        if (index == current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                        if (index == current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant,
                     ),
             )
         }

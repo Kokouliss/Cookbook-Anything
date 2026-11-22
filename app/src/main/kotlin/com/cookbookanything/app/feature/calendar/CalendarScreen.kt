@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -121,14 +121,19 @@ fun CalendarScreen(
                         icon = R.drawable.ic_shopping_cart,
                         contentDescription = stringResource(R.string.shopping_list),
                         onClick = onOpenShoppingList,
+                        label = stringResource(R.string.label_shopping),
                     )
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { pickingRecipe = true }, containerColor = MaterialTheme.colorScheme.secondary) {
-                AppIcon(R.drawable.ic_add, contentDescription = stringResource(R.string.schedule_recipe))
-            }
+            ExtendedFloatingActionButton(
+                onClick = { pickingRecipe = true },
+                icon = { AppIcon(R.drawable.ic_add, contentDescription = null) },
+                text = { Text(stringResource(R.string.schedule_recipe)) },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            )
         },
     ) { padding ->
         LazyColumn(
@@ -361,7 +366,7 @@ private fun ScheduledRow(
             text = entry.slot?.let { stringResource(it.label()) } ?: DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
                 .format(Instant.ofEpochMilli(entry.scheduledAt).atZone(zone)),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(end = 16.dp),
         )
         Text(

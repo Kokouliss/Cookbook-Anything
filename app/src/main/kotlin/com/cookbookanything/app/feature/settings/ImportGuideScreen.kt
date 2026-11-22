@@ -57,7 +57,7 @@ fun ImportGuideScreen(onBack: () -> Unit) {
             Text(stringResource(R.string.guide_intro), style = MaterialTheme.typography.bodyLarge)
             sections.forEach { (title, body) ->
                 Column {
-                    Text(stringResource(title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                     Text(stringResource(body), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 4.dp))
                 }
             }
