@@ -2,6 +2,7 @@ package com.cookbookanything.app.data.text
 
 import android.content.Context
 import android.content.pm.PackageManager
+import com.cookbookanything.app.BuildConfig
 import com.google.firebase.FirebaseApp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
@@ -16,19 +17,20 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Calls Google APIs (the Gemini models) with the project's Firebase API key. Each API
- * has to be switched on in that project; the key should be restricted to this app (package name and
- * signing certificate), which the two X-Android headers make possible.
+ * Calls the Gemini models with the Gemini API key the build was given (from Google AI Studio), or else
+ * the project's Firebase API key. The key should be restricted to this app (package name and signing
+ * certificate), which the two X-Android headers make possible.
  */
 @Singleton
 class GoogleApi @Inject constructor(@ApplicationContext private val context: Context) {
 
-    /** False in a build without the Firebase config file. */
-    val available: Boolean get() = FirebaseApp.getApps(context).isNotEmpty()
+    /** False in a build with neither a Gemini key nor the Firebase config file. */
+    val available: Boolean get() = BuildConfig.GEMINI_API_KEY.isNotEmpty() || FirebaseApp.getApps(context).isNotEmpty()
 
     /** POSTs [body] as JSON and returns the JSON answer. Throws [IOException] with the API's message when it refuses. */
     fun post(endpoint: String, body: JsonObject, service: String, timeoutMs: Int = TIMEOUT_MS): JsonObject {
-        val apiKey = FirebaseApp.getInstance().options.apiKey
+        // Google refuses the Firebase project for Gemini (403 "Permission denied on the service"), so a key from AI Studio comes first.
+        val apiKey = BuildConfig.GEMINI_API_KEY.ifEmpty { FirebaseApp.getInstance().options.apiKey }
         val connection = URL("$endpoint?key=$apiKey").openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"

@@ -39,6 +39,8 @@ jobs:
         run: printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
 
       - name: Test and build the debug app
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: ./gradlew :core:domain:test :app:assembleDebug -PversionCode=${{ github.run_number }} -PversionName="$VERSION"
 
       # Room writes the database schema during the build. It has to be committed, because future

@@ -26,6 +26,9 @@ android {
         // The Build workflow passes a rising number, so each test build installs over the previous one.
         versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
         versionName = findProperty("versionName") as String? ?: "0.1.0"
+        // The Gemini key comes from the GEMINI_API_KEY secret (or -PgeminiApiKey locally); empty means use the Firebase key.
+        val geminiApiKey = System.getenv("GEMINI_API_KEY") ?: findProperty("geminiApiKey") as String? ?: ""
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     signingConfigs {
