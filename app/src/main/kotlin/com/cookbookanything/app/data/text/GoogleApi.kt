@@ -16,7 +16,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Calls Google APIs (Cloud Vision, the Gemini models) with the project's Firebase API key. Each API
+ * Calls Google APIs (the Gemini models) with the project's Firebase API key. Each API
  * has to be switched on in that project; the key should be restricted to this app (package name and
  * signing certificate), which the two X-Android headers make possible.
  */
@@ -41,7 +41,9 @@ class GoogleApi @Inject constructor(@ApplicationContext private val context: Con
             connection.outputStream.use { it.write(body.toString().toByteArray()) }
             val code = connection.responseCode
             val text = (if (code < 400) connection.inputStream else connection.errorStream)?.bufferedReader()?.readText().orEmpty()
-            val json = Json.parseToJsonElement(text.ifBlank { "{}" }).jsonObject
+            // An HTML error page from a proxy or captive portal is a failed call, not a crash.
+            val json = runCatching { Json.parseToJsonElement(text.ifBlank { "{}" }).jsonObject }
+                .getOrElse { throw IOException("$service answered $code: ${text.take(200)}") }
             if (code >= 400) {
                 val message = json["error"]?.jsonObject?.get("message")?.jsonPrimitive?.content
                 throw IOException("$service answered $code: ${message ?: text.take(200)}")

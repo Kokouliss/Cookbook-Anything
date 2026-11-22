@@ -84,9 +84,9 @@ class PendingPhotoWorker(context: Context, params: WorkerParameters) : Coroutine
                 continue
             }
             val text = try {
-                entryPoint.photoTextReader().read(Uri.fromFile(file))
+                entryPoint.photoTextReader().read(listOf(Uri.fromFile(file)))
             } catch (e: IOException) {
-                // The connection came and went, or Cloud Vision is not switched on: try again later.
+                // The connection came and went, or Gemini is not allowed for the key yet: try again later.
                 return Result.retry()
             }
             val parsed = text?.let(::parseRecipeText)

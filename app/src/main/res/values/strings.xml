@@ -226,7 +226,7 @@
     <string name="link_send_details">Send details</string>
     <string name="link_failed">The page could not be loaded. Check the connection and the link.</string>
     <string name="photo_nothing">No text was found in the photo.</string>
-    <string name="photo_failed">The photo could not be read. Check the connection, and that Cloud Vision is switched on for the project.</string>
+    <string name="photo_failed">The photo could not be read. Google answered:</string>
     <string name="photo_saved_offline">No internet. The photo is saved and will be read as a new recipe when the phone is back online.</string>
     <string name="photo_read_title">Recipe read from your photo</string>
     <string name="photo_read_full">The cookbook is full. Delete a recipe or unlock, and the photo is read the next time the app opens.</string>
@@ -254,6 +254,7 @@
     <string name="whats_new">What’s new</string>
     <string name="whats_new_title">What’s new in version %1$s</string>
     <string-array name="whats_new_items">
+        <item>Reading a recipe from photos now writes the name, ingredients and steps for you, handwriting and Greek included.</item>
         <item>A reel whose caption has no recipe is listened to: the spoken recipe is written down for you.</item>
         <item>Imported recipes can be translated into your language on the phone: switch it on in Settings.</item>
         <item>Tags on recipes, and filters: total time, cooked or not, rating, and “what’s in my pantry”.</item>

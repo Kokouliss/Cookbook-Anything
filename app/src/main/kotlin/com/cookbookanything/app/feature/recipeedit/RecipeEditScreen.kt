@@ -158,7 +158,7 @@ fun RecipeEditScreen(
     newCameraTarget: () -> Uri,
     onPaste: (String) -> Unit,
     linkDetails: () -> Uri?,
-    /** Null when sign-in is not set up in this build, which also means no Cloud Vision. */
+    /** Null when sign-in is not set up in this build, which also means no reading from photos. */
     onReadPhotos: ((List<Uri>) -> Unit)?,
     readResults: Flow<ReadResult>,
 ) {
@@ -186,6 +186,7 @@ fun RecipeEditScreen(
         readResults.collect { result ->
             // A link that was not read offers the page the site answered with, so the reason can be found.
             val unreadLink = result == ReadResult.LinkNothing || result == ReadResult.LinkFailed
+            val failedPhoto = result is ReadResult.PhotoFailed
             val duplicate = result as? ReadResult.Duplicate
             val pressed = snackbarHostState.showSnackbar(
                 actionLabel = when {
@@ -193,14 +194,14 @@ fun RecipeEditScreen(
                     duplicate != null -> open
                     else -> null
                 },
-                duration = if (unreadLink || duplicate != null) SnackbarDuration.Long else SnackbarDuration.Short,
+                duration = if (unreadLink || duplicate != null || failedPhoto) SnackbarDuration.Long else SnackbarDuration.Short,
                 message = when (result) {
                     // Only one of the two lists came through: the editor is the place to finish it.
                     is ReadResult.Added ->
                         if ((result.ingredients == 0) != (result.steps == 0)) pastedPartial
                         else context.getString(R.string.pasted_summary, result.ingredients, result.steps)
                     ReadResult.PhotoNothing -> photoNothing
-                    ReadResult.PhotoFailed -> photoFailed
+                    is ReadResult.PhotoFailed -> result.reason?.let { "$photoFailed\n$it" } ?: photoFailed
                     ReadResult.PhotoSavedForLater -> photoSavedOffline
                     ReadResult.LinkNothing -> linkNothing
                     ReadResult.LinkFailed -> linkFailed

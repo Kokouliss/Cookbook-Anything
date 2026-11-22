@@ -15,24 +15,31 @@ import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 /**
- * Listens to a cooking video and writes down the recipe said or shown in it, through a Google AI
- * model (Gemini) called with the project's key like Cloud Vision; the Generative Language API has to
- * be switched on in the project. The video goes whole, so no audio has to be pulled out on the phone.
+ * Writes down the recipe in photos or a cooking video through a Google AI model (Gemini), called
+ * with the project's key (see [GoogleApi]); the Generative Language API has to be switched on in the
+ * project and allowed for that key. It reads Greek and English, printed and handwritten, and hears
+ * what is said in a video, so no text recognition or audio extraction runs on the phone.
  */
 @Singleton
-class SpokenRecipeReader @Inject constructor(private val api: GoogleApi) {
+class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
 
     val available: Boolean get() = api.available
 
-    /** The recipe as text, laid out for [com.cookbookanything.core.domain.text.parseRecipeText], or null when the video gives none. Throws [IOException] when the call fails. */
-    suspend fun read(video: ByteArray, mimeType: String): String? = withContext(Dispatchers.IO) {
+    /**
+     * The recipe in [media] (bytes and MIME type, in order) as text laid out for
+     * [com.cookbookanything.core.domain.text.parseRecipeText], or null when there is none.
+     * [subject] says what the media are, [PHOTOS] or [VIDEO]. Throws [IOException] when the call fails.
+     */
+    suspend fun read(media: List<Pair<ByteArray, String>>, subject: String): String? = withContext(Dispatchers.IO) {
         val request = buildJsonObject {
             putJsonArray("contents") {
                 add(
                     buildJsonObject {
                         putJsonArray("parts") {
-                            add(buildJsonObject { putJsonObject("inline_data") { put("mime_type", mimeType); put("data", Base64.encodeToString(video, Base64.NO_WRAP)) } })
-                            add(buildJsonObject { put("text", PROMPT) })
+                            media.forEach { (bytes, mimeType) ->
+                                add(buildJsonObject { putJsonObject("inline_data") { put("mime_type", mimeType); put("data", Base64.encodeToString(bytes, Base64.NO_WRAP)) } })
+                            }
+                            add(buildJsonObject { put("text", PROMPT.format(subject)) })
                         }
                     },
                 )
@@ -47,15 +54,18 @@ class SpokenRecipeReader @Inject constructor(private val api: GoogleApi) {
         text.takeIf { it.isNotEmpty() && !it.startsWith(NONE) }
     }
 
-    private companion object {
+    companion object {
+        const val PHOTOS = "one or more photos of the same recipe, in order (a cookbook page, a handwritten card or a screenshot)"
+        const val VIDEO = "a cooking video"
+
         // shortcut: the model name is fixed here, move it to a remote setting if Google retires it
-        const val ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-        const val TIMEOUT_MS = 120_000
-        const val NONE = "NONE"
-        const val PROMPT = "This is a cooking video. Write down the recipe that is spoken or shown in it, in the language it is spoken in, " +
+        private const val ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        private const val TIMEOUT_MS = 120_000
+        private const val NONE = "NONE"
+        private const val PROMPT = "This is %s. Write down the recipe that is written, spoken or shown in it, in its own language, " +
             "as plain text in exactly this shape: the dish's name on the first line; then a line that says only \"Ingredients:\" followed by " +
             "one ingredient per line with its amount; then a line that says only \"Steps:\" followed by the steps in order, one per line, " +
             "with the times and temperatures that are mentioned. Keep the two labels \"Ingredients:\" and \"Steps:\" in English whatever the " +
-            "spoken language. No other text. If the video has no recipe, answer with the single word NONE."
+            "recipe's language. No other text. If there is no recipe, answer with the single word NONE."
     }
 }
