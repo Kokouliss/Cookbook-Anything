@@ -388,4 +388,21 @@
     <string name="label_delete">Delete</string>
     <string name="label_move">Aisle</string>
     <string name="label_optional">Optional</string>
+
+    <!-- Full-screen reading of a link or a photo. The stages are paced by time, not by the real work. -->
+    <string name="reading_title">Reading the recipe</string>
+    <string-array name="reading_link_stages">
+        <item>Opening the page</item>
+        <item>Finding the recipe on it</item>
+        <item>Picking out the ingredients</item>
+        <item>Writing down the steps</item>
+        <item>Bringing the photo</item>
+    </string-array>
+    <string-array name="reading_photo_stages">
+        <item>Looking at the photo</item>
+        <item>Reading the writing</item>
+        <item>Picking out the ingredients</item>
+        <item>Writing down the steps</item>
+        <item>Almost ready</item>
+    </string-array>
 </resources>

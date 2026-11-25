@@ -30,6 +30,9 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.runtime.CompositionLocalProvider
+import com.cookbookanything.app.ui.components.LocalSharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -121,117 +124,122 @@ fun CookbookApp(viewModel: MainViewModel) {
         // Each screen has its own Scaffold that handles the system bars.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
-        NavDisplay(
-            backStack = backStack,
-            modifier = Modifier
-                .padding(padding)
-                .consumeWindowInsets(padding),
-            onBack = { backStack.removeLastOrNull() },
-            transitionSpec = { pageTurn(forward = true) },
-            popTransitionSpec = { pageTurn(forward = false) },
-            predictivePopTransitionSpec = { pageTurn(forward = false) },
-            entryDecorators = listOf(
-                rememberSaveableStateHolderNavEntryDecorator(),
-                rememberViewModelStoreNavEntryDecorator(),
-            ),
-            entryProvider = entryProvider {
-                entry<RecipeListKey> {
-                    RecipeListRoute(
-                        onAddRecipe = {
-                            if (uiState.canAddRecipe) {
-                                backStack.add(RecipeEditKey())
-                            } else {
-                                showPaywall = true
-                            }
-                        },
-                        onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
-                        onImportRecipe = viewModel::importFile,
-                        onManageCategories = { backStack.add(CategoriesKey) },
-                        onOpenCalendar = { backStack.add(CalendarKey) },
-                        onOpenShoppingList = { backStack.add(ShoppingListKey) },
-                        backupOverdue = uiState.backup.overdue,
-                        onOpenSettings = { backStack.add(SettingsKey) },
-                    )
-                }
-                entry<RecipeDetailKey> { key ->
-                    RecipeDetailRoute(
-                        onBack = { backStack.removeLastOrNull() },
-                        onEdit = { backStack.add(RecipeEditKey(key.recipeId)) },
-                        onStartCooking = { servings, measurement -> backStack.add(CookModeKey(key.recipeId, servings, measurement)) },
-                        onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
-                        viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
-                            factory.create(key.recipeId)
-                        },
-                    )
-                }
-                entry<RecipeEditKey> { key ->
-                    RecipeEditRoute(
-                        onClose = { backStack.removeLastOrNull() },
-                        onSaved = { recipeId ->
-                            backStack.removeLastOrNull()
-                            // A new recipe opens on its page; an edited one is already underneath.
-                            if (key.recipeId == null) backStack.add(RecipeDetailKey(recipeId))
-                        },
-                        // The link was already saved once: the editor closes and the saved recipe opens.
-                        onOpenRecipe = { recipeId ->
-                            backStack.removeLastOrNull()
-                            backStack.add(RecipeDetailKey(recipeId))
-                        },
-                        viewModel = hiltViewModel<RecipeEditViewModel, RecipeEditViewModel.Factory> { factory ->
-                            factory.create(key.recipeId, key.pastedText, key.photoUris)
-                        },
-                    )
-                }
-                entry<CookModeKey> { key ->
-                    CookModeRoute(
-                        servings = key.servings,
-                        measurement = key.measurement,
-                        onClose = { backStack.removeLastOrNull() },
-                        viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
-                            factory.create(key.recipeId)
-                        },
-                    )
-                }
-                entry<ShoppingListKey> {
-                    ShoppingListRoute(onBack = { backStack.removeLastOrNull() })
-                }
-                entry<CategoriesKey> {
-                    CategoriesRoute(onBack = { backStack.removeLastOrNull() })
-                }
-                entry<ImportGuideKey> {
-                    ImportGuideScreen(onBack = { backStack.removeLastOrNull() })
-                }
-                entry<AccountKey> {
-                    AccountRoute(onBack = { backStack.removeLastOrNull() })
-                }
-                entry<CalendarKey> {
-                    CalendarRoute(
-                        onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
-                        onOpenShoppingList = { backStack.add(ShoppingListKey) },
-                    )
-                }
-                entry<SettingsKey> {
-                    SettingsScreen(
-                        recipeCount = uiState.recipeCount,
-                        unlocked = uiState.unlocked,
-                        onUnlock = { showPaywall = true },
-                        onManageCategories = { backStack.add(CategoriesKey) },
-                        onOpenImportGuide = { backStack.add(ImportGuideKey) },
-                        translateImports = uiState.translateImports,
-                        onTranslateImports = viewModel::setTranslateImports,
-                        onSaveBackup = viewModel::saveBackup,
-                        onRestoreBackup = viewModel::importFile,
-                        backup = uiState.backup,
-                        onPickBackupFolder = viewModel::setBackupFolder,
-                        onClearBackupFolder = viewModel::clearBackupFolder,
-                        account = uiState.account,
-                        onOpenAccount = { backStack.add(AccountKey) },
-                        onSignOut = viewModel::signOut,
-                        onShowWhatsNew = { showWhatsNew = true },
-                    )
-                }
-            },
-        )
+        // A recipe's photo grows from its tile into the recipe page, and back.
+        SharedTransitionLayout {
+            CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                NavDisplay(
+                    backStack = backStack,
+                    modifier = Modifier
+                        .padding(padding)
+                        .consumeWindowInsets(padding),
+                    onBack = { backStack.removeLastOrNull() },
+                    transitionSpec = { pageTurn(forward = true) },
+                    popTransitionSpec = { pageTurn(forward = false) },
+                    predictivePopTransitionSpec = { pageTurn(forward = false) },
+                    entryDecorators = listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(),
+                    ),
+                    entryProvider = entryProvider {
+                        entry<RecipeListKey> {
+                            RecipeListRoute(
+                                onAddRecipe = {
+                                    if (uiState.canAddRecipe) {
+                                        backStack.add(RecipeEditKey())
+                                    } else {
+                                        showPaywall = true
+                                    }
+                                },
+                                onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
+                                onImportRecipe = viewModel::importFile,
+                                onManageCategories = { backStack.add(CategoriesKey) },
+                                onOpenCalendar = { backStack.add(CalendarKey) },
+                                onOpenShoppingList = { backStack.add(ShoppingListKey) },
+                                backupOverdue = uiState.backup.overdue,
+                                onOpenSettings = { backStack.add(SettingsKey) },
+                            )
+                        }
+                        entry<RecipeDetailKey> { key ->
+                            RecipeDetailRoute(
+                                onBack = { backStack.removeLastOrNull() },
+                                onEdit = { backStack.add(RecipeEditKey(key.recipeId)) },
+                                onStartCooking = { servings, measurement -> backStack.add(CookModeKey(key.recipeId, servings, measurement)) },
+                                onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
+                                viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
+                                    factory.create(key.recipeId)
+                                },
+                            )
+                        }
+                        entry<RecipeEditKey> { key ->
+                            RecipeEditRoute(
+                                onClose = { backStack.removeLastOrNull() },
+                                onSaved = { recipeId ->
+                                    backStack.removeLastOrNull()
+                                    // A new recipe opens on its page; an edited one is already underneath.
+                                    if (key.recipeId == null) backStack.add(RecipeDetailKey(recipeId))
+                                },
+                                // The link was already saved once: the editor closes and the saved recipe opens.
+                                onOpenRecipe = { recipeId ->
+                                    backStack.removeLastOrNull()
+                                    backStack.add(RecipeDetailKey(recipeId))
+                                },
+                                viewModel = hiltViewModel<RecipeEditViewModel, RecipeEditViewModel.Factory> { factory ->
+                                    factory.create(key.recipeId, key.pastedText, key.photoUris)
+                                },
+                            )
+                        }
+                        entry<CookModeKey> { key ->
+                            CookModeRoute(
+                                servings = key.servings,
+                                measurement = key.measurement,
+                                onClose = { backStack.removeLastOrNull() },
+                                viewModel = hiltViewModel<RecipeDetailViewModel, RecipeDetailViewModel.Factory> { factory ->
+                                    factory.create(key.recipeId)
+                                },
+                            )
+                        }
+                        entry<ShoppingListKey> {
+                            ShoppingListRoute(onBack = { backStack.removeLastOrNull() })
+                        }
+                        entry<CategoriesKey> {
+                            CategoriesRoute(onBack = { backStack.removeLastOrNull() })
+                        }
+                        entry<ImportGuideKey> {
+                            ImportGuideScreen(onBack = { backStack.removeLastOrNull() })
+                        }
+                        entry<AccountKey> {
+                            AccountRoute(onBack = { backStack.removeLastOrNull() })
+                        }
+                        entry<CalendarKey> {
+                            CalendarRoute(
+                                onOpenRecipe = { backStack.add(RecipeDetailKey(it)) },
+                                onOpenShoppingList = { backStack.add(ShoppingListKey) },
+                            )
+                        }
+                        entry<SettingsKey> {
+                            SettingsScreen(
+                                recipeCount = uiState.recipeCount,
+                                unlocked = uiState.unlocked,
+                                onUnlock = { showPaywall = true },
+                                onManageCategories = { backStack.add(CategoriesKey) },
+                                onOpenImportGuide = { backStack.add(ImportGuideKey) },
+                                translateImports = uiState.translateImports,
+                                onTranslateImports = viewModel::setTranslateImports,
+                                onSaveBackup = viewModel::saveBackup,
+                                onRestoreBackup = viewModel::importFile,
+                                backup = uiState.backup,
+                                onPickBackupFolder = viewModel::setBackupFolder,
+                                onClearBackupFolder = viewModel::clearBackupFolder,
+                                account = uiState.account,
+                                onOpenAccount = { backStack.add(AccountKey) },
+                                onSignOut = viewModel::signOut,
+                                onShowWhatsNew = { showWhatsNew = true },
+                            )
+                        }
+                    },
+                )
+            }
+        }
     }
 
     if (showWhatsNew) {

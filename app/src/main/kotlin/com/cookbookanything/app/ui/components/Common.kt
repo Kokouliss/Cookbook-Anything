@@ -1,5 +1,8 @@
 package com.cookbookanything.app.ui.components
 
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -232,6 +235,17 @@ fun StruckText(text: String, struck: Boolean, style: TextStyle, color: Color) {
             }
         },
     )
+}
+
+/** Set around the screens, so a photo on one screen can grow into the same photo on the next. */
+val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
+
+/** The recipe's cover photo: on the list and on the recipe page it is one photo that moves between them. */
+@Composable
+fun Modifier.sharedPhoto(name: String): Modifier {
+    val shared = LocalSharedTransitionScope.current ?: return this
+    val screen = LocalNavAnimatedContentScope.current
+    return with(shared) { this@sharedPhoto.sharedElement(rememberSharedContentState("photo-$name"), screen) }
 }
 
 private const val PRESSED_SCALE = 0.97f

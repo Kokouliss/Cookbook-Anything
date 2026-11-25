@@ -7,8 +7,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.core.content.IntentCompat
 import com.cookbookanything.app.navigation.CookbookApp
+import com.cookbookanything.app.ui.components.Preloader
+import com.cookbookanything.app.ui.components.animationScale
 import com.cookbookanything.app.ui.theme.CookbookTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -22,9 +31,17 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) handleIntent(intent)
+        // The preloader plays when the app is opened from its icon, not when a share, a notification or a
+        // restore opens it on a page, and not when the phone's animations are off.
+        val preload = savedInstanceState == null && intent?.action == Intent.ACTION_MAIN && animationScale(this) > 0f
         setContent {
             CookbookTheme {
-                CookbookApp(viewModel)
+                var preloading by rememberSaveable { mutableStateOf(preload) }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // The app loads underneath meanwhile.
+                    CookbookApp(viewModel)
+                    if (preloading) Preloader(onFinished = { preloading = false })
+                }
             }
         }
     }

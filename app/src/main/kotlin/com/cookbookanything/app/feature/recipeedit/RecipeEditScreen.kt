@@ -127,6 +127,7 @@ fun RecipeEditRoute(
         linkDetails = viewModel::linkDetails,
         onReadPhotos = if (viewModel.canReadPhotos) viewModel::readPhotos else null,
         readResults = viewModel.readResultFlow,
+        onCancelRead = viewModel::cancelRead,
         onAddPhotos = viewModel::addPhotos,
         onRemovePhoto = viewModel::removePhoto,
         newCameraTarget = viewModel::newCameraTarget,
@@ -168,6 +169,7 @@ fun RecipeEditScreen(
     /** Null when sign-in is not set up in this build, which also means no reading from photos. */
     onReadPhotos: ((List<Uri>) -> Unit)?,
     readResults: Flow<ReadResult>,
+    onCancelRead: () -> Unit,
 ) {
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -245,257 +247,261 @@ fun RecipeEditScreen(
 
     BackHandler(enabled = uiState.dirty) { confirmDiscard = true }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                colors = appBarColors(),
-                title = {
-                    Text(stringResource(if (uiState.isNew) R.string.new_recipe else R.string.edit_recipe))
-                },
-                navigationIcon = {
-                    AppIconButton(R.drawable.ic_close, stringResource(R.string.close), onClick = close)
-                },
-                actions = {
-                    if (onReadPhotos != null) {
-                        AddPhotoButton(
-                            picker = readPicker,
-                            iconOnly = true,
-                            icon = R.drawable.ic_document_scanner,
-                            label = stringResource(R.string.photo_recipe),
-                            shortLabel = stringResource(R.string.label_photo),
-                        )
-                    }
-                    AppIconButton(
-                        icon = R.drawable.ic_content_paste,
-                        contentDescription = stringResource(R.string.paste_recipe),
-                        enabled = !uiState.loading,
-                        label = stringResource(R.string.label_paste),
-                        onClick = {
-                            scope.launch {
-                                val clip = clipboard.getClipEntry()?.clipData
-                                val text = clip?.let { data ->
-                                    (0 until data.itemCount).joinToString("\n") { data.getItemAt(it).coerceToText(context) }
-                                }
-                                if (text.isNullOrBlank()) snackbarHostState.showSnackbar(pasteNothing) else onPaste(text)
-                            }
-                        },
-                    )
-                    TextButton(onClick = onSave, enabled = !uiState.loading) {
-                        Text(stringResource(R.string.save))
-                    }
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) { padding ->
-        if (uiState.loading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator()
-            }
-            return@Scaffold
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // A photo or a link takes a few seconds to read; the line says so without blocking typing.
-            AnimatedVisibility(visible = uiState.reading) { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
-            OutlinedTextField(
-                value = uiState.title,
-                onValueChange = onTitleChange,
-                label = { Text(stringResource(R.string.recipe_title)) },
-                isError = uiState.titleMissing,
-                supportingText = if (uiState.titleMissing) {
-                    { Text(stringResource(R.string.title_required)) }
-                } else {
-                    null
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    imeAction = ImeAction.Next,
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = uiState.description,
-                onValueChange = onDescriptionChange,
-                label = { Text(stringResource(R.string.description)) },
-                placeholder = { Text(stringResource(R.string.description_hint)) },
-                minLines = 2,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            CategoryPicker(
-                categories = uiState.categories,
-                selectedCategoryId = uiState.categoryId,
-                onCategoryChange = onCategoryChange,
-                onCreateCategory = onCreateCategory,
-            )
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                NumberField(
-                    value = uiState.prepMinutes,
-                    onValueChange = onPrepMinutesChange,
-                    label = stringResource(R.string.prep_time_label),
-                    suffix = stringResource(R.string.minutes_short),
-                    modifier = Modifier.weight(1f),
-                )
-                NumberField(
-                    value = uiState.cookMinutes,
-                    onValueChange = onCookMinutesChange,
-                    label = stringResource(R.string.cook_time_label),
-                    suffix = stringResource(R.string.minutes_short),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            NumberField(
-                value = uiState.waitMinutes,
-                onValueChange = onWaitMinutesChange,
-                label = stringResource(R.string.wait_time_label),
-                suffix = stringResource(R.string.minutes_short),
-                modifier = Modifier.fillMaxWidth(0.5f),
-            )
-
-            PhotoStrip(
-                photos = uiState.photos,
-                onRemove = { onRemovePhoto(null, it) },
-                picker = photoPicker,
-                onBeforePick = { photoTargetStepId = null },
-            )
-
-            SectionTitle(stringResource(R.string.ingredients))
-            // Next to the amounts it describes: the recipe page scales them from this number.
-            NumberField(
-                value = uiState.servings,
-                onValueChange = onServingsChange,
-                label = stringResource(R.string.servings),
-                modifier = Modifier.fillMaxWidth(0.5f),
-            )
-            // Rows are dragged by their handle and swiped left to remove; the last row is the always-empty spare one.
-            ReorderableColumn(
-                list = uiState.ingredients,
-                onSettle = onMoveIngredient,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) { index, ingredient, _ ->
-                // Keyed by id so focus stays with the right field when a row above is removed.
-                key(ingredient.id) {
-                    val spare = index == uiState.ingredients.lastIndex
-                    ReorderableItem {
-                        SwipeToRemove(
-                            enabled = !spare,
-                            onRemove = {
-                                removeWithUndo(ingredientRemoved, { onRemoveIngredient(ingredient.id) }, { onRestoreIngredient(index, ingredient) })
-                            },
-                        ) {
-                            RemovableField(
-                                value = ingredient.text,
-                                onValueChange = { onIngredientChange(ingredient.id, it) },
-                                placeholder = stringResource(R.string.ingredient_hint),
-                                singleLine = true,
-                                onRemove = {
-                                    removeWithUndo(ingredientRemoved, { onRemoveIngredient(ingredient.id) }, { onRestoreIngredient(index, ingredient) })
-                                }.takeIf { !spare },
-                                handle = { DragHandle(modifier = Modifier.draggableHandle(enabled = !spare), visible = !spare) },
-                                trailing = {
-                                    if (!spare) {
-                                        OptionalToggle(
-                                            optional = ingredient.optional,
-                                            onChange = { onIngredientOptionalChange(ingredient.id, it) },
-                                        )
-                                    }
-                                },
+    // The reading page lies over the whole editor, top bar included, while a link or a photo is read.
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    colors = appBarColors(),
+                    title = {
+                        Text(stringResource(if (uiState.isNew) R.string.new_recipe else R.string.edit_recipe))
+                    },
+                    navigationIcon = {
+                        AppIconButton(R.drawable.ic_close, stringResource(R.string.close), onClick = close)
+                    },
+                    actions = {
+                        if (onReadPhotos != null) {
+                            AddPhotoButton(
+                                picker = readPicker,
+                                iconOnly = true,
+                                icon = R.drawable.ic_document_scanner,
+                                label = stringResource(R.string.photo_recipe),
+                                shortLabel = stringResource(R.string.label_photo),
                             )
                         }
-                    }
+                        AppIconButton(
+                            icon = R.drawable.ic_content_paste,
+                            contentDescription = stringResource(R.string.paste_recipe),
+                            enabled = !uiState.loading,
+                            label = stringResource(R.string.label_paste),
+                            onClick = {
+                                scope.launch {
+                                    val clip = clipboard.getClipEntry()?.clipData
+                                    val text = clip?.let { data ->
+                                        (0 until data.itemCount).joinToString("\n") { data.getItemAt(it).coerceToText(context) }
+                                    }
+                                    if (text.isNullOrBlank()) snackbarHostState.showSnackbar(pasteNothing) else onPaste(text)
+                                }
+                            },
+                        )
+                        TextButton(onClick = onSave, enabled = !uiState.loading) {
+                            Text(stringResource(R.string.save))
+                        }
+                    },
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+        ) { padding ->
+            if (uiState.loading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
                 }
+                return@Scaffold
             }
 
-            SectionTitle(stringResource(R.string.steps))
-            ReorderableColumn(
-                list = uiState.steps,
-                onSettle = onMoveStep,
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) { index, step, _ ->
-                key(step.id) {
-                    val spare = index == uiState.steps.lastIndex
-                    ReorderableItem {
-                        Column {
+            ) {
+                // Pasted text is read in a moment (longer when translated); the line says so without blocking typing.
+                AnimatedVisibility(visible = uiState.reading == ReadKind.TEXT) { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
+                OutlinedTextField(
+                    value = uiState.title,
+                    onValueChange = onTitleChange,
+                    label = { Text(stringResource(R.string.recipe_title)) },
+                    isError = uiState.titleMissing,
+                    supportingText = if (uiState.titleMissing) {
+                        { Text(stringResource(R.string.title_required)) }
+                    } else {
+                        null
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        imeAction = ImeAction.Next,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = uiState.description,
+                    onValueChange = onDescriptionChange,
+                    label = { Text(stringResource(R.string.description)) },
+                    placeholder = { Text(stringResource(R.string.description_hint)) },
+                    minLines = 2,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                CategoryPicker(
+                    categories = uiState.categories,
+                    selectedCategoryId = uiState.categoryId,
+                    onCategoryChange = onCategoryChange,
+                    onCreateCategory = onCreateCategory,
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    NumberField(
+                        value = uiState.prepMinutes,
+                        onValueChange = onPrepMinutesChange,
+                        label = stringResource(R.string.prep_time_label),
+                        suffix = stringResource(R.string.minutes_short),
+                        modifier = Modifier.weight(1f),
+                    )
+                    NumberField(
+                        value = uiState.cookMinutes,
+                        onValueChange = onCookMinutesChange,
+                        label = stringResource(R.string.cook_time_label),
+                        suffix = stringResource(R.string.minutes_short),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                NumberField(
+                    value = uiState.waitMinutes,
+                    onValueChange = onWaitMinutesChange,
+                    label = stringResource(R.string.wait_time_label),
+                    suffix = stringResource(R.string.minutes_short),
+                    modifier = Modifier.fillMaxWidth(0.5f),
+                )
+
+                PhotoStrip(
+                    photos = uiState.photos,
+                    onRemove = { onRemovePhoto(null, it) },
+                    picker = photoPicker,
+                    onBeforePick = { photoTargetStepId = null },
+                )
+
+                SectionTitle(stringResource(R.string.ingredients))
+                // Next to the amounts it describes: the recipe page scales them from this number.
+                NumberField(
+                    value = uiState.servings,
+                    onValueChange = onServingsChange,
+                    label = stringResource(R.string.servings),
+                    modifier = Modifier.fillMaxWidth(0.5f),
+                )
+                // Rows are dragged by their handle and swiped left to remove; the last row is the always-empty spare one.
+                ReorderableColumn(
+                    list = uiState.ingredients,
+                    onSettle = onMoveIngredient,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) { index, ingredient, _ ->
+                    // Keyed by id so focus stays with the right field when a row above is removed.
+                    key(ingredient.id) {
+                        val spare = index == uiState.ingredients.lastIndex
+                        ReorderableItem {
                             SwipeToRemove(
                                 enabled = !spare,
-                                onRemove = { removeWithUndo(stepRemoved, { onRemoveStep(step.id) }, { onRestoreStep(index, step) }) },
+                                onRemove = {
+                                    removeWithUndo(ingredientRemoved, { onRemoveIngredient(ingredient.id) }, { onRestoreIngredient(index, ingredient) })
+                                },
                             ) {
                                 RemovableField(
-                                    value = step.text,
-                                    onValueChange = { onStepChange(step.id, it) },
-                                    placeholder = stringResource(R.string.step_hint, index + 1),
-                                    singleLine = false,
+                                    value = ingredient.text,
+                                    onValueChange = { onIngredientChange(ingredient.id, it) },
+                                    placeholder = stringResource(R.string.ingredient_hint),
+                                    singleLine = true,
                                     onRemove = {
-                                        removeWithUndo(stepRemoved, { onRemoveStep(step.id) }, { onRestoreStep(index, step) })
+                                        removeWithUndo(ingredientRemoved, { onRemoveIngredient(ingredient.id) }, { onRestoreIngredient(index, ingredient) })
                                     }.takeIf { !spare },
                                     handle = { DragHandle(modifier = Modifier.draggableHandle(enabled = !spare), visible = !spare) },
                                     trailing = {
-                                        AddPhotoButton(
-                                            picker = photoPicker,
-                                            onBeforePick = { photoTargetStepId = step.id },
-                                            iconOnly = true,
-                                            shortLabel = stringResource(R.string.label_photo),
-                                        )
+                                        if (!spare) {
+                                            OptionalToggle(
+                                                optional = ingredient.optional,
+                                                onChange = { onIngredientOptionalChange(ingredient.id, it) },
+                                            )
+                                        }
                                     },
                                 )
-                            }
-                            if (step.photos.isNotEmpty()) {
-                                PhotoStrip(photos = step.photos, onRemove = { onRemovePhoto(step.id, it) })
                             }
                         }
                     }
                 }
+
+                SectionTitle(stringResource(R.string.steps))
+                ReorderableColumn(
+                    list = uiState.steps,
+                    onSettle = onMoveStep,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) { index, step, _ ->
+                    key(step.id) {
+                        val spare = index == uiState.steps.lastIndex
+                        ReorderableItem {
+                            Column {
+                                SwipeToRemove(
+                                    enabled = !spare,
+                                    onRemove = { removeWithUndo(stepRemoved, { onRemoveStep(step.id) }, { onRestoreStep(index, step) }) },
+                                ) {
+                                    RemovableField(
+                                        value = step.text,
+                                        onValueChange = { onStepChange(step.id, it) },
+                                        placeholder = stringResource(R.string.step_hint, index + 1),
+                                        singleLine = false,
+                                        onRemove = {
+                                            removeWithUndo(stepRemoved, { onRemoveStep(step.id) }, { onRestoreStep(index, step) })
+                                        }.takeIf { !spare },
+                                        handle = { DragHandle(modifier = Modifier.draggableHandle(enabled = !spare), visible = !spare) },
+                                        trailing = {
+                                            AddPhotoButton(
+                                                picker = photoPicker,
+                                                onBeforePick = { photoTargetStepId = step.id },
+                                                iconOnly = true,
+                                                shortLabel = stringResource(R.string.label_photo),
+                                            )
+                                        },
+                                    )
+                                }
+                                if (step.photos.isNotEmpty()) {
+                                    PhotoStrip(photos = step.photos, onRemove = { onRemovePhoto(step.id, it) })
+                                }
+                            }
+                        }
+                    }
+                }
+
+                SectionTitle(stringResource(R.string.notes))
+                OutlinedTextField(
+                    value = uiState.notes,
+                    onValueChange = onNotesChange,
+                    placeholder = { Text(stringResource(R.string.notes_hint)) },
+                    minLines = 2,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                SectionTitle(stringResource(R.string.tags))
+                OutlinedTextField(
+                    value = uiState.tags,
+                    onValueChange = onTagsChange,
+                    placeholder = { Text(stringResource(R.string.tags_hint)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                SectionTitle(stringResource(R.string.video))
+                val videoInvalid = uiState.video.isNotBlank() && videoLinkOrNull(uiState.video) == null
+                OutlinedTextField(
+                    value = uiState.video,
+                    onValueChange = onVideoChange,
+                    placeholder = { Text(stringResource(R.string.video_hint)) },
+                    supportingText = { Text(stringResource(if (videoInvalid) R.string.video_invalid else R.string.video_help)) },
+                    isError = videoInvalid,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
-
-            SectionTitle(stringResource(R.string.notes))
-            OutlinedTextField(
-                value = uiState.notes,
-                onValueChange = onNotesChange,
-                placeholder = { Text(stringResource(R.string.notes_hint)) },
-                minLines = 2,
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            SectionTitle(stringResource(R.string.tags))
-            OutlinedTextField(
-                value = uiState.tags,
-                onValueChange = onTagsChange,
-                placeholder = { Text(stringResource(R.string.tags_hint)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            SectionTitle(stringResource(R.string.video))
-            val videoInvalid = uiState.video.isNotBlank() && videoLinkOrNull(uiState.video) == null
-            OutlinedTextField(
-                value = uiState.video,
-                onValueChange = onVideoChange,
-                placeholder = { Text(stringResource(R.string.video_hint)) },
-                supportingText = { Text(stringResource(if (videoInvalid) R.string.video_invalid else R.string.video_help)) },
-                isError = videoInvalid,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
+        ReadingScreen(kind = uiState.reading, onCancel = onCancelRead)
     }
 
     if (confirmDiscard) {
