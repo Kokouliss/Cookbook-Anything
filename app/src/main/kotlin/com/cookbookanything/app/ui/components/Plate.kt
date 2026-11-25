@@ -3,8 +3,8 @@ package com.cookbookanything.app.ui.components
 import android.content.Context
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.EaseOutBounce
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -49,8 +49,11 @@ import kotlinx.coroutines.launch
  */
 class Pose(val x: Float, val y: Float, val turn: Float, val scale: Float = 1f, val alpha: Float = 1f, val behind: Boolean = false)
 
-/** Where the ingredients sit once they are on the plate: side by side on its rim, tilted as in the logo. */
-val restingPoses = listOf(Pose(28.5f, 44.5f, 0f), Pose(49.5f, 43.6f, 15f), Pose(70.5f, 44.2f, -15f))
+/** Where the ingredients end: in the air above the plate, in the same arch and tilt as in the icon. */
+val restingPoses = listOf(Pose(28f, 34f, 0f), Pose(50.5f, 17.5f, 15f), Pose(73f, 35.07f, -15f))
+
+/** Slows into place and drifts a touch past it before coming back, like something floating, with no hard stop. */
+private val Settle = CubicBezierEasing(0.34f, 1.28f, 0.64f, 1f)
 
 /** Where the ingredients are while they circle the plate, at [phase] radians round. */
 fun circlingPoses(phase: Float): List<Pose> = List(INGREDIENTS) { i ->
@@ -66,30 +69,31 @@ fun circlingPoses(phase: Float): List<Pose> = List(INGREDIENTS) { i ->
     )
 }
 
-/** An ingredient dropped from [height] units above its resting place, [t] from 0 to 1 of the fall. */
-fun fallingPose(i: Int, t: Float, height: Float = 130f): Pose {
+/** An ingredient drifting down from [height] units above its place in the air, [t] from 0 to 1 (linear time). */
+fun fallingPose(i: Int, t: Float, height: Float = FALL_HEIGHT): Pose {
     val rest = restingPoses[i]
-    val y = EaseOutBounce.transform(t)
-    return Pose(rest.x, rest.y - height * (1f - y), rest.turn - 90f * (1f - FastOutSlowInEasing.transform(t)), alpha = (t * 4f).coerceAtMost(1f))
+    val left = 1f - Settle.transform(t)
+    return Pose(rest.x, rest.y - height * left, rest.turn - FALL_TURN * left, alpha = (t * 3f).coerceAtMost(1f))
 }
 
-/** An ingredient tossed from [from] up over its resting place and dropped onto the plate, [t] from 0 to 1. */
-fun tossedPose(i: Int, from: Pose, t: Float): Pose {
+/** An ingredient gliding from [from] to its place in the air, [t] from 0 to 1 (linear time). */
+fun settlingPose(i: Int, from: Pose, t: Float): Pose {
     val rest = restingPoses[i]
-    val up = FastOutSlowInEasing.transform((t / TOSS_RISE).coerceAtMost(1f))
-    val down = EaseOutBounce.transform(((t - TOSS_RISE) / (1f - TOSS_RISE)).coerceIn(0f, 1f))
-    val top = rest.y - TOSS_HEIGHT
+    val done = Settle.transform(t)
+    // The short way round, however many turns the ingredient made while circling.
+    val turn = ((rest.turn - from.turn) % 360f + 540f) % 360f - 180f
     return Pose(
-        x = from.x + (rest.x - from.x) * up,
-        y = if (t < TOSS_RISE) from.y + (top - from.y) * up else top + (rest.y - top) * down,
-        turn = from.turn + (rest.turn - from.turn) * t,
-        scale = from.scale + (1f - from.scale) * up,
+        x = from.x + (rest.x - from.x) * done,
+        y = from.y + (rest.y - from.y) * done,
+        turn = from.turn + turn * done,
+        scale = from.scale + (1f - from.scale) * done,
+        behind = from.behind && t < 0.25f,
     )
 }
 
 private const val INGREDIENTS = 3
-private const val TOSS_RISE = 0.35f
-private const val TOSS_HEIGHT = 22f
+private const val FALL_HEIGHT = 60f
+private const val FALL_TURN = 40f
 
 /** The plate and the ingredients at [poses], read while drawing so a moving pose never recomposes. */
 @Composable
@@ -139,18 +143,19 @@ private fun equilateral() = Path().apply {
 fun animationScale(context: Context): Float =
     Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
 
-private const val FALL_MILLIS = 650
-private const val FALL_STAGGER_MILLIS = 130L
-private const val FALL_START_MILLIS = 120L
-private const val SETTLE_MILLIS = 150L
+private const val FALL_MILLIS = 850
+private const val FALL_STAGGER_MILLIS = 140L
+private const val FALL_START_MILLIS = 200L
+private const val HOLD_MILLIS = 350L
 private const val FADE_MILLIS = 250
 
 /**
- * The opening screen: the plate on the page and the three ingredients falling onto it one after
- * another, then the app shows through. About a second; a tap skips it.
+ * The opening screen: the plate on the page and the three ingredients drifting down one after
+ * another into the icon's arch above it, then the app shows through. About 1.9 s; a tap skips it.
+ * [onSettled] comes when the ingredients hang still, the moment to build the app underneath.
  */
 @Composable
-fun Preloader(onFinished: () -> Unit) {
+fun Preloader(onSettled: () -> Unit, onFinished: () -> Unit) {
     val falls = remember { List(INGREDIENTS) { Animatable(0f) } }
     val appear = remember { Animatable(0f) }
     val leave = remember { Animatable(0f) }
@@ -159,10 +164,13 @@ fun Preloader(onFinished: () -> Unit) {
         falls.forEachIndexed { i, fall ->
             launch {
                 delay(FALL_START_MILLIS + i * FALL_STAGGER_MILLIS)
-                fall.animateTo(1f, tween(FALL_MILLIS))
+                // Linear here: fallingPose gives the motion its easing.
+                fall.animateTo(1f, tween(FALL_MILLIS, easing = LinearEasing))
             }
         }
-        delay(FALL_START_MILLIS + (INGREDIENTS - 1) * FALL_STAGGER_MILLIS + FALL_MILLIS + SETTLE_MILLIS)
+        delay(FALL_START_MILLIS + (INGREDIENTS - 1) * FALL_STAGGER_MILLIS + FALL_MILLIS)
+        onSettled()
+        delay(HOLD_MILLIS)
         leave.animateTo(1f, tween(FADE_MILLIS))
         onFinished()
     }
