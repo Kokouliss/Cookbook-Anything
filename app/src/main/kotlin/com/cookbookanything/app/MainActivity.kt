@@ -37,10 +37,20 @@ class MainActivity : AppCompatActivity() {
         setContent {
             CookbookTheme {
                 var preloading by rememberSaveable { mutableStateOf(preload) }
+                // The app is built while the ingredients hang still, so building it never stalls their fall.
+                var showApp by rememberSaveable { mutableStateOf(!preload) }
                 Box(modifier = Modifier.fillMaxSize()) {
                     // The app loads underneath meanwhile.
-                    CookbookApp(viewModel)
-                    if (preloading) Preloader(onFinished = { preloading = false })
+                    if (showApp) CookbookApp(viewModel)
+                    if (preloading) {
+                        Preloader(
+                            onSettled = { showApp = true },
+                            onFinished = {
+                                preloading = false
+                                showApp = true
+                            },
+                        )
+                    }
                 }
             }
         }

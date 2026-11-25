@@ -56,13 +56,14 @@ import com.cookbookanything.app.ui.components.PlateScene
 import com.cookbookanything.app.ui.components.Pose
 import com.cookbookanything.app.ui.components.animationScale
 import com.cookbookanything.app.ui.components.circlingPoses
-import com.cookbookanything.app.ui.components.tossedPose
+import com.cookbookanything.app.ui.components.restingPoses
+import com.cookbookanything.app.ui.components.settlingPose
 import com.cookbookanything.app.ui.theme.RecipeNameFont
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val FADE_MILLIS = 220
-private const val LAND_MILLIS = 700
+private const val LAND_MILLIS = 900
 // shortcut: the stages are paced by the clock, not by the reader's real steps, as Panos allowed; report real steps if a stage ever looks wrong.
 private const val STAGE_MILLIS = 1_700L
 private const val CIRCLE_SECONDS = 2.6f
@@ -143,8 +144,8 @@ private fun ReadingPage(kind: ReadKind, finished: Boolean, onCancel: () -> Unit,
             PlateScene(
                 poses = {
                     // Each ingredient leaves the circle a moment after the one before it.
-                    landingFrom?.let { from -> from.indices.map { i -> tossedPose(i, from[i], (land.value * 1.3f - i * 0.15f).coerceIn(0f, 1f)) } }
-                        ?: circlingPoses(phase)
+                    landingFrom?.let { from -> from.indices.map { i -> settlingPose(i, from[i], (land.value * 1.3f - i * 0.15f).coerceIn(0f, 1f)) } }
+                        ?: if (speed > 0f) circlingPoses(phase) else restingPoses
                 },
                 modifier = Modifier.size(180.dp),
             )
