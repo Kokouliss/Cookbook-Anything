@@ -2,6 +2,12 @@
 
 package com.cookbookanything.app.feature.recipelist
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,7 +28,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,6 +75,7 @@ import com.cookbookanything.app.ui.components.PageCard
 import com.cookbookanything.app.ui.components.StruckText
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.pressScale
+import com.cookbookanything.app.ui.components.sharedPhoto
 import com.cookbookanything.app.ui.theme.RecipeNameFont
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
@@ -125,6 +134,8 @@ fun RecipeListScreen(
     backupOverdue: Boolean,
     onOpenSettings: () -> Unit,
 ) {
+    val gridState = rememberLazyGridState()
+    val atTop by remember { derivedStateOf { gridState.firstVisibleItemIndex == 0 } }
     // Any file type: chat apps deliver recipe files as generic documents.
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onImportRecipe(uri)
@@ -155,6 +166,8 @@ fun RecipeListScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onAddRecipe,
+                // Folds to the plus while the list is scrolled down, so it covers less; the word comes back at the top.
+                expanded = atTop,
                 icon = { AppIcon(R.drawable.ic_add, contentDescription = null) },
                 text = { Text(stringResource(R.string.add_recipe)) },
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -174,6 +187,7 @@ fun RecipeListScreen(
 
             is RecipeListUiState.Success -> RecipeList(
                 uiState = uiState,
+                gridState = gridState,
                 contentPadding = padding,
                 onOpenRecipe = onOpenRecipe,
                 onSelectCategory = onSelectCategory,
@@ -219,6 +233,7 @@ private fun RecipeSort.label(): Int = when (this) {
 @Composable
 private fun RecipeList(
     uiState: RecipeListUiState.Success,
+    gridState: LazyGridState,
     contentPadding: PaddingValues,
     onOpenRecipe: (String) -> Unit,
     onSelectCategory: (String?) -> Unit,
@@ -235,6 +250,12 @@ private fun RecipeList(
     var editingFilter by rememberSaveable { mutableStateOf(false) }
     // After the screen is restored the view model may be new, so it is told the saved text again.
     LaunchedEffect(query) { onSearch(query) }
+    // The tiles rise into place one after another the first time the list opens, not on every return.
+    var risen by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(RISE_ALL_MILLIS)
+        risen = true
+    }
 
     Column(
         modifier = Modifier
@@ -321,19 +342,22 @@ private fun RecipeList(
                 val categoryNames = uiState.categories.associate { it.id to it.name }
                 // Pictures like a cookbook's index, two across on a phone, more on a tablet.
                 LazyVerticalGrid(
+                    state = gridState,
                     columns = GridCells.Adaptive(160.dp),
                     // Bottom space keeps the last card clear of the add button.
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(uiState.recipes, key = { it.id }) { recipe ->
+                    itemsIndexed(uiState.recipes, key = { _, recipe -> recipe.id }) { index, recipe ->
                         RecipeCard(
                             recipe = recipe,
                             categoryName = categoryNames[recipe.categoryId],
                             onClick = { onOpenRecipe(recipe.id) },
                             // A sort or a filter moves cards to their new place instead of redrawing the grid.
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier
+                                .animateItem()
+                                .then(if (risen) Modifier else Modifier.riseIn(index)),
                         )
                     }
                 }
@@ -544,7 +568,7 @@ private fun RecipeCard(recipe: RecipeSummary, categoryName: String?, onClick: ()
             .aspectRatio(4f / 3f)
             .clip(MaterialTheme.shapes.medium)
         if (coverPhoto != null) {
-            RecipePhoto(name = coverPhoto, modifier = photoModifier)
+            RecipePhoto(name = coverPhoto, modifier = Modifier.sharedPhoto(coverPhoto).then(photoModifier))
         } else {
             Box(modifier = photoModifier.background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
                 DoodleImage(Doodle.Pot)
@@ -581,4 +605,23 @@ private fun recipeFacts(recipe: RecipeSummary): String? {
         recipe.servings?.let { stringResource(R.string.servings_count, it) },
         recipe.timesCooked.takeIf { it > 0 }?.let { resources.getQuantityString(R.plurals.cooked_times, it, it) },
     ).joinToString(" · ").ifEmpty { null }
+}
+
+private const val RISE_MILLIS = 320
+private const val RISE_STAGGER_MILLIS = 40L
+private const val RISE_MAX_STAGGERED = 8
+private const val RISE_ALL_MILLIS = RISE_MAX_STAGGERED * RISE_STAGGER_MILLIS + RISE_MILLIS + 60L
+
+/** Fades a tile in while it rises a little, the [index]th a moment after the one before. */
+@Composable
+private fun Modifier.riseIn(index: Int): Modifier {
+    val rise = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(index.coerceAtMost(RISE_MAX_STAGGERED) * RISE_STAGGER_MILLIS)
+        rise.animateTo(1f, tween(RISE_MILLIS, easing = FastOutSlowInEasing))
+    }
+    return graphicsLayer {
+        alpha = rise.value
+        translationY = (1f - rise.value) * 24.dp.toPx()
+    }
 }

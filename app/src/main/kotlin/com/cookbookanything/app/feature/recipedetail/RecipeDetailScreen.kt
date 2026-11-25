@@ -84,6 +84,7 @@ import com.cookbookanything.app.ui.components.CheckRow
 import com.cookbookanything.app.ui.components.ConfirmDialog
 import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.RecipePhoto
+import com.cookbookanything.app.ui.components.sharedPhoto
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
 import com.cookbookanything.app.ui.theme.RecipeNameFont
@@ -381,7 +382,7 @@ private fun RecipeContent(
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         if (recipe.photos.isNotEmpty()) {
-            item { PhotoRow(photos = recipe.photos, height = 240, modifier = Modifier.padding(top = 4.dp)) }
+            item { PhotoRow(photos = recipe.photos, height = 240, modifier = Modifier.padding(top = 4.dp), coverShared = true) }
         }
         item {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -601,7 +602,7 @@ private fun CookPromptDialog(onCooked: (Uri?) -> Unit, newCameraTarget: () -> Ur
 }
 
 @Composable
-private fun PhotoRow(photos: List<String>, height: Int, modifier: Modifier = Modifier) {
+private fun PhotoRow(photos: List<String>, height: Int, modifier: Modifier = Modifier, coverShared: Boolean = false) {
     LazyRow(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -610,7 +611,7 @@ private fun PhotoRow(photos: List<String>, height: Int, modifier: Modifier = Mod
         items(photos, key = { it }) { photo ->
             RecipePhoto(
                 name = photo,
-                modifier = Modifier
+                modifier = (if (coverShared && photo == photos.first()) Modifier.sharedPhoto(photo) else Modifier)
                     .height(height.dp)
                     .width((height * 4 / 3).dp)
                     .clip(MaterialTheme.shapes.medium),

@@ -383,4 +383,20 @@
     <string name="label_delete">Διαγραφή</string>
     <string name="label_move">Διάδρομος</string>
     <string name="label_optional">Προαιρετικό</string>
+
+    <string name="reading_title">Διαβάζω τη συνταγή</string>
+    <string-array name="reading_link_stages">
+        <item>Ανοίγω τη σελίδα</item>
+        <item>Βρίσκω τη συνταγή</item>
+        <item>Ξεχωρίζω τα υλικά</item>
+        <item>Γράφω τα βήματα</item>
+        <item>Φέρνω τη φωτογραφία</item>
+    </string-array>
+    <string-array name="reading_photo_stages">
+        <item>Κοιτάζω τη φωτογραφία</item>
+        <item>Διαβάζω τα γράμματα</item>
+        <item>Ξεχωρίζω τα υλικά</item>
+        <item>Γράφω τα βήματα</item>
+        <item>Σχεδόν έτοιμο</item>
+    </string-array>
 </resources>

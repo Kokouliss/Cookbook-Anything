@@ -29,6 +29,7 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.util.UUID
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -49,10 +50,13 @@ sealed interface ReadResult {
     data object NotTranslated : ReadResult
 }
 
+/** What is being read: a link and a photo take seconds and get the full-screen reading page, plain text only a line. */
+enum class ReadKind { TEXT, LINK, PHOTO }
+
 data class RecipeEditUiState(
     val loading: Boolean = true,
-    /** A photo or a link is being read; takes a few seconds. */
-    val reading: Boolean = false,
+    /** Null unless a photo, a link or pasted text is being read. */
+    val reading: ReadKind? = null,
     val isNew: Boolean = true,
     val title: String = "",
     val titleMissing: Boolean = false,
@@ -208,13 +212,13 @@ class RecipeEditViewModel @AssistedInject constructor(
     fun paste(text: String) {
         val link = linkIn(text)
         // Plain text goes through read() too, so the progress line shows while it is translated.
-        if (link != null) readLink(link) else read(ReadResult.Added(0, 0)) { applyParsed(parseRecipeText(text)) }
+        if (link != null) readLink(link) else read(ReadKind.TEXT, ReadResult.Added(0, 0)) { applyParsed(parseRecipeText(text)) }
     }
 
     /** What the site answered to the link that was just not read, to send on. */
     fun linkDetails(): Uri? = linkRecipeReader.detailsFile()
 
-    private fun readLink(url: String) = read(ReadResult.LinkFailed) {
+    private fun readLink(url: String) = read(ReadKind.LINK, ReadResult.LinkFailed) {
         val key = sourceKey(url)
         recipeRepository.observeSummaries().first()
             .firstOrNull { it.id != recipeId && it.source?.let(::sourceKey) == key }
@@ -250,18 +254,29 @@ class RecipeEditViewModel @AssistedInject constructor(
         return ReadResult.Added(parsed.ingredients.size, parsed.steps.size)
     }
 
-    /** Runs a read with the progress line shown, and reports [failure] when the call throws. */
-    private fun read(failure: ReadResult, block: suspend () -> ReadResult) {
-        viewModelScope.launch {
-            edit { copy(reading = true) }
-            val result = try {
-                block()
-            } catch (e: IOException) {
-                if (failure is ReadResult.PhotoFailed) ReadResult.PhotoFailed(e.message) else failure
+    private var readJob: Job? = null
+
+    /** Runs a read with its progress shown, and reports [failure] when the call throws. */
+    private fun read(kind: ReadKind, failure: ReadResult, block: suspend () -> ReadResult) {
+        readJob = viewModelScope.launch {
+            edit { copy(reading = kind) }
+            try {
+                val result = try {
+                    block()
+                } catch (e: IOException) {
+                    if (failure is ReadResult.PhotoFailed) ReadResult.PhotoFailed(e.message) else failure
+                }
+                readResults.send(result)
+            } finally {
+                // Also when the read is stopped, so the form comes back.
+                edit { copy(reading = null) }
             }
-            edit { copy(reading = false) }
-            readResults.send(result)
         }
+    }
+
+    /** Stops a read that takes too long; what it filled in so far stays. */
+    fun cancelRead() {
+        readJob?.cancel()
     }
 
     /** Adds picked photos to the step with [stepId], or to the recipe itself when it is null. */
@@ -299,7 +314,7 @@ class RecipeEditViewModel @AssistedInject constructor(
      * Reads the recipe off photos of a page (several photos for a long recipe) and fills the form
      * like pasted text. Offline, the photos are kept and read later as a new recipe.
      */
-    fun readPhotos(uris: List<Uri>) = read(ReadResult.PhotoFailed()) {
+    fun readPhotos(uris: List<Uri>) = read(ReadKind.PHOTO, ReadResult.PhotoFailed()) {
         if (!pendingPhotoReads.isOnline()) {
             pendingPhotoReads.add(uris)
             return@read ReadResult.PhotoSavedForLater
