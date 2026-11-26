@@ -3,6 +3,7 @@ package com.cookbookanything.app.feature.recipedetail
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
+import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -59,6 +60,9 @@ fun VideoPlayerDialog(link: String, onDismiss: () -> Unit) {
                 AndroidView(
                     factory = { viewContext ->
                         WebView(viewContext).apply {
+                            // Without this the view gets wrap-content params, and the browser engine then lays pages out
+                            // in a window zero pixels tall: the player (height: 100%) shrinks to nothing and never shows.
+                            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                             setBackgroundColor(android.graphics.Color.BLACK)
                             settings.javaScriptEnabled = true
                             settings.domStorageEnabled = true
