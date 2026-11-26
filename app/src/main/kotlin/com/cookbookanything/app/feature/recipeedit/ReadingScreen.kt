@@ -143,8 +143,8 @@ private fun ReadingPage(kind: ReadKind, finished: Boolean, onCancel: () -> Unit,
         ) {
             PlateScene(
                 poses = {
-                    // Each ingredient leaves the circle a moment after the one before it.
-                    landingFrom?.let { from -> from.indices.map { i -> settlingPose(i, from[i], (land.value * 1.3f - i * 0.15f).coerceIn(0f, 1f)) } }
+                    // Each piece leaves the circle a moment after the one before it; the last one lands as the glide ends.
+                    landingFrom?.let { from -> from.indices.map { i -> settlingPose(i, from[i], (land.value * 1.3f - i * 0.3f / from.lastIndex).coerceIn(0f, 1f)) } }
                         ?: if (speed > 0f) circlingPoses(phase) else restingPoses
                 },
                 modifier = Modifier.size(180.dp),

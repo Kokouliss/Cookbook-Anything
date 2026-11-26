@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Panos's cookbook icon (graphite kit, cookbook-icon.svg): the bowl in white with the family's
-     three shapes above it. The 100-unit tile is scaled to the 72 dp an adaptive icon shows. -->
+<!-- Panos's cookbook icon (six-app graphite kit, cookbook-icon.svg, 25 November 2026): the bowl in white
+     with the six AnyKind pieces heaped over it. The 100-unit tile is scaled to the 72 dp an adaptive
+     icon shows; the diamond's tip stays just inside the 66 dp safe circle. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -8,13 +9,30 @@
     android:viewportHeight="108">
     <group android:scaleX="0.72" android:scaleY="0.72" android:translateX="18" android:translateY="18">
         <group android:scaleX="0.9" android:scaleY="0.9" android:translateX="5" android:translateY="5">
-            <path android:fillColor="#FFFFFF" android:pathData="M16 54H84A34 34 0 0 1 16 54Z" />
-            <path android:fillColor="#B4472E" android:pathData="M18.5 34a9.5 9.5 0 1 0 19 0a9.5 9.5 0 1 0 -19 0Z" />
-            <group android:rotation="15" android:pivotX="50.5" android:pivotY="17.5">
-                <path android:fillColor="#B58428" android:pathData="M44 9H57A2 2 0 0 1 59 11V24A2 2 0 0 1 57 26H44A2 2 0 0 1 42 24V11A2 2 0 0 1 44 9Z" />
+            <path android:fillColor="#FFFFFF" android:pathData="M16 57H84A34 34 0 0 1 16 57Z" />
+            <!-- diamond, Vault -->
+            <group android:translateX="50" android:translateY="9">
+                <path android:fillColor="#A8556B" android:pathData="M0 -8.96L7.28 0L0 8.96L-7.28 0Z" />
             </group>
-            <group android:rotation="-15" android:pivotX="73" android:pivotY="35">
-                <path android:fillColor="#2F7F92" android:pathData="M73 21.2L85 42H61Z" />
+            <!-- square, Shelf -->
+            <group android:translateX="38.5" android:translateY="25.5" android:rotation="15">
+                <path android:fillColor="#B58428" android:pathData="M-4.9 -6.3H4.9A1.4 1.4 0 0 1 6.3 -4.9V4.9A1.4 1.4 0 0 1 4.9 6.3H-4.9A1.4 1.4 0 0 1 -6.3 4.9V-4.9A1.4 1.4 0 0 1 -4.9 -6.3Z" />
+            </group>
+            <!-- triangle, Closet -->
+            <group android:translateX="61.5" android:translateY="25.5" android:rotation="-15">
+                <path android:fillColor="#5E7A33" android:pathData="M0 -8.68L8.4 5.88H-8.4Z" />
+            </group>
+            <!-- circle, Cookbook -->
+            <group android:translateX="27" android:translateY="42">
+                <path android:fillColor="#B4472E" android:pathData="M-7.56 0A7.56 7.56 0 1 0 7.56 0A7.56 7.56 0 1 0 -7.56 0Z" />
+            </group>
+            <!-- pill, List -->
+            <group android:translateX="50" android:translateY="43">
+                <path android:fillColor="#2F7F92" android:pathData="M-4.9 -3.78H4.9A3.78 3.78 0 0 1 4.9 3.78H-4.9A3.78 3.78 0 0 1 -4.9 -3.78Z" />
+            </group>
+            <!-- plus, Chores -->
+            <group android:translateX="73" android:translateY="42">
+                <path android:fillColor="#7E5BA0" android:pathData="M-2.52 -7.84H2.52V-2.52H7.84V2.52H2.52V7.84H-2.52V2.52H-7.84V-2.52H-2.52Z" />
             </group>
         </group>
     </group>
