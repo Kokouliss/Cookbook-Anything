@@ -20,8 +20,8 @@
     <!-- Recipe list -->
     <string name="add_recipe">Νέα συνταγή</string>
     <string name="all_recipes">Όλες</string>
-    <string name="no_recipes_yet">Το βιβλίο συνταγών σου είναι άδειο. Πάτησε + για να προσθέσεις την πρώτη σου συνταγή.</string>
-    <string name="no_recipes_in_category">Δεν υπάρχουν ακόμη συνταγές σε αυτή την κατηγορία.</string>
+    <string name="no_recipes_yet">Γράψ’ τη, επικόλλησε έναν σύνδεσμο ή φωτογράφισε τη σελίδα. Όλα καταλήγουν εδώ.</string>
+    <string name="no_recipes_in_category">Αυτή η ενότητα είναι ακόμη λευκή σελίδα.</string>
     <string name="import_recipe">Εισαγωγή συνταγής</string>
     <string name="import_failed">Αυτό το αρχείο δεν είναι συνταγή ή αντίγραφο του Cookbook Anything.</string>
 
@@ -33,11 +33,9 @@
     <string name="reset_checks">Αποεπιλογή όλων</string>
     <string name="add_to_calendar">Προσθήκη στο ημερολόγιο</string>
     <string name="recipe_not_found">Αυτή η συνταγή δεν υπάρχει πια.</string>
-    <string name="delete_recipe_title">Διαγραφή αυτής της συνταγής;</string>
-    <string name="delete_recipe_text">Η συνταγή, οι φωτογραφίες, τα σχόλια και οι καταχωρίσεις της στο ημερολόγιο θα διαγραφούν οριστικά.</string>
     <string name="share_as_pdf">Ως PDF</string>
     <string name="share_as_recipe_file">Ως αρχείο συνταγής για την εφαρμογή</string>
-    <string name="share_failed">Δεν ήταν δυνατή η κοινοποίηση της συνταγής.</string>
+    <string name="share_failed">Η συνταγή δεν στάλθηκε. Δοκίμασε άλλη μία φορά.</string>
 
     <!-- Recipe editor -->
     <string name="new_recipe">Νέα συνταγή</string>
@@ -65,7 +63,7 @@
 
     <!-- Calendar -->
     <string name="schedule_recipe">Προγραμμάτισε μια συνταγή</string>
-    <string name="nothing_scheduled">Δεν έχεις προγραμματίσει κάτι για αυτή τη μέρα.</string>
+    <string name="nothing_scheduled">Ελεύθερη μέρα. Τι τραβάει η όρεξή σου;</string>
     <string name="add_a_recipe_first">Πρόσθεσε πρώτα μια συνταγή και μετά μπορείς να την προγραμματίσεις εδώ.</string>
     <string name="previous_month">Προηγούμενος μήνας</string>
     <string name="next_month">Επόμενος μήνας</string>
@@ -90,8 +88,8 @@
     <string name="backup_hint">Το αντίγραφο είναι ένα αρχείο με όλες τις συνταγές και τις φωτογραφίες σου. Κράτα ένα και εκτός τηλεφώνου.</string>
     <string name="backup_save">Αποθήκευση αντιγράφου</string>
     <string name="backup_restore">Επαναφορά από αντίγραφο</string>
-    <string name="backup_saved">Το αντίγραφο αποθηκεύτηκε.</string>
-    <string name="backup_failed">Το αντίγραφο δεν μπόρεσε να αποθηκευτεί.</string>
+    <string name="backup_saved">Το αντίγραφο αποθηκεύτηκε. Μία έγνοια λιγότερη.</string>
+    <string name="backup_failed">Το αντίγραφο δεν αποθηκεύτηκε. Οι συνταγές σου είναι ασφαλείς στο κινητό.</string>
     <string name="backup_nothing_new">Όλες οι συνταγές του αντιγράφου υπάρχουν ήδη εδώ.</string>
     <plurals name="backup_restored">
         <item quantity="one">Επαναφέρθηκε %d συνταγή.</item>
@@ -101,7 +99,7 @@
     <!-- Search -->
     <string name="search_hint">Αναζήτηση συνταγής ή υλικού</string>
     <string name="clear_search">Καθαρισμός αναζήτησης</string>
-    <string name="no_search_results">Καμία συνταγή δεν ταιριάζει με την αναζήτηση.</string>
+    <string name="no_search_results">Τίποτα με αυτό το όνομα. Δοκίμασε ένα υλικό;</string>
 
     <!-- Cooking mode -->
     <string name="start_cooking">Ξεκίνα το μαγείρεμα</string>
@@ -112,7 +110,7 @@
     <!-- Shopping list -->
     <string name="shopping_list">Λίστα για ψώνια</string>
     <string name="shopping_hint">Τα υλικά των συνταγών που έχεις προγραμματίσει. Τσέκαρε ό,τι έχεις ήδη.</string>
-    <string name="shopping_empty">Βάλε συνταγές στο ημερολόγιο και τα υλικά τους θα εμφανιστούν εδώ.</string>
+    <string name="shopping_empty">Προγραμμάτισε ένα γεύμα και τα υλικά του θα μπουν εδώ στη σειρά.</string>
 
     <!-- Servings and times -->
     <string name="servings">Μερίδες</string>
@@ -132,8 +130,8 @@
 
     <!-- Editor: reorder and remove -->
     <string name="drag_to_reorder">Σύρε για αλλαγή σειράς</string>
-    <string name="ingredient_removed">Το υλικό αφαιρέθηκε</string>
-    <string name="step_removed">Το βήμα αφαιρέθηκε</string>
+    <string name="ingredient_removed">Το υλικό σβήστηκε</string>
+    <string name="step_removed">Το βήμα σβήστηκε</string>
     <string name="undo">Αναίρεση</string>
 
     <!-- Cooking mode -->
@@ -215,12 +213,12 @@
     <string name="error_invalid_email">Αυτό δεν μοιάζει με διεύθυνση email.</string>
     <string name="error_network">Χωρίς σύνδεση. Δοκίμασε ξανά όταν είσαι online.</string>
     <string name="error_sign_in_again">Κάνε ξανά σύνδεση και μετά διέγραψε τον λογαριασμό.</string>
-    <string name="error_unknown">Κάτι πήγε στραβά. Δοκίμασε ξανά.</string>
+    <string name="error_unknown">Αυτό δεν πέτυχε. Δοκίμασε άλλη μία φορά.</string>
     <string name="photo_recipe">Ανάγνωση συνταγής από φωτογραφία</string>
     <string name="link_nothing">Δεν βρέθηκε συνταγή σε αυτόν τον σύνδεσμο. Αντίγραψε το κείμενο της συνταγής, ή βγάλε στιγμιότυπα οθόνης και διάβασέ τα με το κουμπί της φωτογραφίας.</string>
     <string name="link_send_details">Αποστολή στοιχείων</string>
-    <string name="link_failed">Η σελίδα δεν φορτώθηκε. Έλεγξε τη σύνδεση και τον σύνδεσμο.</string>
-    <string name="photo_nothing">Δεν βρέθηκε κείμενο στη φωτογραφία.</string>
+    <string name="link_failed">Η σελίδα δεν άνοιξε. Έλεγξε τη σύνδεση και τον σύνδεσμο.</string>
+    <string name="photo_nothing">Δεν βρέθηκε γραπτό στη φωτογραφία. Δοκίμασε μια πιο καθαρή και ίσια λήψη.</string>
     <string name="photo_failed">Η φωτογραφία δεν διαβάστηκε. Η απάντηση της Google:</string>
     <string name="photo_saved_offline">Χωρίς σύνδεση. Η φωτογραφία αποθηκεύτηκε και θα διαβαστεί ως νέα συνταγή όταν το τηλέφωνο συνδεθεί.</string>
     <string name="photo_read_title">Η συνταγή διαβάστηκε από τη φωτογραφία σου</string>
@@ -240,7 +238,7 @@
     <string name="favorite">Προσθήκη στα αγαπημένα</string>
     <string name="unfavorite">Αφαίρεση από τα αγαπημένα</string>
     <string name="favorites">Αγαπημένα</string>
-    <string name="no_favorites">Δεν έχεις αγαπημένα ακόμη. Πάτα την καρδιά σε μια συνταγή.</string>
+    <string name="no_favorites">Δεν έχεις αγαπημένα ακόμη. Πάτα την καρδιά σε μια συνταγή που αγαπάς.</string>
     <string name="rate_stars">Βαθμολογία %1$d από 5</string>
     <string name="source">Πηγή</string>
     <string name="source_photo">Διαβάστηκε από φωτογραφία</string>
@@ -249,6 +247,9 @@
     <string name="whats_new">Τι νέο υπάρχει</string>
     <string name="whats_new_title">Τι νέο υπάρχει στην έκδοση %1$s</string>
     <string-array name="whats_new_items">
+        <item>Περισσότερος χαρακτήρας: τίτλοι με τη γραμματοσειρά του βιβλίου, μία οικογένεια σχεδιασμένων εικονιδίων και καρτέλες κατηγοριών σαν τα διαχωριστικά ενός τετραδίου συνταγών.</item>
+        <item>Η εφαρμογή απαντά στο άγγιγμά σου: το τσεκάρισμα, η αποθήκευση και το σύρσιμο μιας γραμμής έχουν το καθένα τη δική του δόνηση. Οι αγαπημένες και οι μαγειρεμένες συνταγές παίρνουν σφραγίδα.</item>
+        <item>Διαγραφή συνταγής χωρίς ερώτηση: φεύγει αμέσως και η Αναίρεση μένει για λίγα δευτερόλεπτα.</item>
         <item>Βίντεο σε συνταγή: επικόλλησε σύνδεσμο YouTube, Instagram, TikTok ή Facebook και δες το στη σελίδα της συνταγής. Μια συνταγή που αντιγράφεται από ανάρτηση με βίντεο κρατά το βίντεό της.</item>
         <item>Πιο ήρεμη εμφάνιση: λευκές και μαύρες σελίδες με κόκκινο μόνο στα κύρια κουμπιά, και μια λέξη κάτω από κάθε εικονίδιο ενέργειας.</item>
         <item>Η ανάγνωση συνταγής από φωτογραφίες γράφει πια για σένα το όνομα, τα υλικά και τα βήματα, ακόμη και χειρόγραφα και ελληνικά.</item>
@@ -343,7 +344,7 @@
     <string name="filter_pantry">Τι έχω στο ντουλάπι</string>
     <string name="filter_pantry_hint">αυγά, σπανάκι, φέτα</string>
     <string name="clear_filters">Καθαρισμός</string>
-    <string name="no_filter_results">Καμία συνταγή δεν ταιριάζει με αυτά τα φίλτρα.</string>
+    <string name="no_filter_results">Καμία συνταγή δεν τα πιάνει όλα. Χαλάρωσε ένα;</string>
     <string name="pin">Καρφίτσωμα στην κορυφή</string>
     <string name="unpin">Ξεκαρφίτσωμα</string>
     <string name="duplicate">Αντίγραφο</string>
@@ -399,4 +400,19 @@
         <item>Γράφω τα βήματα</item>
         <item>Σχεδόν έτοιμο</item>
     </string-array>
+
+    <!-- Voice: warm, brief, a little wry, like a note on the fridge. See DESIGN.md. -->
+    <string name="empty_cookbook_title">Η καλύτερη συνταγή της γιαγιάς; Γράψ’ τη.</string>
+    <string name="shopping_empty_title">Τίποτα για ψώνια</string>
+    <string name="shopping_all_done">Όλα στο καλάθι. Καλό μαγείρεμα.</string>
+    <string name="recipe_deleted">Η συνταγή «%1$s» διαγράφηκε</string>
+    <string name="next_meal">Επόμενο γεύμα</string>
+    <string name="move_up">Μετακίνηση πάνω</string>
+    <string name="move_down">Μετακίνηση κάτω</string>
+    <!-- Rubber stamps on the recipe page: capitals without accents. -->
+    <string name="stamp_favorite">ΑΓΑΠΗΜΕΝΗ</string>
+    <plurals name="stamp_cooked">
+        <item quantity="one">ΜΑΓΕΙΡΕΥΤΗΚΕ</item>
+        <item quantity="other">ΜΑΓΕΙΡΕΥΤΗΚΕ %d×</item>
+    </plurals>
 </resources>

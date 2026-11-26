@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,16 +63,32 @@ fun DoodleImage(doodle: Doodle, modifier: Modifier = Modifier) {
     }
 }
 
-/** A doodle over a line of muted text, for a screen with nothing to list. */
+/**
+ * A page with nothing on it yet: a doodle, a line in the cook's own voice, what to do about it in
+ * muted text, and the one button that does it.
+ */
 @Composable
-fun EmptyState(doodle: Doodle, text: String, modifier: Modifier = Modifier) {
+fun EmptyState(
+    doodle: Doodle,
+    text: String,
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    action: String? = null,
+    onAction: () -> Unit = {},
+) {
     Column(modifier = modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         DoodleImage(doodle, modifier = Modifier.padding(bottom = 16.dp))
+        if (title != null) {
+            Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 8.dp))
+        }
         Text(
             text = text,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        if (action != null) {
+            Button(onClick = onAction, modifier = Modifier.padding(top = 20.dp)) { Text(action) }
+        }
     }
 }

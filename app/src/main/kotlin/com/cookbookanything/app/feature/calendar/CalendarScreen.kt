@@ -51,6 +51,8 @@ import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.Doodle
 import com.cookbookanything.app.ui.components.EmptyState
+import com.cookbookanything.app.ui.components.Touch
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.cookbookanything.app.ui.components.currentLocale
 import com.cookbookanything.app.ui.components.label
 import com.cookbookanything.app.ui.components.rememberNotificationPermissionRequest
@@ -110,6 +112,7 @@ fun CalendarScreen(
         uiState.schedule.groupBy { Instant.ofEpochMilli(it.scheduledAt).atZone(zone).toLocalDate() }
     }
     val requestNotificationPermission = rememberNotificationPermissionRequest()
+    val haptics = LocalHapticFeedback.current
 
     Scaffold(
         topBar = {
@@ -208,6 +211,7 @@ fun CalendarScreen(
             onConfirm = { dateTime, slot ->
                 pickedRecipeId = null
                 requestNotificationPermission()
+                haptics.performHapticFeedback(Touch.Done)
                 onSchedule(recipeId, dateTime.atZone(zone).toInstant().toEpochMilli(), slot)
             },
             onDismiss = { pickedRecipeId = null },

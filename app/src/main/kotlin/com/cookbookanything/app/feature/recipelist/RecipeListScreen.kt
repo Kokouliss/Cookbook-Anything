@@ -39,6 +39,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
@@ -71,12 +72,14 @@ import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.Doodle
 import com.cookbookanything.app.ui.components.DoodleImage
 import com.cookbookanything.app.ui.components.EmptyState
+import com.cookbookanything.app.ui.components.IndexTab
 import com.cookbookanything.app.ui.components.PageCard
 import com.cookbookanything.app.ui.components.StruckText
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.pressScale
 import com.cookbookanything.app.ui.components.sharedPhoto
 import com.cookbookanything.app.ui.theme.RecipeNameFont
+import com.cookbookanything.app.ui.theme.TABULAR_NUMBERS
 import com.cookbookanything.app.ui.theme.appBarColors
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
@@ -164,8 +167,11 @@ fun RecipeListScreen(
             )
         },
         floatingActionButton = {
+            val pressing = remember { MutableInteractionSource() }
             ExtendedFloatingActionButton(
                 onClick = onAddRecipe,
+                modifier = Modifier.pressScale(pressing),
+                interactionSource = pressing,
                 // Folds to the plus while the list is scrolled down, so it covers less; the word comes back at the top.
                 expanded = atTop,
                 icon = { AppIcon(R.drawable.ic_add, contentDescription = null) },
@@ -189,6 +195,7 @@ fun RecipeListScreen(
                 uiState = uiState,
                 gridState = gridState,
                 contentPadding = padding,
+                onAddRecipe = onAddRecipe,
                 onOpenRecipe = onOpenRecipe,
                 onSelectCategory = onSelectCategory,
                 onSearch = onSearch,
@@ -235,6 +242,7 @@ private fun RecipeList(
     uiState: RecipeListUiState.Success,
     gridState: LazyGridState,
     contentPadding: PaddingValues,
+    onAddRecipe: () -> Unit,
     onOpenRecipe: (String) -> Unit,
     onSelectCategory: (String?) -> Unit,
     onSearch: (String) -> Unit,
@@ -281,7 +289,7 @@ private fun RecipeList(
             }
         }
         if (!uiState.cookbookIsEmpty) {
-            HomeStrip(next = uiState.next, onOpenRecipe = onOpenRecipe, onOpenCalendar = onOpenCalendar, onOpenShoppingList = onOpenShoppingList)
+            HomeStrip(next = uiState.next, nextPhoto = uiState.nextPhoto, onOpenRecipe = onOpenRecipe, onOpenCalendar = onOpenCalendar, onOpenShoppingList = onOpenShoppingList)
             GettingStartedCard(uiState.gettingStarted)
             OutlinedTextField(
                 value = query,
@@ -314,28 +322,37 @@ private fun RecipeList(
         }
         when {
             uiState.cookbookIsEmpty -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                EmptyState(Doodle.Pot, stringResource(R.string.no_recipes_yet))
+                EmptyState(
+                    doodle = Doodle.Pot,
+                    title = stringResource(R.string.empty_cookbook_title),
+                    text = stringResource(R.string.no_recipes_yet),
+                    action = stringResource(R.string.add_recipe),
+                    onAction = onAddRecipe,
+                )
             }
 
-            uiState.recipes.isEmpty() -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringResource(
-                    when {
-                        query.isNotBlank() -> R.string.no_search_results
-                        !uiState.filter.isEmpty -> R.string.no_filter_results
-                        uiState.onlyFavorites -> R.string.no_favorites
-                        else -> R.string.no_recipes_in_category
-                    },
-                ),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+            // Nothing found is its own page: what was looked for, and the way back out of it.
+            uiState.recipes.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                when {
+                    query.isNotBlank() -> EmptyState(
+                        doodle = Doodle.Whisk,
+                        text = stringResource(R.string.no_search_results),
+                        action = stringResource(R.string.clear_search),
+                        onAction = { query = "" },
+                    )
+
+                    !uiState.filter.isEmpty -> EmptyState(
+                        doodle = Doodle.Whisk,
+                        text = stringResource(R.string.no_filter_results),
+                        action = stringResource(R.string.clear_filters),
+                        onAction = { onFilter(RecipeFilter()) },
+                    )
+
+                    else -> EmptyState(
+                        doodle = Doodle.Whisk,
+                        text = stringResource(if (uiState.onlyFavorites) R.string.no_favorites else R.string.no_recipes_in_category),
+                    )
+                }
             }
 
             else -> {
@@ -370,9 +387,9 @@ private fun RecipeList(
     }
 }
 
-/** A greeting for the time of day and tonight's plan, with the two things a cook does next. */
+/** A greeting for the time of day, the next planned meal as the page's one big thing, and the two things a cook does next. */
 @Composable
-private fun HomeStrip(next: ScheduledRecipe?, onOpenRecipe: (String) -> Unit, onOpenCalendar: () -> Unit, onOpenShoppingList: () -> Unit) {
+private fun HomeStrip(next: ScheduledRecipe?, nextPhoto: String?, onOpenRecipe: (String) -> Unit, onOpenCalendar: () -> Unit, onOpenShoppingList: () -> Unit) {
     val context = LocalContext.current
     val hour = LocalTime.now().hour
     Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp)) {
@@ -380,17 +397,38 @@ private fun HomeStrip(next: ScheduledRecipe?, onOpenRecipe: (String) -> Unit, on
             text = stringResource(if (hour < 12) R.string.greeting_morning else if (hour < 18) R.string.greeting_afternoon else R.string.greeting_evening),
             style = MaterialTheme.typography.headlineSmall,
         )
-        Text(
-            text = if (next == null) stringResource(R.string.nothing_planned_next) else whenLabel(context, next.scheduledAt) + ": " + next.recipeTitle,
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (next == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (next != null) Modifier.clickable { onOpenRecipe(next.recipeId) } else Modifier)
-                .padding(vertical = 4.dp),
-        )
+        if (next == null) {
+            Text(
+                text = stringResource(R.string.nothing_planned_next),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+        } else {
+            PageCard(onClick = { onOpenRecipe(next.recipeId) }, modifier = Modifier.padding(top = 8.dp).fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
+                    val photo = Modifier
+                        .size(72.dp)
+                        .clip(MaterialTheme.shapes.small)
+                    if (nextPhoto != null) {
+                        RecipePhoto(name = nextPhoto, modifier = photo)
+                    } else {
+                        Box(modifier = photo.background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+                            DoodleImage(Doodle.Pot, modifier = Modifier.size(48.dp))
+                        }
+                    }
+                    Column(modifier = Modifier.padding(horizontal = 12.dp).weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.next_meal) + " · " + whenLabel(context, next.scheduledAt),
+                            style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_NUMBERS),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(next.recipeTitle, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    AppIcon(R.drawable.ic_chevron_right, contentDescription = null)
+                }
+            }
+        }
         Row {
             TextButton(onClick = onOpenCalendar) { Text(stringResource(R.string.plan_a_meal)) }
             TextButton(onClick = onOpenShoppingList) { Text(stringResource(R.string.shopping_list)) }
@@ -464,27 +502,15 @@ private fun CategoryFilter(
                 label = { Text(if (set > 0) stringResource(R.string.filters) + " ($set)" else stringResource(R.string.filters)) },
             )
         }
-        // Favourites narrow whatever category is chosen, so the chip sits apart from the category chips.
         item {
             FilterChip(
                 selected = onlyFavorites,
                 onClick = { onOnlyFavorites(!onlyFavorites) },
                 label = { Text(stringResource(R.string.favorites)) },
-                leadingIcon = { AppIcon(R.drawable.ic_favorite, contentDescription = null, modifier = Modifier.size(18.dp)) },
-            )
-        }
-        item {
-            FilterChip(
-                selected = selectedCategoryId == null && categories.isNotEmpty(),
-                onClick = { onSelectCategory(null) },
-                label = { Text(stringResource(R.string.all_recipes)) },
-            )
-        }
-        items(categories, key = { it.id }) { category ->
-            FilterChip(
-                selected = selectedCategoryId == category.id,
-                onClick = { onSelectCategory(category.id) },
-                label = { Text(category.name) },
+                // Filled heart when on, outline when off: told apart by shape, not only by the chip's shade.
+                leadingIcon = {
+                    AppIcon(if (onlyFavorites) R.drawable.ic_favorite else R.drawable.ic_favorite_border, contentDescription = null, modifier = Modifier.size(18.dp))
+                },
             )
         }
         items(tags, key = { "tag-$it" }) { tag ->
@@ -495,6 +521,20 @@ private fun CategoryFilter(
                 label = { Text("#$tag") },
             )
         }
+    }
+    if (categories.isNotEmpty()) {
+        // The categories are the divider tabs of the book, standing on the rule the recipes hang under.
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            item { IndexTab(stringResource(R.string.all_recipes), selected = selectedCategoryId == null, onClick = { onSelectCategory(null) }) }
+            items(categories, key = { it.id }) { category ->
+                IndexTab(category.name, selected = selectedCategoryId == category.id, onClick = { onSelectCategory(category.id) })
+            }
+        }
+        HorizontalDivider(thickness = 1.5.dp, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

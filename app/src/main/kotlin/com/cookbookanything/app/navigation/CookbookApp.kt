@@ -8,7 +8,9 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,6 +32,8 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.Crossfade
+import kotlinx.coroutines.launch
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.runtime.CompositionLocalProvider
 import com.cookbookanything.app.ui.components.LocalSharedTransitionScope
@@ -75,7 +79,13 @@ fun CookbookApp(viewModel: MainViewModel) {
     val backupSavedMessage = stringResource(R.string.backup_saved)
     val backupFailedMessage = stringResource(R.string.backup_failed)
     val nothingNewMessage = stringResource(R.string.backup_nothing_new)
+    val undoLabel = stringResource(R.string.undo)
     val resources = context.resources
+    val openCalendar = {
+        while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        backStack.add(CalendarKey)
+        Unit
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -85,10 +95,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                     if (event.startCooking) backStack.add(CookModeKey(event.recipeId))
                 }
                 MainEvent.OpenShoppingList -> backStack.add(ShoppingListKey)
-                MainEvent.OpenCalendar -> {
-                    while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
-                    backStack.add(CalendarKey)
-                }
+                MainEvent.OpenCalendar -> openCalendar()
                 is MainEvent.NewRecipeFromText -> backStack.add(RecipeEditKey(pastedText = event.text))
                 is MainEvent.NewRecipeFromPhotos -> backStack.add(RecipeEditKey(photoUris = event.uris))
                 MainEvent.ImportFailed -> snackbarHostState.showSnackbar(importFailedMessage)
@@ -102,6 +109,20 @@ fun CookbookApp(viewModel: MainViewModel) {
                         resources.getQuantityString(R.plurals.backup_restored, event.added, event.added)
                     },
                 )
+                // Its own coroutine, so the long wait for Undo does not hold up the events behind it.
+                is MainEvent.RecipeDeleted -> launch {
+                    var undone = false
+                    try {
+                        undone = snackbarHostState.showSnackbar(
+                            message = resources.getString(R.string.recipe_deleted, event.title),
+                            actionLabel = undoLabel,
+                            duration = SnackbarDuration.Long,
+                        ) == SnackbarResult.ActionPerformed
+                    } finally {
+                        // Also when the screen is torn down mid-wait: the delete that was asked for still happens.
+                        if (undone) viewModel.undoDelete(event.recipeId) else viewModel.finishDelete(event.recipeId)
+                    }
+                }
             }
         }
     }
@@ -199,7 +220,7 @@ fun CookbookApp(viewModel: MainViewModel) {
                             )
                         }
                         entry<ShoppingListKey> {
-                            ShoppingListRoute(onBack = { backStack.removeLastOrNull() })
+                            ShoppingListRoute(onBack = { backStack.removeLastOrNull() }, onPlanMeal = openCalendar)
                         }
                         entry<CategoriesKey> {
                             CategoriesRoute(onBack = { backStack.removeLastOrNull() })
@@ -263,26 +284,34 @@ fun CookbookApp(viewModel: MainViewModel) {
 }
 
 @Composable
-private fun CookbookBottomBar(currentKey: NavKey?, onSelect: (NavKey) -> Unit) {
+internal fun CookbookBottomBar(currentKey: NavKey?, onSelect: (NavKey) -> Unit) {
     NavigationBar {
         NavigationBarItem(
             selected = currentKey == RecipeListKey,
             onClick = { onSelect(RecipeListKey) },
-            icon = { AppIcon(R.drawable.ic_restaurant, contentDescription = null) },
+            icon = { TabIcon(R.drawable.ic_cookbook, R.drawable.ic_cookbook_filled, currentKey == RecipeListKey) },
             label = { Text(stringResource(R.string.tab_recipes)) },
         )
         NavigationBarItem(
             selected = currentKey == CalendarKey,
             onClick = { onSelect(CalendarKey) },
-            icon = { AppIcon(R.drawable.ic_calendar, contentDescription = null) },
+            icon = { TabIcon(R.drawable.ic_calendar, R.drawable.ic_calendar_filled, currentKey == CalendarKey) },
             label = { Text(stringResource(R.string.tab_calendar)) },
         )
         NavigationBarItem(
             selected = currentKey == SettingsKey,
             onClick = { onSelect(SettingsKey) },
-            icon = { AppIcon(R.drawable.ic_settings, contentDescription = null) },
+            icon = { TabIcon(R.drawable.ic_settings, R.drawable.ic_settings_filled, currentKey == SettingsKey) },
             label = { Text(stringResource(R.string.tab_settings)) },
         )
+    }
+}
+
+/** Outline while the tab is closed, filled while it is open: the shape says it as well as the colour. */
+@Composable
+private fun TabIcon(outline: Int, filled: Int, selected: Boolean) {
+    Crossfade(targetState = selected, label = "tab icon") { on ->
+        AppIcon(if (on) filled else outline, contentDescription = null)
     }
 }
 

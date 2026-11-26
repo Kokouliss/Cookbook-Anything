@@ -81,7 +81,13 @@ import com.cookbookanything.app.ui.components.rememberPhotoPicker
 import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.CheckRow
-import com.cookbookanything.app.ui.components.ConfirmDialog
+import com.cookbookanything.app.ui.components.Stamp
+import com.cookbookanything.app.ui.components.Touch
+import com.cookbookanything.app.ui.components.toggle
+import com.cookbookanything.app.ui.theme.TABULAR_NUMBERS
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.runtime.key
 import com.cookbookanything.app.ui.components.DateTimePickerDialog
 import com.cookbookanything.app.ui.components.RecipePhoto
 import com.cookbookanything.app.ui.components.sharedPhoto
@@ -213,7 +219,7 @@ fun RecipeDetailScreen(
 ) {
     var shareMenuOpen by remember { mutableStateOf(false) }
     var moreMenuOpen by remember { mutableStateOf(false) }
-    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
     val loaded = uiState is RecipeDetailUiState.Success
 
     Scaffold(
@@ -230,7 +236,10 @@ fun RecipeDetailScreen(
                         AppIconButton(
                             icon = if (favorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
                             contentDescription = stringResource(if (favorite) R.string.unfavorite else R.string.favorite),
-                            onClick = { onFavorite(!favorite) },
+                            onClick = {
+                                haptics.toggle(!favorite)
+                                onFavorite(!favorite)
+                            },
                             label = stringResource(R.string.label_favorite),
                         )
                         Box {
@@ -266,7 +275,8 @@ fun RecipeDetailScreen(
                                     (if (pinned) R.string.unpin else R.string.pin) to { onPin(!pinned) },
                                     R.string.duplicate to onDuplicate,
                                     R.string.print to onPrint,
-                                    R.string.delete to { confirmDelete = true },
+                                    // No "are you sure": the recipe goes at once and Undo is offered for a while.
+                                    R.string.delete to onDelete,
                                 )
                                 actions.forEach { (label, action) ->
                                     DropdownMenuItem(
@@ -310,19 +320,6 @@ fun RecipeDetailScreen(
 
     if (cookPrompt) {
         CookPromptDialog(onCooked = onCooked, newCameraTarget = newCameraTarget, onDismiss = onDismissCookPrompt)
-    }
-
-    if (confirmDelete) {
-        ConfirmDialog(
-            title = stringResource(R.string.delete_recipe_title),
-            text = stringResource(R.string.delete_recipe_text),
-            confirmLabel = stringResource(R.string.delete),
-            onConfirm = {
-                confirmDelete = false
-                onDelete()
-            },
-            onDismiss = { confirmDelete = false },
-        )
     }
 }
 
@@ -371,6 +368,11 @@ private fun RecipeContent(
     val convertible = remember(recipe) { hasConvertibleUnits(recipe.ingredients.map { it.text }, recipe.steps.map { it.text }) }
     val countableIngredients = recipe.ingredients.filterNot { isHeading(it.text) }
     val countableSteps = recipe.steps.filterNot { isHeading(it.text) }
+    val haptics = LocalHapticFeedback.current
+    // A stamp is pressed on once, when it is earned on this page, not each time it scrolls back into view.
+    var inkedFavorite by remember { mutableStateOf(recipe.favorite) }
+    var inkedCooked by remember { mutableIntStateOf(recipe.cookedAt.size) }
+    LaunchedEffect(recipe.favorite) { if (!recipe.favorite) inkedFavorite = false }
 
     // The page of a printed cookbook: the picture, the name in the book serif, the facts between two
     // hairlines, then the sections, each with its own rule.
@@ -405,13 +407,35 @@ private fun RecipeContent(
                     )
                     HorizontalDivider()
                 }
-                if (recipe.cookedAt.isNotEmpty()) {
-                    val times = LocalContext.current.resources.getQuantityString(R.plurals.cooked_times, recipe.cookedAt.size, recipe.cookedAt.size)
-                    Text(
-                        text = times + ", " + stringResource(R.string.cooked_last, formatDate(recipe.cookedAt.last(), locale)),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                if (recipe.cookedAt.isNotEmpty() || recipe.favorite) {
+                    // What the cook thinks of it, stamped on the page as on a card that went round the family.
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        itemVerticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                    ) {
+                        val cooked = recipe.cookedAt.size
+                        if (cooked > 0) {
+                            key(cooked) {
+                                Stamp(
+                                    text = LocalContext.current.resources.getQuantityString(R.plurals.stamp_cooked, cooked, cooked),
+                                    fresh = cooked > inkedCooked,
+                                    onPressed = { inkedCooked = cooked },
+                                )
+                            }
+                        }
+                        if (recipe.favorite) {
+                            Stamp(stringResource(R.string.stamp_favorite), tilt = 3f, fresh = !inkedFavorite, onPressed = { inkedFavorite = true })
+                        }
+                        if (cooked > 0) {
+                            Text(
+                                text = stringResource(R.string.cooked_last, formatDate(recipe.cookedAt.last(), locale)),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
                 if (recipe.tags.isNotEmpty()) {
                     Text(
@@ -421,7 +445,10 @@ private fun RecipeContent(
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
-                Rating(stars = recipe.rating, onRate = onRate)
+                Rating(stars = recipe.rating, onRate = {
+                    haptics.performHapticFeedback(Touch.Notch)
+                    onRate(it)
+                })
                 recipe.source?.let { source ->
                     SourceRow(source = source, onOpen = {
                         // A bad or unknown link must not crash the page.
@@ -462,7 +489,10 @@ private fun RecipeContent(
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (baseServings != null && shownServings != null) {
-                            ServingsStepper(servings = shownServings, onChange = { scale = it.toDouble() / baseServings })
+                            ServingsStepper(servings = shownServings, onChange = {
+                                haptics.performHapticFeedback(Touch.Notch)
+                                scale = it.toDouble() / baseServings
+                            })
                         }
                         if (canScaleByIngredient) {
                             TextButton(onClick = { scalingByIngredient = true }, modifier = Modifier.padding(start = 8.dp)) {
@@ -574,6 +604,7 @@ private fun RecipeContent(
             onConfirm = { dateTime, slot ->
                 pickingDateTime = false
                 requestNotificationPermission()
+                haptics.performHapticFeedback(Touch.Done)
                 onSchedule(dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(), slot)
             },
             onDismiss = { pickingDateTime = false },
@@ -639,7 +670,7 @@ private fun SectionHeader(title: String, progress: String? = null) {
                     transitionSpec = { (slideInVertically { it } + fadeIn()) togetherWith (slideOutVertically { -it } + fadeOut()) },
                     label = "progress",
                 ) { count ->
-                    Text(count, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(count, style = MaterialTheme.typography.labelLarge.copy(fontFeatureSettings = TABULAR_NUMBERS), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -705,7 +736,7 @@ private fun ServingsStepper(servings: Int, onChange: (Int) -> Unit) {
             onClick = { onChange(servings - 1) },
             enabled = servings > 1,
         )
-        Text(servings.toString(), style = MaterialTheme.typography.titleMedium)
+        Text(servings.toString(), style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = TABULAR_NUMBERS))
         AppIconButton(
             icon = R.drawable.ic_add,
             contentDescription = stringResource(R.string.more_servings),
@@ -787,7 +818,7 @@ private fun StepRow(number: Int, step: Step, onDoneChange: (Boolean) -> Unit) {
                 textAlign = TextAlign.End,
                 modifier = Modifier
                     .width(36.dp)
-                    .padding(top = 10.dp),
+                    .padding(top = 14.dp),
             )
             CheckRow(text = step.text, checked = step.done, onCheckedChange = onDoneChange, modifier = Modifier.weight(1f))
         }

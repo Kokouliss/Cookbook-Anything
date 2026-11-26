@@ -112,3 +112,5 @@ Stack: Kotlin, Jetpack Compose with Material 3, Hilt, Room 3, Navigation 3, Work
 The colours live in `core/domain/.../design/Palette.kt` so that a unit test can check every text and background pair for contrast (WCAG AA). The look is white and black with red accents: plain white pages in light mode, near-black in dark mode, neutral greys, and the AnyKind family red only for the main button, ticks and switches. Recipe names are in Literata (the Google Play Books serif, SIL Open Font License in `app/licenses/`, Greek included); everything else is the phone's sans. Action icons carry a word under them. The launcher icon and the AnyKind wordmark are his logo files.
 
 `app/debug.keystore` is a throwaway signing key for test builds only, so that each new test build can update the previous one without wiping your recipes. It must never sign a Google Play release.
+
+How the app should look, move and talk: [DESIGN.md](DESIGN.md).

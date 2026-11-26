@@ -57,7 +57,12 @@ import com.cookbookanything.app.ui.components.AppIcon
 import com.cookbookanything.app.ui.components.AppIconButton
 import com.cookbookanything.app.ui.components.PageCard
 import com.cookbookanything.app.ui.components.RecipePhoto
+import com.cookbookanything.app.ui.components.Touch
+import com.cookbookanything.app.ui.theme.TABULAR_NUMBERS
 import com.cookbookanything.app.ui.theme.appBarColors
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.cookbookanything.core.domain.cooking.ingredientsForStep
 import com.cookbookanything.core.domain.cooking.timerMinutes
 import com.cookbookanything.core.domain.model.Recipe
@@ -115,6 +120,7 @@ fun CookModeScreen(
     // Starts where the cook left off: the first step that is not ticked yet.
     val pager = rememberPagerState(initialPage = steps.indexOfFirst { !it.done }.coerceAtLeast(0)) { steps.size }
     val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
     var showIngredients by rememberSaveable { mutableStateOf(false) }
     val position = pager.currentPage
     val isLast = position == steps.lastIndex
@@ -148,10 +154,11 @@ fun CookModeScreen(
             ) {
                 StepDots(count = steps.size, current = position)
                 Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Big enough for a floury knuckle.
                     OutlinedButton(
                         onClick = { scope.launch { pager.animateScrollToPage(position - 1) } },
                         enabled = position > 0,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
                     ) {
                         Text(stringResource(R.string.previous))
                     }
@@ -159,6 +166,7 @@ fun CookModeScreen(
                         onClick = {
                             // Moving on ticks the step, so the recipe page shows the same progress.
                             onStepDone(steps[position].id, true)
+                            haptics.performHapticFeedback(if (isLast) Touch.Done else Touch.Check)
                             if (isLast) {
                                 onFinished()
                                 onClose()
@@ -166,7 +174,7 @@ fun CookModeScreen(
                                 scope.launch { pager.animateScrollToPage(position + 1) }
                             }
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).heightIn(min = 56.dp),
                     ) {
                         Text(stringResource(if (isLast) R.string.finish else R.string.next))
                     }
@@ -274,7 +282,8 @@ private fun TimerChip(minutes: Int, timer: StepTimer?, onStart: () -> Unit, onSt
     }
     AssistChip(
         onClick = if (timer == null) onStart else onStop,
-        label = { Text(label) },
+        // Digits of one width, so the countdown does not shiver as it runs.
+        label = { Text(label, style = LocalTextStyle.current.copy(fontFeatureSettings = TABULAR_NUMBERS)) },
         leadingIcon = {
             AppIcon(
                 icon = if (timer == null) R.drawable.ic_timer else R.drawable.ic_stop,
