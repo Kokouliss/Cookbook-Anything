@@ -30,11 +30,6 @@ object Palette {
         const val SURFACE_HIGH = 0xFFEFEFEF
         const val SURFACE_HIGHEST = 0xFFE9E9E9
         const val ERROR = 0xFFB4472E
-
-        // The three shapes of the AnyKind logos, as Panos's kit sets them (app-palette.css): drawing only, never text.
-        const val KIND_CIRCLE = 0xFFB4472E
-        const val KIND_SQUARE = 0xFFB08128
-        const val KIND_TRIANGLE = 0xFF2F7F92
     }
 
     object Dark {
@@ -55,11 +50,14 @@ object Palette {
         const val SURFACE_HIGH = 0xFF262626
         const val SURFACE_HIGHEST = 0xFF303030
         const val ERROR = 0xFFDE6B52
-
-        const val KIND_CIRCLE = 0xFFBD5D47
-        const val KIND_SQUARE = 0xFFB58428
-        const val KIND_TRIANGLE = 0xFF358395
     }
+
+    /**
+     * The six AnyKind pieces (Panos's six-app kit, colors.css), in the order the cookbook heap is built:
+     * circle (Cookbook), pill (List), plus (Chores), square (Shelf), triangle (Closet), diamond (Vault).
+     * Drawing only, never text, and the same in both themes, as on the icon's ink tile.
+     */
+    val PIECES = longArrayOf(0xFFB4472E, 0xFF2F7F92, 0xFF7E5BA0, 0xFFB58428, 0xFF5E7A33, 0xFFA8556B)
 
     /** WCAG 2 contrast ratio between two opaque ARGB colours, from 1.0 to 21.0. */
     fun contrastRatio(a: Long, b: Long): Double {
