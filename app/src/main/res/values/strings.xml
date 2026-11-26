@@ -22,8 +22,8 @@
     <!-- Recipe list -->
     <string name="add_recipe">Add recipe</string>
     <string name="all_recipes">All</string>
-    <string name="no_recipes_yet">Your cookbook is empty. Tap + to add your first recipe.</string>
-    <string name="no_recipes_in_category">No recipes in this category yet.</string>
+    <string name="no_recipes_yet">Type it, paste a link, or photograph the page. It all ends up here.</string>
+    <string name="no_recipes_in_category">This section is still a blank page.</string>
     <string name="import_recipe">Import recipe</string>
     <string name="import_failed">This file is not a Cookbook Anything recipe or backup.</string>
 
@@ -35,11 +35,9 @@
     <string name="reset_checks">Uncheck everything</string>
     <string name="add_to_calendar">Add to calendar</string>
     <string name="recipe_not_found">This recipe no longer exists.</string>
-    <string name="delete_recipe_title">Delete this recipe?</string>
-    <string name="delete_recipe_text">The recipe, its photos, comments and calendar entries will be deleted for good.</string>
     <string name="share_as_pdf">As a PDF</string>
     <string name="share_as_recipe_file">As a recipe file for the app</string>
-    <string name="share_failed">The recipe could not be shared.</string>
+    <string name="share_failed">Couldn’t share the recipe. Try once more.</string>
 
     <!-- Recipe editor -->
     <string name="new_recipe">New recipe</string>
@@ -67,7 +65,7 @@
 
     <!-- Calendar -->
     <string name="schedule_recipe">Plan a recipe</string>
-    <string name="nothing_scheduled">Nothing planned for this day.</string>
+    <string name="nothing_scheduled">A free day. What sounds good?</string>
     <string name="add_a_recipe_first">Add a recipe first, then you can plan it here.</string>
     <string name="previous_month">Previous month</string>
     <string name="next_month">Next month</string>
@@ -92,8 +90,8 @@
     <string name="backup_hint">A backup is one file with all your recipes and photos. Keep a copy outside this phone.</string>
     <string name="backup_save">Save a backup</string>
     <string name="backup_restore">Restore from a backup</string>
-    <string name="backup_saved">Backup saved.</string>
-    <string name="backup_failed">The backup could not be saved.</string>
+    <string name="backup_saved">Backup saved. One less thing to worry about.</string>
+    <string name="backup_failed">Couldn’t save the backup. Your recipes are still safe on this phone.</string>
     <string name="backup_nothing_new">Every recipe in this backup is already here.</string>
     <plurals name="backup_restored">
         <item quantity="one">%d recipe restored.</item>
@@ -103,7 +101,7 @@
     <!-- Search -->
     <string name="search_hint">Search recipes or ingredients</string>
     <string name="clear_search">Clear search</string>
-    <string name="no_search_results">No recipe matches your search.</string>
+    <string name="no_search_results">Nothing by that name. Try an ingredient?</string>
 
     <!-- Cooking mode -->
     <string name="start_cooking">Start cooking</string>
@@ -114,7 +112,7 @@
     <!-- Shopping list -->
     <string name="shopping_list">Shopping list</string>
     <string name="shopping_hint">Ingredients of the recipes you planned. Tick what you already have.</string>
-    <string name="shopping_empty">Plan recipes in the calendar and their ingredients will show up here.</string>
+    <string name="shopping_empty">Plan a meal and its ingredients line up here.</string>
 
     <!-- Servings and times -->
     <string name="servings">Servings</string>
@@ -134,8 +132,8 @@
 
     <!-- Editor: reorder and remove -->
     <string name="drag_to_reorder">Drag to reorder</string>
-    <string name="ingredient_removed">Ingredient removed</string>
-    <string name="step_removed">Step removed</string>
+    <string name="ingredient_removed">Ingredient crossed out</string>
+    <string name="step_removed">Step crossed out</string>
     <string name="undo">Undo</string>
 
     <!-- Cooking mode -->
@@ -217,15 +215,15 @@
     <string name="error_invalid_email">That does not look like an email address.</string>
     <string name="error_network">No connection. Try again when you are online.</string>
     <string name="error_sign_in_again">Sign in again, then delete the account.</string>
-    <string name="error_unknown">Something went wrong. Try again.</string>
+    <string name="error_unknown">That didn’t work. Try once more.</string>
 
     <!-- Family -->
     <string name="anykind_apps" translatable="false">AnyKind Apps</string>
     <string name="photo_recipe">Read a recipe from a photo</string>
     <string name="link_nothing">No recipe was found at that link. Copy the text of the recipe instead, or take screenshots of it and read them with the photo button.</string>
     <string name="link_send_details">Send details</string>
-    <string name="link_failed">The page could not be loaded. Check the connection and the link.</string>
-    <string name="photo_nothing">No text was found in the photo.</string>
+    <string name="link_failed">Couldn’t open the page. Check the connection and the link.</string>
+    <string name="photo_nothing">Couldn’t find any writing in the photo. Try a sharper, straighter shot.</string>
     <string name="photo_failed">The photo could not be read. Google answered:</string>
     <string name="photo_saved_offline">No internet. The photo is saved and will be read as a new recipe when the phone is back online.</string>
     <string name="photo_read_title">Recipe read from your photo</string>
@@ -245,7 +243,7 @@
     <string name="favorite">Add to favourites</string>
     <string name="unfavorite">Remove from favourites</string>
     <string name="favorites">Favourites</string>
-    <string name="no_favorites">No favourites yet. Tap the heart on a recipe.</string>
+    <string name="no_favorites">No favourites yet. Tap the heart on a recipe you love.</string>
     <string name="rate_stars">Rate %1$d of 5</string>
     <string name="source">Source</string>
     <string name="source_photo">Read from a photo</string>
@@ -254,6 +252,9 @@
     <string name="whats_new">What’s new</string>
     <string name="whats_new_title">What’s new in version %1$s</string>
     <string-array name="whats_new_items">
+        <item>More character: titles in the book serif, one family of drawn icons, and category tabs like the dividers of a cookbook.</item>
+        <item>The app answers your touch: a tick, a saved recipe and a dragged row each have their own tap. Favourites and cooked dishes get a stamp.</item>
+        <item>Delete a recipe without a question: it goes at once and an Undo stays for a few seconds.</item>
         <item>A video on a recipe: paste a YouTube, Instagram, TikTok or Facebook link and watch it on the recipe page. A recipe copied from a video post keeps its video.</item>
         <item>A calmer look: white and black pages with red only on the main buttons, and a word under every action icon.</item>
         <item>Reading a recipe from photos now writes the name, ingredients and steps for you, handwriting and Greek included.</item>
@@ -348,7 +349,7 @@
     <string name="filter_pantry">What’s in my pantry</string>
     <string name="filter_pantry_hint">eggs, spinach, feta</string>
     <string name="clear_filters">Clear</string>
-    <string name="no_filter_results">No recipe matches these filters.</string>
+    <string name="no_filter_results">No recipe ticks all of these. Loosen one?</string>
     <string name="pin">Pin to the top</string>
     <string name="unpin">Unpin</string>
     <string name="duplicate">Duplicate</string>
@@ -405,4 +406,19 @@
         <item>Writing down the steps</item>
         <item>Almost ready</item>
     </string-array>
+
+    <!-- Voice: warm, brief, a little wry, like a note on the fridge. See DESIGN.md. -->
+    <string name="empty_cookbook_title">Grandma’s best? Write it down.</string>
+    <string name="shopping_empty_title">Nothing to buy</string>
+    <string name="shopping_all_done">All in the basket. Happy cooking.</string>
+    <string name="recipe_deleted">“%1$s” deleted</string>
+    <string name="next_meal">Next up</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <!-- Rubber stamps on the recipe page: capitals, written here so each language sets its own. -->
+    <string name="stamp_favorite">FAVOURITE</string>
+    <plurals name="stamp_cooked">
+        <item quantity="one">COOKED</item>
+        <item quantity="other">COOKED %d×</item>
+    </plurals>
 </resources>

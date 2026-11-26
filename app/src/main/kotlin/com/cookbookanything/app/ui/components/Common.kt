@@ -4,13 +4,13 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -188,14 +189,20 @@ fun CheckRow(
     modifier: Modifier = Modifier,
     detail: String? = null,
 ) {
+    val haptics = LocalHapticFeedback.current
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
+            // The whole row is the checkbox: one thing to touch, read out with its state.
+            .toggleable(value = checked, role = Role.Checkbox) {
+                haptics.toggle(it)
+                onCheckedChange(it)
+            }
+            .heightIn(min = 56.dp)
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Checkbox(checked = checked, onCheckedChange = null, modifier = Modifier.padding(12.dp))
         Column(modifier = Modifier.padding(end = 16.dp, top = 8.dp, bottom = 8.dp)) {
             StruckText(
                 text = text,
@@ -210,7 +217,7 @@ fun CheckRow(
     }
 }
 
-private const val STROKE_MILLIS = 350
+private const val STROKE_MILLIS = 200
 
 /** Text that a pen strikes through when [struck], from left to right, and clears again when not. */
 @Composable
@@ -250,11 +257,14 @@ fun Modifier.sharedPhoto(name: String): Modifier {
 
 private const val PRESSED_SCALE = 0.97f
 
+/** The app's one spring: quick, with a small overshoot, like paper put down on a table. */
+val PaperSpring = spring<Float>(dampingRatio = 0.75f, stiffness = 400f)
+
 /** Shrinks what is pressed a little while the finger is down, like a key going in, and springs back. */
 @Composable
 fun Modifier.pressScale(interaction: MutableInteractionSource): Modifier {
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) PRESSED_SCALE else 1f, spring(stiffness = Spring.StiffnessMedium), label = "press")
+    val scale by animateFloatAsState(if (pressed) PRESSED_SCALE else 1f, PaperSpring, label = "press")
     return graphicsLayer {
         scaleX = scale
         scaleY = scale

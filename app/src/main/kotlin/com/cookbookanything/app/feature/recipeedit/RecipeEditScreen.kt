@@ -65,6 +65,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.animation.core.animateFloatAsState
+import com.cookbookanything.app.ui.components.PaperSpring
+import com.cookbookanything.app.ui.components.Touch
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -95,8 +103,12 @@ fun RecipeEditRoute(
     onOpenRecipe: (String) -> Unit,
     viewModel: RecipeEditViewModel,
 ) {
+    val haptics = LocalHapticFeedback.current
     LaunchedEffect(viewModel) {
-        viewModel.saved.collect { recipeId -> onSaved(recipeId) }
+        viewModel.saved.collect { recipeId ->
+            haptics.performHapticFeedback(Touch.Done)
+            onSaved(recipeId)
+        }
     }
     RecipeEditScreen(
         uiState = viewModel.uiState,
@@ -172,6 +184,11 @@ fun RecipeEditScreen(
     onCancelRead: () -> Unit,
 ) {
     var confirmDiscard by rememberSaveable { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
+    // A recipe without a name is refused: the field says why, and the hand feels the no.
+    LaunchedEffect(uiState.titleMissing) { if (uiState.titleMissing) haptics.performHapticFeedback(Touch.Refused) }
+    val pickUp: (Offset) -> Unit = { haptics.performHapticFeedback(Touch.PickUp) }
+    val notch = { haptics.performHapticFeedback(Touch.Notch) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -392,12 +409,13 @@ fun RecipeEditScreen(
                 ReorderableColumn(
                     list = uiState.ingredients,
                     onSettle = onMoveIngredient,
+                    onMove = notch,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) { index, ingredient, _ ->
+                ) { index, ingredient, dragging ->
                     // Keyed by id so focus stays with the right field when a row above is removed.
                     key(ingredient.id) {
                         val spare = index == uiState.ingredients.lastIndex
-                        ReorderableItem {
+                        ReorderableItem(modifier = Modifier.lifted(dragging)) {
                             SwipeToRemove(
                                 enabled = !spare,
                                 onRemove = {
@@ -412,7 +430,14 @@ fun RecipeEditScreen(
                                     onRemove = {
                                         removeWithUndo(ingredientRemoved, { onRemoveIngredient(ingredient.id) }, { onRestoreIngredient(index, ingredient) })
                                     }.takeIf { !spare },
-                                    handle = { DragHandle(modifier = Modifier.draggableHandle(enabled = !spare), visible = !spare) },
+                                    handle = {
+                                        DragHandle(
+                                            modifier = Modifier.draggableHandle(enabled = !spare, onDragStarted = pickUp),
+                                            visible = !spare,
+                                            onMoveUp = { onMoveIngredient(index, index - 1) }.takeIf { index > 0 },
+                                            onMoveDown = { onMoveIngredient(index, index + 1) }.takeIf { index < uiState.ingredients.lastIndex - 1 },
+                                        )
+                                    },
                                     trailing = {
                                         if (!spare) {
                                             OptionalToggle(
@@ -431,11 +456,12 @@ fun RecipeEditScreen(
                 ReorderableColumn(
                     list = uiState.steps,
                     onSettle = onMoveStep,
+                    onMove = notch,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) { index, step, _ ->
+                ) { index, step, dragging ->
                     key(step.id) {
                         val spare = index == uiState.steps.lastIndex
-                        ReorderableItem {
+                        ReorderableItem(modifier = Modifier.lifted(dragging)) {
                             Column {
                                 SwipeToRemove(
                                     enabled = !spare,
@@ -449,7 +475,14 @@ fun RecipeEditScreen(
                                         onRemove = {
                                             removeWithUndo(stepRemoved, { onRemoveStep(step.id) }, { onRestoreStep(index, step) })
                                         }.takeIf { !spare },
-                                        handle = { DragHandle(modifier = Modifier.draggableHandle(enabled = !spare), visible = !spare) },
+                                        handle = {
+                                            DragHandle(
+                                                modifier = Modifier.draggableHandle(enabled = !spare, onDragStarted = pickUp),
+                                                visible = !spare,
+                                                onMoveUp = { onMoveStep(index, index - 1) }.takeIf { index > 0 },
+                                                onMoveDown = { onMoveStep(index, index + 1) }.takeIf { index < uiState.steps.lastIndex - 1 },
+                                            )
+                                        },
                                         trailing = {
                                             AddPhotoButton(
                                                 picker = photoPicker,
@@ -627,20 +660,41 @@ private fun OptionalToggle(optional: Boolean, onChange: (Boolean) -> Unit) {
     }
 }
 
-/** The grip at the start of a row. Pressing it starts the drag at once, so the text field keeps its own long press. */
+/**
+ * The grip at the start of a row. Pressing it starts the drag at once, so the text field keeps its own
+ * long press. A screen reader cannot drag, so it is offered "Move up" and "Move down" instead.
+ */
 @Composable
-private fun DragHandle(modifier: Modifier, visible: Boolean) {
+private fun DragHandle(modifier: Modifier, visible: Boolean, onMoveUp: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null) {
     if (visible) {
+        val up = stringResource(R.string.move_up)
+        val down = stringResource(R.string.move_down)
         AppIcon(
             icon = R.drawable.ic_drag_handle,
             contentDescription = stringResource(R.string.drag_to_reorder),
             modifier = modifier
+                .semantics {
+                    customActions = listOfNotNull(
+                        onMoveUp?.let { move -> CustomAccessibilityAction(up) { move(); true } },
+                        onMoveDown?.let { move -> CustomAccessibilityAction(down) { move(); true } },
+                    )
+                }
                 .padding(end = 4.dp)
                 .size(32.dp)
                 .padding(4.dp),
         )
     } else {
         Box(modifier = Modifier.width(36.dp))
+    }
+}
+
+/** A row picked up to be moved rises a little off the page, and settles back like paper put down. */
+@Composable
+private fun Modifier.lifted(dragging: Boolean): Modifier {
+    val scale by animateFloatAsState(if (dragging) 1.03f else 1f, PaperSpring, label = "lift")
+    return graphicsLayer {
+        scaleX = scale
+        scaleY = scale
     }
 }
 

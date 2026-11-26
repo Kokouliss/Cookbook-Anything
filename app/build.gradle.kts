@@ -16,7 +16,8 @@ if (file("google-services.json").exists()) {
 android {
     namespace = "com.cookbookanything.app"
     compileSdk {
-        version = release(libs.versions.compileSdk.get().toInt())
+        // Compose 1.13 asks for the 37.1 platform.
+        version = release(libs.versions.compileSdk.get().toInt()) { minorApiLevel = 1 }
     }
 
     defaultConfig {

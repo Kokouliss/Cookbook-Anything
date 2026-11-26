@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cookbookanything.app.data.cook.CookingPrompts
 import com.cookbookanything.app.data.photos.PhotoStore
+import com.cookbookanything.app.data.repository.RecipeTrash
 import com.cookbookanything.app.data.share.PdfLabels
 import com.cookbookanything.app.data.share.RecipeSharer
 import com.cookbookanything.app.reminders.CookingTimer
@@ -60,6 +61,7 @@ class RecipeDetailViewModel @AssistedInject constructor(
     private val cookingTimer: CookingTimer,
     private val cookingPrompts: CookingPrompts,
     private val photoStore: PhotoStore,
+    private val recipeTrash: RecipeTrash,
 ) : ViewModel() {
 
     private val _timer = MutableStateFlow<StepTimer?>(null)
@@ -177,11 +179,10 @@ class RecipeDetailViewModel @AssistedInject constructor(
         viewModelScope.launch { scheduleRepository.remove(scheduleId) }
     }
 
+    /** No question asked: the page closes and the recipe waits in the trash while Undo is offered. */
     fun delete() {
-        viewModelScope.launch {
-            recipeRepository.deleteRecipe(recipeId)
-            eventChannel.send(RecipeDetailEvent.Deleted)
-        }
+        recipeTrash.bin(recipeId, (uiState.value as? RecipeDetailUiState.Success)?.recipe?.title.orEmpty())
+        eventChannel.trySend(RecipeDetailEvent.Deleted)
     }
 
     fun shareAsPdf(labels: PdfLabels) = share(RecipeSharer.PDF_MIME_TYPE) { recipeSharer.exportPdf(it, labels) }

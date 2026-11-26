@@ -29,7 +29,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : Worker(contex
         if (!canNotify(context)) return Result.success()
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_restaurant)
+            .setSmallIcon(R.drawable.ic_cookbook)
             .setContentTitle(context.getString(R.string.reminder_title))
             .setContentText(title)
             .setContentIntent(openApp(context, recipeId.hashCode(), Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_RECIPE_ID, recipeId)))

@@ -2,6 +2,7 @@ package com.cookbookanything.app.feature.recipelist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cookbookanything.app.data.repository.RecipeTrash
 import com.cookbookanything.core.domain.model.Category
 import com.cookbookanything.core.domain.model.RecipeSummary
 import com.cookbookanything.core.domain.model.ScheduledRecipe
@@ -36,6 +37,7 @@ sealed interface RecipeListUiState {
         val allTags: List<String>,
         /** The next planned recipe, for the strip at the top. */
         val next: ScheduledRecipe?,
+        val nextPhoto: String? = null,
         val gettingStarted: GettingStarted,
     ) : RecipeListUiState
 }
@@ -52,6 +54,7 @@ class RecipeListViewModel @Inject constructor(
     recipeRepository: RecipeRepository,
     categoryRepository: CategoryRepository,
     scheduleRepository: ScheduleRepository,
+    recipeTrash: RecipeTrash,
 ) : ViewModel() {
     private val selectedCategoryId = MutableStateFlow<String?>(null)
     private val query = MutableStateFlow("")
@@ -63,7 +66,8 @@ class RecipeListViewModel @Inject constructor(
     private data class Options(val sort: RecipeSort, val favorites: Boolean, val filter: RecipeFilter, val schedule: List<ScheduledRecipe>)
 
     val uiState: StateFlow<RecipeListUiState> = combine(
-        recipeRepository.observeSummaries(),
+        // A recipe that was just deleted is out of sight while its Undo is on screen.
+        recipeRepository.observeSummaries().combine(recipeTrash.waiting) { recipes, waiting -> recipes.filterNot { it.id in waiting } },
         categoryRepository.observeCategories(),
         selectedCategoryId,
         query,
@@ -71,7 +75,7 @@ class RecipeListViewModel @Inject constructor(
     ) { recipes, categories, selected, searchText, (order, favorites, narrowing, schedule) ->
         // A deleted category must not keep filtering the list.
         val active = selected?.takeIf { id -> categories.any { it.id == id } }
-        val now = System.currentTimeMillis()
+        val next = System.currentTimeMillis().let { now -> schedule.firstOrNull { it.scheduledAt >= now } }
         RecipeListUiState.Success(
             recipes = recipes.filter {
                 (active == null || it.categoryId == active) && (!favorites || it.favorite) && it.matches(searchText) && it.matches(narrowing)
@@ -83,7 +87,8 @@ class RecipeListViewModel @Inject constructor(
             onlyFavorites = favorites,
             filter = narrowing,
             allTags = recipes.flatMap { it.tags }.distinctBy { it.searchKey() }.sortedBy { it.searchKey() },
-            next = schedule.firstOrNull { it.scheduledAt >= now },
+            next = next,
+            nextPhoto = recipes.firstOrNull { it.id == next?.recipeId }?.coverPhoto,
             gettingStarted = GettingStarted(
                 added = recipes.isNotEmpty(),
                 imported = recipes.any { it.source != null },

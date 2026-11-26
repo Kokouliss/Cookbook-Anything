@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cookbookanything.app.data.account.AccountRepository
 import com.cookbookanything.app.data.account.AccountState
+import com.cookbookanything.app.data.repository.RecipeTrash
 import com.cookbookanything.app.data.share.BackupManager
 import com.cookbookanything.app.data.share.BackupPreferences
 import com.cookbookanything.app.data.text.ImportPreferences
@@ -47,6 +48,8 @@ sealed interface MainEvent {
     data object LimitReached : MainEvent
     data class BackupRestored(val added: Int) : MainEvent
     data class BackupSaved(val success: Boolean) : MainEvent
+    /** A recipe was deleted and waits in the trash: time to offer Undo. */
+    data class RecipeDeleted(val recipeId: String, val title: String) : MainEvent
 }
 
 /** App-wide state: the free-tier limit, and recipes arriving from outside (shared files, reminders). */
@@ -59,6 +62,7 @@ class MainViewModel @Inject constructor(
     private val backupPreferences: BackupPreferences,
     private val accountRepository: AccountRepository,
     private val importPreferences: ImportPreferences,
+    private val recipeTrash: RecipeTrash,
 ) : ViewModel() {
 
     val uiState: StateFlow<MainUiState> = combine(
@@ -73,6 +77,20 @@ class MainViewModel @Inject constructor(
 
     private val eventChannel = Channel<MainEvent>(Channel.BUFFERED)
     val events = eventChannel.receiveAsFlow()
+
+    init {
+        viewModelScope.launch { recipeTrash.binned.collect { eventChannel.send(MainEvent.RecipeDeleted(it.recipeId, it.title)) } }
+    }
+
+    fun undoDelete(recipeId: String) = recipeTrash.release(recipeId)
+
+    /** The wait for Undo is over: now the recipe, its photos, comments and calendar entries really go. */
+    fun finishDelete(recipeId: String) {
+        viewModelScope.launch {
+            recipeRepository.deleteRecipe(recipeId)
+            recipeTrash.release(recipeId)
+        }
+    }
 
     fun openRecipe(recipeId: String, startCooking: Boolean = false) {
         eventChannel.trySend(MainEvent.OpenRecipe(recipeId, startCooking))

@@ -51,7 +51,7 @@ import com.cookbookanything.core.domain.shopping.toBuyText
 private const val LIST_ANYTHING_PACKAGE = "com.kokouliss.listanything"
 
 @Composable
-fun ShoppingListRoute(onBack: () -> Unit, viewModel: ShoppingListViewModel = hiltViewModel()) {
+fun ShoppingListRoute(onBack: () -> Unit, onPlanMeal: () -> Unit, viewModel: ShoppingListViewModel = hiltViewModel()) {
     val items by viewModel.items.collectAsStateWithLifecycle()
     val thisWeek by viewModel.thisWeek.collectAsStateWithLifecycle()
     ShoppingListScreen(
@@ -59,6 +59,7 @@ fun ShoppingListRoute(onBack: () -> Unit, viewModel: ShoppingListViewModel = hil
         thisWeek = thisWeek,
         onThisWeek = viewModel::setThisWeek,
         onBack = onBack,
+        onPlanMeal = onPlanMeal,
         onCheckedChange = viewModel::setChecked,
         onMoveToAisle = viewModel::moveToAisle,
     )
@@ -70,6 +71,7 @@ fun ShoppingListScreen(
     thisWeek: Boolean,
     onThisWeek: (Boolean) -> Unit,
     onBack: () -> Unit,
+    onPlanMeal: () -> Unit,
     onCheckedChange: (List<String>, Boolean) -> Unit,
     onMoveToAisle: (productKey: String, Aisle) -> Unit,
 ) {
@@ -127,7 +129,13 @@ fun ShoppingListScreen(
                 entries == null -> Unit
 
                 entries.isEmpty() -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EmptyState(Doodle.Basket, stringResource(R.string.shopping_empty))
+                    EmptyState(
+                        doodle = Doodle.Basket,
+                        title = stringResource(R.string.shopping_empty_title),
+                        text = stringResource(R.string.shopping_empty),
+                        action = stringResource(R.string.plan_a_meal),
+                        onAction = onPlanMeal,
+                    )
                 }
 
                 else -> ShoppingItems(entries, onCheckedChange, onMoveToAisle = { moving = it })
@@ -158,10 +166,12 @@ private fun ShoppingItems(
         contentPadding = PaddingValues(bottom = 24.dp),
     ) {
         item {
+            // With the last tick the hint gives way to a word of thanks: earned, and only then.
+            val allDone = entries.all { it.checked }
             Text(
-                text = stringResource(R.string.shopping_hint),
+                text = stringResource(if (allDone) R.string.shopping_all_done else R.string.shopping_hint),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (allDone) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             )
         }
@@ -175,7 +185,7 @@ private fun ShoppingItems(
                 )
             }
             items(aisleItems, key = { it.ingredientIds.first() }) { item ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.animateItem()) {
                     CheckRow(
                         text = item.label,
                         checked = item.checked,

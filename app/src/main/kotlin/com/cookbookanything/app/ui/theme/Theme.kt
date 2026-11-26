@@ -6,6 +6,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
@@ -14,11 +16,13 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.cookbookanything.app.R
 import com.cookbookanything.core.domain.design.Palette.Dark
 import com.cookbookanything.core.domain.design.Palette.Light
@@ -89,8 +93,8 @@ private val DarkColors = darkColorScheme(
     error = Color(Dark.ERROR),
 )
 
-// Literata, the book serif Google made for Play Books (SIL Open Font License, Greek included), only
-// for recipe names, cut at the optical size of a title. Everything else is the phone's sans.
+// Literata, the book serif Google made for Play Books (SIL Open Font License, Greek included), cut at
+// the optical size of a title. It sets everything from 20 sp up: recipe names, screen titles, headings.
 val RecipeNameFont = FontFamily(
     listOf(FontWeight.Normal, FontWeight.Medium, FontWeight.SemiBold, FontWeight.Bold).map { weight ->
         Font(
@@ -100,6 +104,43 @@ val RecipeNameFont = FontFamily(
         )
     },
 )
+
+// Inter (SIL Open Font License, Greek included) for everything smaller. Bundled, so the text looks the
+// same on every phone instead of following the maker's system font.
+private val TextFont = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+    Font(R.font.inter_semibold, FontWeight.SemiBold),
+    Font(R.font.inter_bold, FontWeight.Bold),
+)
+
+/** Digits of one width, so a running timer or a changing count does not wobble. */
+const val TABULAR_NUMBERS = "tnum"
+
+// One scale for the family: serif from 20 sp up, sans below, line heights that leave room for Greek accents.
+private val CookbookTypography = Typography().run {
+    fun TextStyle.serif(size: Int, line: Int) =
+        copy(fontFamily = RecipeNameFont, fontWeight = FontWeight.Medium, fontSize = size.sp, lineHeight = line.sp, letterSpacing = 0.sp)
+    fun TextStyle.sans(size: Int, line: Int, weight: FontWeight) =
+        copy(fontFamily = TextFont, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = 0.sp)
+    copy(
+        displayLarge = displayLarge.copy(fontFamily = RecipeNameFont),
+        displayMedium = displayMedium.copy(fontFamily = RecipeNameFont),
+        displaySmall = displaySmall.serif(36, 44),
+        headlineLarge = headlineLarge.serif(32, 40),
+        headlineMedium = headlineMedium.serif(28, 36),
+        headlineSmall = headlineSmall.serif(24, 32),
+        titleLarge = titleLarge.serif(22, 28),
+        titleMedium = titleMedium.sans(17, 24, FontWeight.SemiBold),
+        titleSmall = titleSmall.sans(14, 20, FontWeight.SemiBold),
+        bodyLarge = bodyLarge.sans(16, 24, FontWeight.Normal),
+        bodyMedium = bodyMedium.sans(14, 20, FontWeight.Normal),
+        bodySmall = bodySmall.sans(12, 16, FontWeight.Normal),
+        labelLarge = labelLarge.sans(14, 20, FontWeight.Medium),
+        labelMedium = labelMedium.sans(12, 16, FontWeight.Medium),
+        labelSmall = labelSmall.sans(11, 16, FontWeight.Medium),
+    )
+}
 
 // Corners nearer to square than Material's, like a printed page and its photos.
 private val CookbookShapes = Shapes(
@@ -115,6 +156,9 @@ fun CookbookTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
         shapes = CookbookShapes,
+        typography = CookbookTypography,
+        // Springs with a little life in them for what moves; colour and fades stay without bounce.
+        motionScheme = MotionScheme.expressive(),
         content = content,
     )
 }
