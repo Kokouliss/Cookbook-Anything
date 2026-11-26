@@ -38,6 +38,8 @@ import com.cookbookanything.core.domain.design.Palette
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -160,8 +162,10 @@ private const val FADE_MILLIS = 250
 
 /**
  * The opening screen: the bowl on the page and the six pieces drifting down one after another into
- * the icon's heap above it, bottom row first, then the app shows through. About 2.1 s; a tap skips it.
- * [onSettled] comes when the pieces hang still, the moment to build the app underneath.
+ * the icon's heap above it, bottom row first, then the app shows through. About 2.1 s, always to the
+ * end: the clock starts at the first frame on screen and waits for every piece to land, however
+ * long the app took to start. [onSettled] comes when the pieces hang still, the moment to build the
+ * app underneath.
  */
 @Composable
 fun Preloader(onSettled: () -> Unit, onFinished: () -> Unit) {
@@ -169,15 +173,15 @@ fun Preloader(onSettled: () -> Unit, onFinished: () -> Unit) {
     val appear = remember { Animatable(0f) }
     val leave = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
+        withFrameNanos { }
         launch { appear.animateTo(1f, tween(FADE_MILLIS)) }
-        falls.forEachIndexed { i, fall ->
-            launch {
-                delay(FALL_START_MILLIS + i * FALL_STAGGER_MILLIS)
-                // Linear here: fallingPose gives the motion its easing.
-                fall.animateTo(1f, tween(FALL_MILLIS, easing = LinearEasing))
+        coroutineScope {
+            falls.forEachIndexed { i, fall ->
+                // Linear here: fallingPose gives the motion its easing. The wait is part of the animation, so it runs on frames too.
+                val wait = (FALL_START_MILLIS + i * FALL_STAGGER_MILLIS).toInt()
+                launch { fall.animateTo(1f, tween(FALL_MILLIS, delayMillis = wait, easing = LinearEasing)) }
             }
         }
-        delay(FALL_START_MILLIS + (PIECES - 1) * FALL_STAGGER_MILLIS + FALL_MILLIS)
         onSettled()
         delay(HOLD_MILLIS)
         leave.animateTo(1f, tween(FADE_MILLIS))
@@ -189,7 +193,8 @@ fun Preloader(onSettled: () -> Unit, onFinished: () -> Unit) {
             .fillMaxSize()
             .graphicsLayer { alpha = 1f - leave.value }
             .background(MaterialTheme.colorScheme.background)
-            .pointerInput(Unit) { awaitPointerEventScope { awaitPointerEvent(); onFinished() } },
+            // Touches stop here: the opening always plays to the end.
+            .pointerInput(Unit) {},
         contentAlignment = Alignment.Center,
     ) {
         Column(

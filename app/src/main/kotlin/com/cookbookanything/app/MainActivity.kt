@@ -31,9 +31,9 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) handleIntent(intent)
-        // The preloader plays when the app is opened from its icon, not when a share, a notification or a
-        // restore opens it on a page, and not when the phone's animations are off.
-        val preload = savedInstanceState == null && intent?.action == Intent.ACTION_MAIN && animationScale(this) > 0f
+        // The preloader plays every time the app opens (Panos: "always play fully when you open the app"), not when
+        // an open app comes back to the front or is rebuilt after a rotation, and not when the phone's animations are off.
+        val preload = savedInstanceState == null && animationScale(this) > 0f
         setContent {
             CookbookTheme {
                 var preloading by rememberSaveable { mutableStateOf(preload) }
