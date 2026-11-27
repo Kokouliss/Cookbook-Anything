@@ -42,8 +42,10 @@ private val recipePrefix = Regex("""^(?:recipe|συνταγη)\s*[:\-–]\s*""",
 private val greekLetters = Regex("""[α-ωΑ-Ωά-ώΆ-Ώ]""")
 private val latinLetters = Regex("""[a-zA-Z]""")
 private const val SHORT_LINE = 40
-private const val TITLE_LENGTH = 60
-private const val TITLE_WORDS = 8
+// A caption's title names the dish and what is in it ("… με μπρόκολο, γαλοπούλα, φέτα και γκούντα 🥦"), so it runs to
+// nine words; an opening sentence ("Στείλε αυτή τη συνταγή στο άτομο που …") runs longer. Counted without the emoji.
+private const val TITLE_LENGTH = 70
+private const val TITLE_WORDS = 10
 private const val POINTER_LINE = 60
 private val servingsLine = Regex(
     """(?:^|\b)(?:(\d{1,2})\s*(?:servings?|portions?|people|μεριδεσ|ατομα)|(?:serves|servings?|yield|μεριδεσ|για)\D{0,3}(\d{1,2}))(?:\b|$)""",
@@ -81,13 +83,17 @@ fun parseRecipeText(text: String, language: String = Locale.getDefault().languag
 
     lines.forEach { raw ->
         val key = raw.trim { !it.isLetterOrDigit() }.searchKey()
+        // "Υλικά (4–6 μερίδες)" is still the header; what the brackets say is read for the servings.
+        val header = key.substringBefore('(').trim { !it.isLetterOrDigit() }
+        val found = servingsLine.find(key)?.let { it.groupValues[1].ifEmpty { it.groupValues[2] }.toIntOrNull() }
         when {
-            key in INGREDIENT_HEADERS -> mode = Mode.INGREDIENTS
-            key in STEP_HEADERS -> mode = Mode.STEPS
+            header in INGREDIENT_HEADERS || header in STEP_HEADERS -> {
+                mode = if (header in INGREDIENT_HEADERS) Mode.INGREDIENTS else Mode.STEPS
+                if (header != key) servings = servings ?: found
+            }
             else -> {
-                val found = servingsLine.find(key)
                 if (found != null && servings == null && raw.length <= 40) {
-                    servings = (found.groupValues[1].ifEmpty { found.groupValues[2] }).toIntOrNull()
+                    servings = found
                     return@forEach
                 }
                 val line = raw.replace(bullet, "").trim()
@@ -97,13 +103,15 @@ fun parseRecipeText(text: String, language: String = Locale.getDefault().languag
                 val beforeRecipe = mode == null && ingredients.isEmpty() && steps.isEmpty()
                 lastWasIngredient = false
                 when {
+                    // "Would you have it for breakfast?" under a list is the author talking, not a line of the recipe.
+                    !beforeRecipe && (line.endsWith("?") || line.endsWith(";")) -> Unit
                     isHeading(line) -> {
                         if (mode == Mode.STEPS || (mode == null && steps.isNotEmpty())) steps += line else { ingredients += line; lastWasIngredient = true }
                     }
                     beforeRecipe && title == null && looksLikeTitle(raw, line) -> title = cleanTitle(line)
                     mode == Mode.INGREDIENTS -> ingredients += line
                     mode == Mode.STEPS -> steps += line
-                    amountLed.containsMatchIn(raw) && !stepNumber.containsMatchIn(raw) -> { ingredients += line; lastWasIngredient = true }
+                    amountLed.containsMatchIn(line) && !stepNumber.containsMatchIn(raw) -> { ingredients += line; lastWasIngredient = true }
                     continuesIngredients -> { ingredients += line; lastWasIngredient = true }
                     beforeRecipe && !stepNumber.containsMatchIn(raw) -> description += line
                     looksLikeStep || steps.isNotEmpty() || line.endsWith(".") -> steps += line
@@ -129,7 +137,7 @@ fun parseRecipeText(text: String, language: String = Locale.getDefault().languag
 }
 
 private fun looksLikeTitle(raw: String, line: String): Boolean =
-    line.length <= TITLE_LENGTH && line.split(Regex("""\s+""")).size <= TITLE_WORDS && !amountLed.containsMatchIn(raw) &&
+    cleanTitle(line).let { it.length <= TITLE_LENGTH && it.split(Regex("""\s+""")).size <= TITLE_WORDS } && !amountLed.containsMatchIn(line) &&
         !stepNumber.containsMatchIn(raw) && !line.trimEnd('.', '!').contains(". ") && !line.endsWith(".")
 
 /** Drops a "Recipe:" prefix and the emoji or punctuation a caption decorates its title with. */

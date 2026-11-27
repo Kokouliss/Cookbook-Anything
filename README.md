@@ -73,7 +73,7 @@ Deleting the account from Settings deletes the Firebase user. Nothing else is st
 
 ### Recipe from a photo or a reel (Gemini)
 
-The "Read a recipe from a photo" button in the editor sends the photos to Gemini (`gemini-3.8-flash`, or Google's newest flash model when that one is retired), which reads Greek and English, printed and handwritten, and answers with the name, ingredients and steps; the form is filled like pasted text. A link to a reel whose caption holds no recipe sends the video the same way. Offline, the photo is kept and read as soon as the phone is back online; it then becomes a new recipe with the photo attached, announced by a notification. When Google refuses, the message in the editor shows its answer; a reel then still gives its name, picture and video.
+The "Read a recipe from a photo" button in the editor sends the photos to Gemini (`gemini-3.8-flash`, or Google's newest flash model when that one is retired), which reads Greek and English, printed and handwritten, and answers with the name, ingredients and steps; the form is filled like pasted text. A link to a reel whose caption leaves out the ingredients or the steps sends the video the same way, and waits up to a minute for the answer. Offline, the photo is kept and read as soon as the phone is back online; it then becomes a new recipe with the photo attached, announced by a notification. When Google refuses, the message in the editor shows its answer; a reel then still gives its name, picture and video.
 
 It needs a Gemini API key. Google refuses the Firebase project's own key for Gemini ("403: Permission denied on the service"), so the key comes from Google AI Studio:
 

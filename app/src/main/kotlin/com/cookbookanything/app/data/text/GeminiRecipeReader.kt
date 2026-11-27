@@ -32,9 +32,10 @@ class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
     /**
      * The recipe in [media] (bytes and MIME type, in order) as text laid out for
      * [com.cookbookanything.core.domain.text.parseRecipeText], or null when there is none.
-     * [subject] says what the media are, [PHOTOS] or [VIDEO]. Throws [IOException] when the call fails.
+     * [subject] says what the media are, [PHOTOS] or [VIDEO]. Throws [IOException] when the call fails
+     * or the model takes longer than [timeoutMs].
      */
-    suspend fun read(media: List<Pair<ByteArray, String>>, subject: String): String? = withContext(Dispatchers.IO) {
+    suspend fun read(media: List<Pair<ByteArray, String>>, subject: String, timeoutMs: Int = TIMEOUT_MS): String? = withContext(Dispatchers.IO) {
         val request = buildJsonObject {
             putJsonArray("contents") {
                 add(
@@ -48,10 +49,14 @@ class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
                     },
                 )
             }
-            putJsonObject("generationConfig") { put("temperature", 0.2) }
+            putJsonObject("generationConfig") {
+                put("temperature", 0.2)
+                // Copying out a recipe needs no pondering; the default (medium) only makes the reader wait.
+                putJsonObject("thinkingConfig") { put("thinkingLevel", "LOW") }
+            }
         }
         val (working, answer) = firstAvailableModel(MODELS, model, gone = { (it as? GoogleApi.Refused)?.code == 404 }) {
-            api.post("$ENDPOINT/$it:generateContent", request, "Gemini", timeoutMs = TIMEOUT_MS)
+            api.post("$ENDPOINT/$it:generateContent", request, "Gemini", timeoutMs = timeoutMs)
         }
         model = working
         val text = answer["candidates"]?.jsonArray?.firstOrNull()?.jsonObject
