@@ -44,6 +44,8 @@ sealed interface ReadResult {
     data object PhotoSavedForLater : ReadResult
     data object LinkNothing : ReadResult
     data object LinkFailed : ReadResult
+    /** The caption came through without a recipe and the model could not listen to the video; [reason] is its answer. */
+    data class VideoNotHeard(val reason: String) : ReadResult
     /** The link was saved before, as the recipe named here. */
     data class Duplicate(val recipeId: String, val title: String) : ReadResult
     /** Translation was switched on but did not work; the recipe is kept in its own language. */
@@ -223,9 +225,9 @@ class RecipeEditViewModel @AssistedInject constructor(
         recipeRepository.observeSummaries().first()
             .firstOrNull { it.id != recipeId && it.source?.let(::sourceKey) == key }
             ?.let { return@read ReadResult.Duplicate(it.id, it.title) }
-        val (recipe, photo) = linkRecipeReader.read(url) ?: return@read ReadResult.LinkNothing
+        val (recipe, photo, unheard) = linkRecipeReader.read(url) ?: return@read ReadResult.LinkNothing
         edit { copy(photos = if (photo != null) photos + photo else photos, source = source ?: url) }
-        applyParsed(recipe)
+        applyParsed(recipe).let { added -> if (unheard != null) ReadResult.VideoNotHeard(unheard) else added }
     }
 
     /**

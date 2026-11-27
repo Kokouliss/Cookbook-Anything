@@ -204,6 +204,7 @@ fun RecipeEditScreen(
     val photoSavedOffline = stringResource(R.string.photo_saved_offline)
     val linkNothing = stringResource(R.string.link_nothing)
     val linkFailed = stringResource(R.string.link_failed)
+    val videoNotHeard = stringResource(R.string.video_not_heard)
     val sendDetails = stringResource(R.string.link_send_details)
     val pastedPartial = stringResource(R.string.pasted_partial)
     val open = stringResource(R.string.open)
@@ -211,7 +212,7 @@ fun RecipeEditScreen(
     LaunchedEffect(readResults) {
         readResults.collect { result ->
             // A link that was not read offers the page the site answered with, so the reason can be found.
-            val unreadLink = result == ReadResult.LinkNothing || result == ReadResult.LinkFailed
+            val unreadLink = result == ReadResult.LinkNothing || result == ReadResult.LinkFailed || result is ReadResult.VideoNotHeard
             val failedPhoto = result is ReadResult.PhotoFailed
             val duplicate = result as? ReadResult.Duplicate
             val pressed = snackbarHostState.showSnackbar(
@@ -231,6 +232,7 @@ fun RecipeEditScreen(
                     ReadResult.PhotoSavedForLater -> photoSavedOffline
                     ReadResult.LinkNothing -> linkNothing
                     ReadResult.LinkFailed -> linkFailed
+                    is ReadResult.VideoNotHeard -> "$videoNotHeard\n${result.reason}"
                     is ReadResult.Duplicate -> context.getString(R.string.link_duplicate, result.title)
                     ReadResult.NotTranslated -> notTranslated
                 },

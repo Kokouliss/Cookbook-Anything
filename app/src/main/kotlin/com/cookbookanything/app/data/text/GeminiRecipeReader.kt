@@ -1,6 +1,7 @@
 package com.cookbookanything.app.data.text
 
 import android.util.Base64
+import com.cookbookanything.core.domain.text.firstAvailableModel
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,6 +26,9 @@ class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
 
     val available: Boolean get() = api.available
 
+    // The place in MODELS of the one that last answered, so a retired model is not sent a whole video again.
+    @Volatile private var model = 0
+
     /**
      * The recipe in [media] (bytes and MIME type, in order) as text laid out for
      * [com.cookbookanything.core.domain.text.parseRecipeText], or null when there is none.
@@ -46,7 +50,10 @@ class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
             }
             putJsonObject("generationConfig") { put("temperature", 0.2) }
         }
-        val answer = api.post(ENDPOINT, request, "Gemini", timeoutMs = TIMEOUT_MS)
+        val (working, answer) = firstAvailableModel(MODELS, model, gone = { (it as? GoogleApi.Refused)?.code == 404 }) {
+            api.post("$ENDPOINT/$it:generateContent", request, "Gemini", timeoutMs = TIMEOUT_MS)
+        }
+        model = working
         val text = answer["candidates"]?.jsonArray?.firstOrNull()?.jsonObject
             ?.get("content")?.jsonObject?.get("parts")?.jsonArray
             ?.mapNotNull { it.jsonObject["text"]?.jsonPrimitive?.content }
@@ -58,8 +65,11 @@ class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
         const val PHOTOS = "one or more photos of the same recipe, in order (a cookbook page, a handwritten card or a screenshot)"
         const val VIDEO = "a cooking video"
 
-        // shortcut: the model name is fixed here, move it to a remote setting if Google retires it
-        private const val ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        // Google retires models with a 404 (gemini-2.5-flash, November 2026), so after the named one comes
+        // the alias that always points at its newest flash model, which can be a preview with tighter limits.
+        // shortcut: both names are fixed here, move them to a remote setting if the alias goes too
+        private val MODELS = listOf("gemini-3.8-flash", "gemini-flash-latest")
+        private const val ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
         private const val TIMEOUT_MS = 120_000
         private const val NONE = "NONE"
         private const val PROMPT = "This is %s. Write down the recipe that is written, spoken or shown in it, in its own language, " +

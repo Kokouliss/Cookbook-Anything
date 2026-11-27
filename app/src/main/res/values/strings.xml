@@ -223,6 +223,7 @@
     <string name="link_nothing">No recipe was found at that link. Copy the text of the recipe instead, or take screenshots of it and read them with the photo button.</string>
     <string name="link_send_details">Send details</string>
     <string name="link_failed">Couldn’t open the page. Check the connection and the link.</string>
+    <string name="video_not_heard">The caption holds no recipe and the video could not be listened to, so only the name, picture and video were added. Google answered:</string>
     <string name="photo_nothing">Couldn’t find any writing in the photo. Try a sharper, straighter shot.</string>
     <string name="photo_failed">The photo could not be read. Google answered:</string>
     <string name="photo_saved_offline">No internet. The photo is saved and will be read as a new recipe when the phone is back online.</string>
