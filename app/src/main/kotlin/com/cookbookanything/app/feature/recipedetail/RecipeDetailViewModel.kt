@@ -8,6 +8,7 @@ import com.cookbookanything.app.data.photos.PhotoStore
 import com.cookbookanything.app.data.repository.RecipeTrash
 import com.cookbookanything.app.data.share.PdfLabels
 import com.cookbookanything.app.data.share.RecipeSharer
+import com.cookbookanything.app.data.text.LinkRecipeReader
 import com.cookbookanything.app.reminders.CookingTimer
 import com.cookbookanything.core.domain.ingredients.isHeading
 import com.cookbookanything.core.domain.model.MealSlot
@@ -20,6 +21,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,6 +30,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 sealed interface RecipeDetailUiState {
     data object Loading : RecipeDetailUiState
@@ -51,6 +54,8 @@ sealed interface RecipeDetailEvent {
     data class Duplicated(val recipeId: String) : RecipeDetailEvent
 }
 
+private const val VIDEO_FILE_TIMEOUT_MS = 5_000L
+
 @HiltViewModel(assistedFactory = RecipeDetailViewModel.Factory::class)
 class RecipeDetailViewModel @AssistedInject constructor(
     @Assisted private val recipeId: String,
@@ -62,7 +67,18 @@ class RecipeDetailViewModel @AssistedInject constructor(
     private val cookingPrompts: CookingPrompts,
     private val photoStore: PhotoStore,
     private val recipeTrash: RecipeTrash,
+    private val linkRecipeReader: LinkRecipeReader,
 ) : ViewModel() {
+
+    /**
+     * The video file to play for [link] in place of its site's player, or null to use the player.
+     * The player is the fallback, so the lookup gets a few seconds and no more.
+     */
+    suspend fun videoFile(link: String): String? {
+        // Awaited, not called, so the limit holds even while the request itself cannot be interrupted.
+        val file = viewModelScope.async { runCatching { linkRecipeReader.videoFile(link) }.getOrNull() }
+        return withTimeoutOrNull(VIDEO_FILE_TIMEOUT_MS) { file.await() }
+    }
 
     private val _timer = MutableStateFlow<StepTimer?>(null)
     val timer: StateFlow<StepTimer?> = _timer

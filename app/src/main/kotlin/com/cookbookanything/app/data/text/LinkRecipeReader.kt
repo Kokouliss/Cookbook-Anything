@@ -91,6 +91,14 @@ class LinkRecipeReader @Inject constructor(
         LinkRead(recipe, photo, unheard)
     }
 
+    /**
+     * A fresh address of the video file of the Instagram post at [link], to play on its own; Instagram
+     * signs each address for a day or two only. Null for any other link, or when the post's page gives none.
+     */
+    suspend fun videoFile(link: String): String? = withContext(Dispatchers.IO) {
+        instagramEmbedUrl(link)?.let { runCatching { fetch(it) }.getOrNull() }?.let(::parseRecipeHtml)?.videoUrl
+    }
+
     /** The recipe said in the video at [video], or null when it holds none or is too big to send. Throws [IOException] when the model refuses. */
     private suspend fun listen(video: String): ParsedRecipe? {
         val connection = runCatching { open(video) }.getOrNull() ?: return null
