@@ -7,6 +7,7 @@ import com.google.firebase.FirebaseApp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -43,8 +44,18 @@ class GoogleApi @Inject constructor(@ApplicationContext private val context: Con
             connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             connection.setRequestProperty("X-Android-Package", context.packageName)
             connection.setRequestProperty("X-Android-Cert", signingCertificateSha1())
-            connection.outputStream.use { it.write(body.toString().toByteArray()) }
-            val code = connection.responseCode
+            // Streamed, so the write lasts as long as the upload and [timeoutMs] is all Google's own time.
+            val bytes = body.toString().toByteArray()
+            connection.setFixedLengthStreamingMode(bytes.size)
+            val started = System.currentTimeMillis()
+            connection.outputStream.use { it.write(bytes) }
+            val sent = (System.currentTimeMillis() - started) / 1000
+            val code = try {
+                connection.responseCode
+            } catch (e: SocketTimeoutException) {
+                // Says which side was slow, the phone's upload or the model.
+                throw IOException("$service did not answer within ${timeoutMs / 1000} s (${bytes.size / 1024} KB sent in $sent s)", e)
+            }
             val text = (if (code < 400) connection.inputStream else connection.errorStream)?.bufferedReader()?.readText().orEmpty()
             // An HTML error page from a proxy or captive portal is a failed call, not a crash.
             val json = runCatching { Json.parseToJsonElement(text.ifBlank { "{}" }).jsonObject }

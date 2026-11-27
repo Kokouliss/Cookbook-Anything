@@ -58,20 +58,29 @@ class LinkRecipeReader @Inject constructor(
         // A caption that only points at a blog ("full recipe at …") is read from the blog itself.
         val blog = page.link?.takeIf { page.ingredients.isEmpty() }?.let { runCatching { load(it) }.getOrNull() }?.takeIf { it.ingredients.isNotEmpty() }
         val written = blog?.let { it.copy(title = it.title ?: page.title, description = it.description ?: page.description, imageUrl = it.imageUrl ?: page.imageUrl) } ?: page
-        // A reel whose caption gives no ingredients is listened to; the model writes the recipe down.
+        // A reel whose caption leaves out the ingredients or the steps is listened to; the model writes the recipe down.
         // When listening fails, what the caption gave (name, description, picture, video) is still worth keeping.
         var unheard: String? = null
-        val spoken = written.videoUrl?.takeIf { written.ingredients.isEmpty() && gemini.available }?.let { video ->
+        val spoken = written.videoUrl?.takeIf { (written.ingredients.isEmpty() || written.steps.isEmpty()) && gemini.available }?.let { video ->
             try {
                 listen(video)
             } catch (e: IOException) {
-                writeDetails(url, "The page was read: name \"${written.title}\", ${written.steps.size} steps, no ingredients.\nVideo: $video\nListening to the video failed: $e")
+                writeDetails(url, "The page was read: name \"${written.title}\", ${written.ingredients.size} ingredients, ${written.steps.size} steps.\nVideo: $video\nListening to the video failed: $e")
                 if (written.isEmpty) throw e
                 unheard = e.message ?: e.toString()
                 null
             }
         }
-        val text = spoken?.copy(title = written.title ?: spoken.title, description = written.description ?: spoken.description, imageUrl = written.imageUrl) ?: written
+        // The caption's own ingredients are exact, so they stay; the steps are the video's when it gave any.
+        val text = spoken?.let {
+            written.copy(
+                title = written.title ?: it.title,
+                description = written.description ?: it.description,
+                servings = written.servings ?: it.servings,
+                ingredients = written.ingredients.ifEmpty { it.ingredients },
+                steps = it.steps.ifEmpty { written.steps },
+            )
+        } ?: written
         if (text.isEmpty) return@withContext null
         // The video to watch: the post itself when it is one, else the player the page embeds, else an Instagram post that carried a video.
         // shortcut: a short link (vm.tiktok.com) only counts when its page names the full address in og:url, pass the address after redirects if they turn up without a video.
@@ -91,7 +100,7 @@ class LinkRecipeReader @Inject constructor(
             connection.disconnect()
         }
         if (bytes.size > MAX_VIDEO_BYTES) return null
-        val text = gemini.read(listOf(bytes to mimeType), GeminiRecipeReader.VIDEO)
+        val text = gemini.read(listOf(bytes to mimeType), GeminiRecipeReader.VIDEO, timeoutMs = LISTEN_TIMEOUT_MS)
         return text?.let(::parseRecipeText)?.takeIf { it.ingredients.isNotEmpty() || it.steps.isNotEmpty() }
     }
 
@@ -194,6 +203,8 @@ class LinkRecipeReader @Inject constructor(
         const val MAX_IMAGE_BYTES = 6L * 1024 * 1024
         /** The model takes a request of 20 MB; a reel is a few. */
         const val MAX_VIDEO_BYTES = 15 * 1024 * 1024
+        /** How long the model may take over a video; past that the caption alone is better than more waiting. */
+        const val LISTEN_TIMEOUT_MS = 60_000
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
     }
 }

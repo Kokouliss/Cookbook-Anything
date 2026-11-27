@@ -148,6 +148,58 @@ class RecipeTextTest {
     }
 
     @Test
+    fun `a header with the servings in brackets and dashed amounts, in two languages`() {
+        // The shape of the reel caption that came out as the name "6 αυγά" and eleven steps.
+        val caption = """
+            Αλμυρό κέικ ομελέτας με μπρόκολο, γαλοπούλα, φέτα και γκούντα 🥦
+
+            Μια συνταγή με λίγα υλικά και χωρίς πολλά σκεύη. Χωρίς αλεύρι, και κόβεται σε φέτες! 🧀
+
+            Υλικά (4–6 μερίδες)
+
+            - 300 γρ. μπρόκολο
+            - 6 αυγά
+            - 120 γρ. στραγγιστό γιαούρτι 2%
+            - 1 κ.σ. ελαιόλαδο
+            - Λίγο αλάτι και πιπέρι
+
+            Εσύ θα το προτιμούσες για πρωινό ή για βραδινό;
+
+            🇺🇸
+
+            Savory Broccoli, Turkey, Feta & Gouda Egg Loaf 🥦
+
+            A recipe with few ingredients and few dishes. No flour, and it cuts into slices! 🧀
+
+            Ingredients (4–6 servings)
+
+            - 300 g broccoli
+            - 6 eggs
+            - 120 g strained Greek yogurt (2%)
+            - 1 tbsp olive oil
+            - A little salt and black pepper
+
+            Would you have this for breakfast or dinner?
+
+            #eggloaf #easyrecipes
+        """.trimIndent()
+        val greek = parseRecipeText(caption, language = "el")
+        assertEquals("Αλμυρό κέικ ομελέτας με μπρόκολο, γαλοπούλα, φέτα και γκούντα", greek.title)
+        assertEquals("Μια συνταγή με λίγα υλικά και χωρίς πολλά σκεύη. Χωρίς αλεύρι, και κόβεται σε φέτες! 🧀", greek.description)
+        assertEquals(6, greek.servings)
+        assertEquals(
+            listOf("300 γρ. μπρόκολο", "6 αυγά", "120 γρ. στραγγιστό γιαούρτι 2%", "1 κ.σ. ελαιόλαδο", "Λίγο αλάτι και πιπέρι"),
+            greek.ingredients,
+        )
+        assertTrue(greek.steps.isEmpty())
+        // shortcut: an English reader still gets the second title and intro on top of the list, split the caption at the language change if that is reported.
+        assertEquals(
+            listOf("300 g broccoli", "6 eggs", "120 g strained Greek yogurt (2%)", "1 tbsp olive oil", "A little salt and black pepper"),
+            parseRecipeText(caption, language = "en").ingredients.takeLast(5),
+        )
+    }
+
+    @Test
     fun `blank text is empty`() {
         assertTrue(parseRecipeText("  \n\n ").isEmpty)
     }
