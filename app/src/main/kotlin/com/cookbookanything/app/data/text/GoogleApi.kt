@@ -31,6 +31,9 @@ class GoogleApi @Inject constructor(@ApplicationContext private val context: Con
     /** Google's refusal, with the HTTP status, so a caller can tell a retired model (404) from the rest. */
     class Refused(val code: Int, message: String) : IOException(message)
 
+    /** No answer within the time allowed; the message says how long the upload took, to tell a slow phone from a slow model. */
+    class TimedOut(message: String, cause: Throwable) : IOException(message, cause)
+
     /** POSTs [body] as JSON and returns the JSON answer. Throws [Refused] with the API's message when it refuses. */
     fun post(endpoint: String, body: JsonObject, service: String, timeoutMs: Int = TIMEOUT_MS): JsonObject {
         // Google refuses the Firebase project for Gemini (403 "Permission denied on the service"), so a key from AI Studio comes first.
@@ -53,8 +56,7 @@ class GoogleApi @Inject constructor(@ApplicationContext private val context: Con
             val code = try {
                 connection.responseCode
             } catch (e: SocketTimeoutException) {
-                // Says which side was slow, the phone's upload or the model.
-                throw IOException("$service did not answer within ${timeoutMs / 1000} s (${bytes.size / 1024} KB sent in $sent s)", e)
+                throw TimedOut("$service did not answer within ${timeoutMs / 1000} s (${bytes.size / 1024} KB sent in $sent s)", e)
             }
             val text = (if (code < 400) connection.inputStream else connection.errorStream)?.bufferedReader()?.readText().orEmpty()
             // An HTML error page from a proxy or captive portal is a failed call, not a crash.

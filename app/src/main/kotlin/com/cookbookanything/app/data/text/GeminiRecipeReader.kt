@@ -26,7 +26,9 @@ class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
 
     val available: Boolean get() = api.available
 
-    // The place in MODELS of the one that last answered, so a retired model is not sent a whole video again.
+    // The place in MODELS of the one to ask first: the one that last answered, so a model that is retired or
+    // overloaded is not sent a whole video again.
+    // shortcut: it only moves on, so a busy hour leaves the app on a backup model until it restarts
     @Volatile private var model = 0
 
     /**
@@ -55,8 +57,16 @@ class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
                 putJsonObject("thinkingConfig") { put("thinkingLevel", "LOW") }
             }
         }
-        val (working, answer) = firstAvailableModel(MODELS, model, gone = { (it as? GoogleApi.Refused)?.code == 404 }) {
-            api.post("$ENDPOINT/$it:generateContent", request, "Gemini", timeoutMs = timeoutMs)
+        var asked = model
+        val (working, answer) = try {
+            firstAvailableModel(MODELS, model, unavailable = { (it as? GoogleApi.Refused)?.code in MOVE_ON }) {
+                asked = MODELS.indexOf(it)
+                api.post("$ENDPOINT/$it:generateContent", request, "Gemini", timeoutMs = timeoutMs)
+            }
+        } catch (e: GoogleApi.TimedOut) {
+            // Trying the next model now would double the wait; it is asked first the next time instead.
+            model = (asked + 1) % MODELS.size
+            throw e
         }
         model = working
         val text = answer["candidates"]?.jsonArray?.firstOrNull()?.jsonObject
@@ -70,10 +80,12 @@ class GeminiRecipeReader @Inject constructor(private val api: GoogleApi) {
         const val PHOTOS = "one or more photos of the same recipe, in order (a cookbook page, a handwritten card or a screenshot)"
         const val VIDEO = "a cooking video"
 
-        // Google retires models with a 404 (gemini-2.5-flash, November 2026), so after the named one comes
-        // the alias that always points at its newest flash model, which can be a preview with tighter limits.
-        // shortcut: both names are fixed here, move them to a remote setting if the alias goes too
-        private val MODELS = listOf("gemini-3.8-flash", "gemini-flash-latest")
+        // Google retires models with a 404 (gemini-2.5-flash, November 2026) and turns requests away when one is
+        // overloaded (503, seen on gemini-3.8-flash the same month) or out of free quota (429). Each of these
+        // moves on to the next: the older flash models, then the alias for its newest one, which can be a preview.
+        // shortcut: the names are fixed here, move them to a remote setting if the alias goes too
+        private val MODELS = listOf("gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-flash-latest")
+        private val MOVE_ON = setOf(404, 429, 503)
         private const val ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
         private const val TIMEOUT_MS = 120_000
         private const val NONE = "NONE"
