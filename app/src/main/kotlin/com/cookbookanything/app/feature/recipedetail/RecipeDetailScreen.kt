@@ -177,6 +177,7 @@ fun RecipeDetailRoute(
         onDeleteComment = viewModel::deleteComment,
         onSchedule = viewModel::schedule,
         onRemoveSchedule = viewModel::removeSchedule,
+        videoFile = viewModel::videoFile,
     )
 }
 
@@ -216,6 +217,7 @@ fun RecipeDetailScreen(
     onDeleteComment: (String) -> Unit,
     onSchedule: (Long, MealSlot?) -> Unit,
     onRemoveSchedule: (String) -> Unit,
+    videoFile: suspend (String) -> String?,
 ) {
     var shareMenuOpen by remember { mutableStateOf(false) }
     var moreMenuOpen by remember { mutableStateOf(false) }
@@ -314,6 +316,7 @@ fun RecipeDetailScreen(
                 onDeleteComment = onDeleteComment,
                 onSchedule = onSchedule,
                 onRemoveSchedule = onRemoveSchedule,
+                videoFile = videoFile,
             )
         }
     }
@@ -349,6 +352,7 @@ private fun RecipeContent(
     onDeleteComment: (String) -> Unit,
     onSchedule: (Long, MealSlot?) -> Unit,
     onRemoveSchedule: (String) -> Unit,
+    videoFile: suspend (String) -> String?,
 ) {
     val recipe = uiState.recipe
     val locale = currentLocale()
@@ -611,7 +615,7 @@ private fun RecipeContent(
         )
     }
 
-    if (watching) recipe.video?.let { VideoPlayerDialog(link = it, onDismiss = { watching = false }) }
+    if (watching) recipe.video?.let { VideoPlayerDialog(link = it, videoFile = videoFile, onDismiss = { watching = false }) }
 }
 
 /** "Did you cook it?": yes, yes with a photo of the result, or not this time. */
