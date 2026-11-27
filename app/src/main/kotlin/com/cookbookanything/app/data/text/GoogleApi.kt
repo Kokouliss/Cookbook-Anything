@@ -27,7 +27,10 @@ class GoogleApi @Inject constructor(@ApplicationContext private val context: Con
     /** False in a build with neither a Gemini key nor the Firebase config file. */
     val available: Boolean get() = BuildConfig.GEMINI_API_KEY.isNotEmpty() || FirebaseApp.getApps(context).isNotEmpty()
 
-    /** POSTs [body] as JSON and returns the JSON answer. Throws [IOException] with the API's message when it refuses. */
+    /** Google's refusal, with the HTTP status, so a caller can tell a retired model (404) from the rest. */
+    class Refused(val code: Int, message: String) : IOException(message)
+
+    /** POSTs [body] as JSON and returns the JSON answer. Throws [Refused] with the API's message when it refuses. */
     fun post(endpoint: String, body: JsonObject, service: String, timeoutMs: Int = TIMEOUT_MS): JsonObject {
         // Google refuses the Firebase project for Gemini (403 "Permission denied on the service"), so a key from AI Studio comes first.
         val apiKey = BuildConfig.GEMINI_API_KEY.ifEmpty { FirebaseApp.getInstance().options.apiKey }
@@ -45,10 +48,10 @@ class GoogleApi @Inject constructor(@ApplicationContext private val context: Con
             val text = (if (code < 400) connection.inputStream else connection.errorStream)?.bufferedReader()?.readText().orEmpty()
             // An HTML error page from a proxy or captive portal is a failed call, not a crash.
             val json = runCatching { Json.parseToJsonElement(text.ifBlank { "{}" }).jsonObject }
-                .getOrElse { throw IOException("$service answered $code: ${text.take(200)}") }
+                .getOrElse { throw Refused(code, "$service answered $code: ${text.take(200)}") }
             if (code >= 400) {
                 val message = json["error"]?.jsonObject?.get("message")?.jsonPrimitive?.content
-                throw IOException("$service answered $code: ${message ?: text.take(200)}")
+                throw Refused(code, "$service answered $code: ${message ?: text.take(200)}")
             }
             return json
         } finally {

@@ -46,14 +46,31 @@ class LinkRecipeReader @Inject constructor(
         if (CookieHandler.getDefault() == null) CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
     }
 
-    /** The recipe and the name of its downloaded picture, or null when the page has none. Throws [IOException] when it cannot load. */
-    suspend fun read(url: String): Pair<ParsedRecipe, String?>? = withContext(Dispatchers.IO) {
+    /**
+     * What a link gave: the recipe, the name of its downloaded picture, and in [unheard] why the video
+     * could not be listened to when the caption was all that came through.
+     */
+    data class LinkRead(val recipe: ParsedRecipe, val photo: String?, val unheard: String? = null)
+
+    /** The recipe at the link, or null when the page has none. Throws [IOException] when it cannot load. */
+    suspend fun read(url: String): LinkRead? = withContext(Dispatchers.IO) {
         val page = load(url) ?: return@withContext null
         // A caption that only points at a blog ("full recipe at …") is read from the blog itself.
         val blog = page.link?.takeIf { page.ingredients.isEmpty() }?.let { runCatching { load(it) }.getOrNull() }?.takeIf { it.ingredients.isNotEmpty() }
         val written = blog?.let { it.copy(title = it.title ?: page.title, description = it.description ?: page.description, imageUrl = it.imageUrl ?: page.imageUrl) } ?: page
         // A reel whose caption gives no ingredients is listened to; the model writes the recipe down.
-        val spoken = written.videoUrl?.takeIf { written.ingredients.isEmpty() && gemini.available }?.let { video -> listen(url, video) }
+        // When listening fails, what the caption gave (name, description, picture, video) is still worth keeping.
+        var unheard: String? = null
+        val spoken = written.videoUrl?.takeIf { written.ingredients.isEmpty() && gemini.available }?.let { video ->
+            try {
+                listen(video)
+            } catch (e: IOException) {
+                writeDetails(url, "The page was read: name \"${written.title}\", ${written.steps.size} steps, no ingredients.\nVideo: $video\nListening to the video failed: $e")
+                if (written.isEmpty) throw e
+                unheard = e.message ?: e.toString()
+                null
+            }
+        }
         val text = spoken?.copy(title = written.title ?: spoken.title, description = written.description ?: spoken.description, imageUrl = written.imageUrl) ?: written
         if (text.isEmpty) return@withContext null
         // The video to watch: the post itself when it is one, else the player the page embeds, else an Instagram post that carried a video.
@@ -62,11 +79,11 @@ class LinkRecipeReader @Inject constructor(
         val photo = recipe.imageUrl?.let { image ->
             runCatching { open(image).let { c -> try { c.inputStream.use { photoStore.importStream(it, MAX_IMAGE_BYTES) } } finally { c.disconnect() } } }.getOrNull()
         }
-        recipe to photo
+        LinkRead(recipe, photo, unheard)
     }
 
-    /** The recipe said in the video at [video], or null when it holds none or is too big to send. */
-    private suspend fun listen(url: String, video: String): ParsedRecipe? {
+    /** The recipe said in the video at [video], or null when it holds none or is too big to send. Throws [IOException] when the model refuses. */
+    private suspend fun listen(video: String): ParsedRecipe? {
         val connection = runCatching { open(video) }.getOrNull() ?: return null
         val (bytes, mimeType) = try {
             connection.inputStream.use { it.readUpTo(MAX_VIDEO_BYTES + 1) } to (connection.contentType?.substringBefore(';')?.trim() ?: "video/mp4")
@@ -74,12 +91,7 @@ class LinkRecipeReader @Inject constructor(
             connection.disconnect()
         }
         if (bytes.size > MAX_VIDEO_BYTES) return null
-        val text = try {
-            gemini.read(listOf(bytes to mimeType), GeminiRecipeReader.VIDEO)
-        } catch (e: IOException) {
-            writeDetails("$url, video $video", Result.failure(e), null)
-            throw e
-        }
+        val text = gemini.read(listOf(bytes to mimeType), GeminiRecipeReader.VIDEO)
         return text?.let(::parseRecipeText)?.takeIf { it.ingredients.isNotEmpty() || it.steps.isNotEmpty() }
     }
 
@@ -93,7 +105,16 @@ class LinkRecipeReader @Inject constructor(
         if (recipe != null) return recipe
         val rendered = browser.load(address) { parseRecipeHtml(it) != null }
         return rendered?.let(::parseRecipeHtml) ?: run {
-            writeDetails("$url, read from $address", plain, rendered)
+            writeDetails(
+                "$url, read from $address",
+                buildString {
+                    appendLine("Plain request: ${plain.fold({ "${it.length} characters" }, { "failed, $it" })}")
+                    appendLine("Browser: ${rendered?.let { "${it.length} characters" } ?: "nothing"}")
+                    appendLine("Each page below starts with a comment that holds the address it ended at.")
+                    appendLine("\n===== plain request =====\n${plain.getOrNull().orEmpty()}")
+                    appendLine("\n===== browser =====\n${rendered.orEmpty()}")
+                },
+            )
             plain.exceptionOrNull()?.let { throw it }
             null
         }
@@ -102,7 +123,7 @@ class LinkRecipeReader @Inject constructor(
     /** What the site answered to the last link that could not be read, as a file to send to the developer. Null when there is none. */
     fun detailsFile(): Uri? = details.takeIf { it.exists() }?.let { FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", it) }
 
-    private fun writeDetails(url: String, plain: Result<String>, rendered: String?) {
+    private fun writeDetails(url: String, report: String) {
         // Best effort: a report that cannot be written must not change what the read answers.
         runCatching {
             details.parentFile?.mkdirs()
@@ -110,11 +131,7 @@ class LinkRecipeReader @Inject constructor(
                 buildString {
                     appendLine("Cookbook Anything ${BuildConfig.VERSION_NAME} on Android ${Build.VERSION.RELEASE}")
                     appendLine("Link: $url")
-                    appendLine("Plain request: ${plain.fold({ "${it.length} characters" }, { "failed, $it" })}")
-                    appendLine("Browser: ${rendered?.let { "${it.length} characters" } ?: "nothing"}")
-                    appendLine("Each page below starts with a comment that holds the address it ended at.")
-                    appendLine("\n===== plain request =====\n${plain.getOrNull().orEmpty()}")
-                    appendLine("\n===== browser =====\n${rendered.orEmpty()}")
+                    appendLine(report)
                 },
             )
         }
