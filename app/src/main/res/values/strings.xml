@@ -267,11 +267,16 @@
         <item>Plan a recipe as breakfast, lunch, snack or dinner, and write a note for each day of the calendar.</item>
         <item>The shopping list can show this week only.</item>
     </string-array>
-    <!-- Home strip and getting started -->
-    <string name="greeting_morning">Good morning</string>
-    <string name="greeting_afternoon">Good afternoon</string>
-    <string name="greeting_evening">Good evening</string>
-    <string name="nothing_planned_next">Nothing planned yet. What are you cooking?</string>
+    <!-- Home page and getting started -->
+    <string name="label_search">Search</string>
+    <string name="label_plan">Plan</string>
+    <string name="label_view">View</string>
+    <string name="view_and_sort">View and order</string>
+    <string name="view_size">Show as</string>
+    <string name="view_small">Small pictures</string>
+    <string name="view_medium">Medium pictures</string>
+    <string name="view_large">Large pictures</string>
+    <string name="view_list">List</string>
     <string name="plan_a_meal">Plan a meal</string>
     <string name="getting_started">Getting started</string>
     <string name="started_progress">%1$d of %2$d done</string>
@@ -379,9 +384,6 @@
     <string name="label_share">Share</string>
     <string name="label_edit">Edit</string>
     <string name="label_more">More</string>
-    <string name="label_import">Import</string>
-    <string name="label_categories">Categories</string>
-    <string name="label_sort">Sort</string>
     <string name="label_paste">Paste</string>
     <string name="label_photo">Photo</string>
     <string name="label_shopping">Shopping</string>
@@ -413,7 +415,6 @@
     <string name="shopping_empty_title">Nothing to buy</string>
     <string name="shopping_all_done">All in the basket. Happy cooking.</string>
     <string name="recipe_deleted">“%1$s” deleted</string>
-    <string name="next_meal">Next up</string>
     <string name="move_up">Move up</string>
     <string name="move_down">Move down</string>
     <!-- Rubber stamps on the recipe page: capitals, written here so each language sets its own. -->

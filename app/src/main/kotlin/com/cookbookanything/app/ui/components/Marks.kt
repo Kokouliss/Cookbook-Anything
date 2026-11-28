@@ -67,7 +67,7 @@ private val TabShape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
 /**
  * A divider tab of a cookbook: round at the top, square where it meets the page. The open section's
  * tab stands taller and is inked, so it is told apart by shape as well as by colour. Set a row of
- * them on a rule in the ink colour.
+ * them on a hairline: an ink rule cuts hard across the recipes that scroll under it.
  */
 @Composable
 fun IndexTab(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {

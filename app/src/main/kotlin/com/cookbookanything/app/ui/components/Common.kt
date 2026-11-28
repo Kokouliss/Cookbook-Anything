@@ -105,7 +105,7 @@ fun AppIconButton(
             .semantics(mergeDescendants = true) {}
             .widthIn(min = 48.dp)
             .heightIn(min = 48.dp)
-            .padding(horizontal = 6.dp, vertical = 4.dp),
+            .padding(horizontal = 4.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
