@@ -40,6 +40,12 @@ Warm, brief, a little wry. Like a note left on the fridge.
 - `MaterialTheme` uses the expressive motion scheme; our own movement uses `PaperSpring`.
 - List rows carry `Modifier.animateItem()`.
 
+## Home
+
+- The recipes and nothing above them: no greeting, no card that repeats the calendar.
+- Places to go (search, plan, shopping) sit in the top bar, each with its word; the rest is under "More".
+- What changes the list sits right above it: filters on the left, "View" (picture size or list, and the order) on the right.
+
 ## Signature details
 
 - **Stamps** (`Stamp`): red, tilted, in capitals. Only for something the cook earned: cooked, favourite.

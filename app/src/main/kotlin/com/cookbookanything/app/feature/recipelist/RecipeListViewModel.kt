@@ -35,9 +35,6 @@ sealed interface RecipeListUiState {
         val filter: RecipeFilter,
         /** Every tag in the cookbook, for the chips. */
         val allTags: List<String>,
-        /** The next planned recipe, for the strip at the top. */
-        val next: ScheduledRecipe?,
-        val nextPhoto: String? = null,
         val gettingStarted: GettingStarted,
     ) : RecipeListUiState
 }
@@ -75,7 +72,6 @@ class RecipeListViewModel @Inject constructor(
     ) { recipes, categories, selected, searchText, (order, favorites, narrowing, schedule) ->
         // A deleted category must not keep filtering the list.
         val active = selected?.takeIf { id -> categories.any { it.id == id } }
-        val next = System.currentTimeMillis().let { now -> schedule.firstOrNull { it.scheduledAt >= now } }
         RecipeListUiState.Success(
             recipes = recipes.filter {
                 (active == null || it.categoryId == active) && (!favorites || it.favorite) && it.matches(searchText) && it.matches(narrowing)
@@ -87,8 +83,6 @@ class RecipeListViewModel @Inject constructor(
             onlyFavorites = favorites,
             filter = narrowing,
             allTags = recipes.flatMap { it.tags }.distinctBy { it.searchKey() }.sortedBy { it.searchKey() },
-            next = next,
-            nextPhoto = recipes.firstOrNull { it.id == next?.recipeId }?.coverPhoto,
             gettingStarted = GettingStarted(
                 added = recipes.isNotEmpty(),
                 imported = recipes.any { it.source != null },
